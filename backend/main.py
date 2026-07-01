@@ -35,7 +35,7 @@ from collections import defaultdict
 from .connectors import degiro, traderepublic, trading212
 from .fx import BASE_CURRENCY, to_eur
 from .prices import fetch_quotes
-from . import income, periods, realized, sectors, store
+from . import income, market, periods, realized, sectors, store
 
 DEMO_MODE = not (os.getenv("T212_API_KEY") and os.getenv("T212_API_SECRET"))
 FRONTEND_DIR = Path(__file__).resolve().parents[1] / "frontend"
@@ -308,6 +308,27 @@ def profit() -> dict:
 def history() -> list[dict]:
     _ensure_backfill()
     return store.get_history()
+
+
+@app.get("/api/indices")
+def indices() -> list[dict]:
+    """Market snapshot for the ticker strip (S&P 500, Nasdaq, AEX, EUR/USD…)."""
+    return market.indices()
+
+
+@app.get("/api/sparklines")
+def sparklines() -> dict[str, list[float]]:
+    """~1 month of daily closes per held ticker, for the row mini-charts."""
+    tickers = [h.ticker for h in (
+        trading212.get_holdings() + degiro.get_holdings() + traderepublic.get_holdings()
+    ) if h.ticker]
+    return market.sparklines(tickers)
+
+
+@app.get("/api/news/{ticker}")
+def news(ticker: str) -> list[dict]:
+    """Recent headlines for one holding (used in the detail view)."""
+    return market.news(ticker)
 
 
 # Serve the dashboard explicitly at "/" (same reliable FileResponse the login
