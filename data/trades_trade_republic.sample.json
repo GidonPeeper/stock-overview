@@ -1,0 +1,9 @@
+{
+  "_note": "SAMPLE demo data. Copy to trades_trade_republic.json and replace with your own (transcribed from the Trade Republic statement PDF). amount_eur is the EUR cash moved.",
+  "trades": [
+    {"date": "2024-02-01", "isin": "US0378331005", "name": "Apple Inc",      "ticker": "AAPL", "side": "BUY",  "quantity": 5.0,  "amount_eur": 900.00},
+    {"date": "2024-05-10", "isin": "US5949181045", "name": "Microsoft Corp", "ticker": "MSFT", "side": "BUY",  "quantity": 3.0,  "amount_eur": 1100.00},
+    {"date": "2024-09-15", "isin": "US0378331005", "name": "Apple Inc",      "ticker": "AAPL", "side": "BUY",  "quantity": 2.0,  "amount_eur": 400.00},
+    {"date": "2025-01-20", "isin": "US5949181045", "name": "Microsoft Corp", "ticker": "MSFT", "side": "SELL", "quantity": 1.0,  "amount_eur": 390.00}
+  ]
+}

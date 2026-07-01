@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <title>Stock Overview — Sign in</title>
+  <link rel="manifest" href="/manifest.webmanifest" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="theme-color" content="#0f1419" />
+  <link rel="apple-touch-icon" href="/icon-180.png" />
+  <style>
+    :root { --bg:#0f1419; --panel:#1a2130; --panel2:#222b3c; --text:#e6edf3; --muted:#8b98a9; --accent:#4493f8; }
+    * { box-sizing:border-box; }
+    body { margin:0; min-height:100vh; background:var(--bg); color:var(--text);
+      font:16px/1.5 -apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
+      display:flex; align-items:center; justify-content:center; padding:24px; }
+    .card { width:100%; max-width:340px; background:var(--panel); border-radius:18px; padding:28px 24px; text-align:center; }
+    img.logo { width:72px; height:72px; border-radius:18px; margin-bottom:14px; }
+    h1 { font-size:20px; margin:0 0 4px; }
+    p.sub { color:var(--muted); font-size:13px; margin:0 0 22px; }
+    input { width:100%; background:var(--panel2); border:1px solid #2c3548; color:var(--text);
+      border-radius:10px; padding:13px 14px; font-size:16px; margin-bottom:12px; }
+    input:focus { outline:none; border-color:var(--accent); }
+    button { width:100%; background:var(--accent); color:#fff; border:none; border-radius:10px;
+      padding:14px; font-size:16px; font-weight:600; cursor:pointer; }
+    .err { color:#f85149; font-size:13px; min-height:18px; margin-bottom:6px; }
+  </style>
+</head>
+<body>
+  <form class="card" method="POST" action="/login">
+    <img class="logo" src="/icon-192.png" alt="" />
+    <h1>Stock Overview</h1>
+    <p class="sub">Sign in to view your portfolio</p>
+    <div class="err" id="err"></div>
+    <input name="username" type="text" placeholder="Username" autocomplete="username" autocapitalize="none" required />
+    <input name="password" type="password" placeholder="Password" autocomplete="current-password" required />
+    <button type="submit">Sign in</button>
+  </form>
+  <script>
+    if (new URLSearchParams(location.search).get("e") === "1")
+      document.getElementById("err").textContent = "Wrong username or password";
+  </script>
+</body>
+</html>

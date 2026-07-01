@@ -1,0 +1,8 @@
+{
+  "_note": "SAMPLE demo data. Copy to income_trade_republic.json and replace with your own dividends/interest from the Trade Republic statement PDF.",
+  "income": [
+    {"date": "2024-08-15", "type": "dividend", "isin": "US0378331005", "amount_eur": 1.20},
+    {"date": "2024-11-01", "type": "interest", "amount_eur": 3.50},
+    {"date": "2025-02-13", "type": "dividend", "isin": "US0378331005", "amount_eur": 1.30}
+  ]
+}

@@ -1,0 +1,401 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <title>Stock Overview</title>
+  <link rel="manifest" href="/manifest.webmanifest" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="apple-mobile-web-app-title" content="Stocks" />
+  <meta name="theme-color" content="#0b0e11" />
+  <link rel="apple-touch-icon" href="/icon-180.png" />
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4"></script>
+  <style>
+    :root{
+      --bg:#0b0e11; --panel:#151a21; --panel2:#1c232d; --panel3:#232b36;
+      --text:#e8edf2; --muted:#8b98a9; --faint:#5b6673;
+      --green:#26a862; --green-bg:rgba(38,168,98,.14);
+      --red:#f0616d; --red-bg:rgba(240,97,109,.14);
+      --accent:#4c8dff; --border:#232b36;
+      --tabbar-h:64px;
+    }
+    *{ box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
+    html,body{ margin:0; background:var(--bg); color:var(--text);
+      font:15px/1.5 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;
+      -webkit-font-smoothing:antialiased; }
+    body{ padding-bottom:calc(var(--tabbar-h) + env(safe-area-inset-bottom)); }
+    .num{ font-variant-numeric:tabular-nums; }
+    .pos{ color:var(--green); } .neg{ color:var(--red); } .muted{ color:var(--muted); }
+    .wrap{ max-width:960px; margin:0 auto; padding:20px 16px 24px;
+      padding-top:calc(16px + env(safe-area-inset-top)); }
+
+    /* header */
+    header{ display:flex; align-items:center; justify-content:space-between; margin-bottom:18px; }
+    header h1{ font-size:19px; font-weight:650; margin:0; letter-spacing:-.01em; }
+    .live{ font-size:11px; color:var(--muted); display:flex; align-items:center; gap:5px; }
+    .live .dot{ width:7px; height:7px; border-radius:50%; background:var(--green);
+      animation:pulse 2s infinite; }
+    @keyframes pulse{ 0%,100%{opacity:1} 50%{opacity:.25} }
+    .iconbtn{ background:var(--panel2); border:none; color:var(--muted); width:36px; height:36px;
+      border-radius:10px; cursor:pointer; font-size:15px; display:grid; place-items:center; }
+    .iconbtn:active{ background:var(--panel3); }
+
+    /* cards */
+    .card{ background:var(--panel); border:1px solid var(--border); border-radius:16px;
+      padding:18px; margin-bottom:14px; }
+    .card h2{ font-size:12px; color:var(--muted); margin:0 0 14px; text-transform:uppercase;
+      letter-spacing:.05em; font-weight:600; }
+
+    /* hero */
+    .hero .label{ font-size:12px; color:var(--muted); text-transform:uppercase; letter-spacing:.05em; }
+    .hero .value{ font-size:38px; font-weight:700; letter-spacing:-.02em; margin:4px 0 8px; }
+    .hero .today{ font-size:15px; font-weight:600; display:inline-flex; align-items:center; gap:6px; }
+    .hero .today .chip{ background:var(--panel2); padding:2px 8px; border-radius:8px; color:var(--muted);
+      font-weight:500; font-size:13px; }
+
+    /* profit selector */
+    .chips{ display:flex; gap:8px; overflow-x:auto; padding-bottom:4px; margin-bottom:16px;
+      scrollbar-width:none; }
+    .chips::-webkit-scrollbar{ display:none; }
+    .chip{ flex:0 0 auto; background:var(--panel2); color:var(--muted); border:1px solid transparent;
+      padding:7px 13px; border-radius:20px; cursor:pointer; font-size:13px; white-space:nowrap; }
+    .chip.active{ background:rgba(76,141,255,.15); color:var(--accent); border-color:rgba(76,141,255,.5); }
+    .pdisplay .n{ font-size:30px; font-weight:700; letter-spacing:-.01em; }
+    .pdisplay .d{ color:var(--muted); font-size:13px; margin-top:4px; }
+
+    /* segmented toggle */
+    .seg{ display:inline-flex; background:var(--panel2); border-radius:11px; padding:3px; margin-bottom:14px; }
+    .seg button{ background:none; border:none; color:var(--muted); padding:7px 16px; border-radius:8px;
+      cursor:pointer; font-size:13px; font-weight:500; }
+    .seg button.active{ background:var(--panel); color:var(--text); box-shadow:0 1px 2px rgba(0,0,0,.3); }
+
+    /* holdings table (grid; becomes cards on mobile) */
+    .htable{ width:100%; }
+    .hhead, .hrow{ display:grid; grid-template-columns:2.3fr 1.1fr 1.25fr 1.5fr 1fr .8fr;
+      align-items:center; gap:8px; }
+    .hhead{ font-size:11px; color:var(--muted); text-transform:uppercase; letter-spacing:.04em;
+      padding:0 0 10px; border-bottom:1px solid var(--border); }
+    .hhead span:not(:first-child), .hrow .cell:not(.c-name){ text-align:right; }
+    .hrow{ padding:13px 0; border-bottom:1px solid var(--border); }
+    .hrow:last-child{ border-bottom:none; }
+    .c-name .nm{ font-weight:550; }
+    .c-name .tk{ font-size:11px; color:var(--faint); margin-top:2px; }
+    .c-name .tags{ margin-top:4px; display:flex; gap:4px; flex-wrap:wrap; }
+    .tag{ font-size:10px; padding:1px 6px; border-radius:5px; background:var(--panel2); color:var(--muted); }
+    .big{ font-weight:600; } .sub{ font-size:12px; margin-left:6px; }
+    .lbl{ display:none; }
+
+    @media(max-width:640px){
+      .hhead{ display:none; }
+      .hrow{ grid-template-columns:1fr auto; grid-template-areas:
+        "name value" "today overall" "price qty"; gap:3px 10px; padding:14px 0; }
+      .c-name{ grid-area:name; } .c-value{ grid-area:value; text-align:right; }
+      .c-today{ grid-area:today; text-align:left !important; }
+      .c-overall{ grid-area:overall; text-align:right; }
+      .c-price{ grid-area:price; text-align:left !important; }
+      .c-qty{ grid-area:qty; text-align:right; }
+      .c-today, .c-overall{ font-size:13px; margin-top:2px; }
+      .c-price, .c-qty{ font-size:12px; color:var(--muted); margin-top:2px; }
+      .lbl{ display:inline; color:var(--faint); font-weight:400; margin-right:4px; }
+      .c-value .sub, .c-today .sub, .c-overall .sub{ display:inline; margin-left:5px; }
+    }
+
+    tfootrow{ display:grid; }
+    .closed-row{ display:flex; justify-content:space-between; padding:11px 0; border-bottom:1px solid var(--border); }
+    .closed-row:last-child{ border-bottom:none; }
+    .closed-total{ display:flex; justify-content:space-between; padding-top:14px; margin-top:6px;
+      border-top:2px solid var(--border); font-weight:650; }
+
+    /* allocation */
+    .alloc{ display:flex; gap:18px; flex-wrap:wrap; }
+    .alloc > div{ flex:1; min-width:240px; }
+    .alloc .t{ font-size:12px; color:var(--muted); margin-bottom:8px; }
+
+    /* chart */
+    .chart-head{ display:flex; justify-content:space-between; align-items:center; margin-bottom:14px; }
+    #chart-wrap{ height:340px; }
+    @media(max-width:640px){ #chart-wrap{ height:300px; } }
+
+    /* period stat grid */
+    .stats{ display:grid; grid-template-columns:repeat(4,1fr); gap:10px; margin-top:16px; }
+    @media(max-width:640px){ .stats{ grid-template-columns:repeat(2,1fr); } }
+    .stat{ background:var(--panel2); border-radius:12px; padding:12px; }
+    .stat .k{ font-size:11px; color:var(--muted); text-transform:uppercase; letter-spacing:.03em; }
+    .stat .v{ font-size:17px; font-weight:650; margin-top:3px; }
+
+    /* pages + tab bar */
+    .page{ display:none; }
+    .page.active{ display:block; animation:fade .2s ease; }
+    @keyframes fade{ from{opacity:0; transform:translateY(4px)} to{opacity:1; transform:none} }
+    .tabbar{ position:fixed; left:0; right:0; bottom:0; height:calc(var(--tabbar-h) + env(safe-area-inset-bottom));
+      padding-bottom:env(safe-area-inset-bottom); background:rgba(13,17,22,.92);
+      backdrop-filter:blur(12px); border-top:1px solid var(--border); display:flex; z-index:10; }
+    .tabbar button{ flex:1; background:none; border:none; color:var(--muted); cursor:pointer;
+      display:flex; flex-direction:column; align-items:center; justify-content:center; gap:3px;
+      font-size:11px; font-weight:500; }
+    .tabbar button svg{ width:22px; height:22px; stroke:currentColor; fill:none; stroke-width:2; }
+    .tabbar button.active{ color:var(--accent); }
+    .skeleton{ color:var(--faint); }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <header>
+      <div>
+        <h1>Stock Overview</h1>
+        <div id="live" class="live"></div>
+      </div>
+      <button class="iconbtn" onclick="loadAll(true)" title="Refresh">↻</button>
+    </header>
+
+    <!-- ===== OVERVIEW ===== -->
+    <section id="page-overview" class="page active">
+      <div class="card hero">
+        <div class="label">Total value</div>
+        <div id="v-value" class="value num skeleton">—</div>
+        <div id="v-today" class="today"></div>
+      </div>
+      <div class="card">
+        <h2>Profit / Loss</h2>
+        <div class="chips" id="profit-chips"></div>
+        <div class="pdisplay">
+          <div id="p-num" class="n num skeleton">—</div>
+          <div id="p-desc" class="d"></div>
+        </div>
+      </div>
+      <div class="card">
+        <h2>Allocation</h2>
+        <div class="alloc">
+          <div><div class="t">By sector</div><canvas id="sector-chart" height="200"></canvas></div>
+          <div><div class="t">By broker</div><canvas id="broker-chart" height="200"></canvas></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ===== HOLDINGS ===== -->
+    <section id="page-holdings" class="page">
+      <div class="seg">
+        <button id="t-open" class="active" onclick="showTab('open')">Open</button>
+        <button id="t-closed" onclick="showTab('closed')">Closed</button>
+      </div>
+      <div class="card" id="tab-open">
+        <div class="htable">
+          <div class="hhead">
+            <span>Holding</span><span>Value</span><span>Today</span><span>Overall</span><span>Price</span><span>Qty</span>
+          </div>
+          <div id="open-rows"><div class="skeleton" style="padding:20px 0">Loading holdings…</div></div>
+        </div>
+      </div>
+      <div class="card" id="tab-closed" hidden>
+        <div class="sub muted" style="margin-bottom:8px">Positions you fully sold — realized profit locked in.</div>
+        <div id="closed-rows" class="skeleton">Loading…</div>
+        <div class="closed-total"><span>Total realized</span><span id="closed-total" class="num"></span></div>
+      </div>
+    </section>
+
+    <!-- ===== PERFORMANCE ===== -->
+    <section id="page-performance" class="page">
+      <div class="card">
+        <div class="chart-head">
+          <h2 id="chart-title" style="margin:0">Profit since inception</h2>
+          <div class="seg" style="margin:0">
+            <button id="m-profit" class="active" onclick="setChartMode('profit')">Profit</button>
+            <button id="m-value" onclick="setChartMode('value')">Value</button>
+          </div>
+        </div>
+        <div id="chart-wrap"><canvas id="chart"></canvas></div>
+        <div class="stats" id="period-stats"></div>
+      </div>
+    </section>
+  </div>
+
+  <!-- bottom tab bar -->
+  <nav class="tabbar">
+    <button data-page="overview" class="active" onclick="showPage('overview')">
+      <svg viewBox="0 0 24 24"><path d="M3 3v18h18"/><path d="M7 14l3-4 3 3 5-7"/></svg>Overview</button>
+    <button data-page="holdings" onclick="showPage('holdings')">
+      <svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="4" rx="1"/><rect x="3" y="10" width="18" height="4" rx="1"/><rect x="3" y="16" width="18" height="4" rx="1"/></svg>Holdings</button>
+    <button data-page="performance" onclick="showPage('performance')">
+      <svg viewBox="0 0 24 24"><path d="M3 17l6-6 4 4 8-8"/><path d="M17 7h4v4"/></svg>Performance</button>
+  </nav>
+
+  <script>
+    const eur=n=>"€"+Number(n).toLocaleString("en-IE",{minimumFractionDigits:2,maximumFractionDigits:2});
+    const eur0=n=>"€"+Number(n).toLocaleString("en-IE",{maximumFractionDigits:0});
+    const signed=n=>(n>=0?"+":"")+eur(n);
+    const pct=n=>(n>=0?"+":"")+Number(n).toFixed(2)+"%";
+    const cls=n=>n>=0?"pos":"neg";
+    const arrow=n=>n>=0?"▲":"▼";
+    let PORT, PROFIT, HISTORY=[], CLOSED, sel="total_return", chartMode="profit", chart, sc, bc;
+    const PALETTE=["#4c8dff","#26a862","#e3b341","#f0616d","#a371f7","#3fb950","#db61a2","#f0883e","#58a6ff","#bc8cff","#56d364","#8b98a9"];
+
+    const VIEWS=[
+      ["total_return","Total return", p=>p.totals.total_return, "Capital gains + dividends & interest — matches your broker apps"],
+      ["all_time","Capital gains", p=>p.totals.all_time, "Realized + unrealized price gains (excludes dividends)"],
+      ["unrealized","Unrealized", p=>p.totals.unrealized, "On the positions you currently hold"],
+      ["realized","Realized", p=>p.totals.realized, "Locked-in gains from closed trades"],
+      ["dividends","Dividends", p=>p.totals.income, "Dividends + interest received"],
+      ["today","Today", p=>p.totals.daily, "Change in your holdings since yesterday's close"],
+      ["week","Week", null, "Market move of current holdings over ~5 trading days"],
+      ["month","Month", null, "Market move of current holdings over ~1 month"],
+      ["year","Year", null, "Market move of current holdings over ~1 year"],
+    ];
+
+    /* ---- navigation ---- */
+    function showPage(name){
+      document.querySelectorAll(".page").forEach(p=>p.classList.toggle("active", p.id==="page-"+name));
+      document.querySelectorAll(".tabbar button").forEach(b=>b.classList.toggle("active", b.dataset.page===name));
+      if(name==="performance" && HISTORY.length) renderChart();   // size correctly once visible
+      window.scrollTo(0,0);
+    }
+
+    /* ---- overview ---- */
+    function renderChips(){
+      document.getElementById("profit-chips").innerHTML = VIEWS.map(([k,l])=>
+        `<span class="chip ${k===sel?'active':''}" onclick="selectView('${k}')">${l}</span>`).join("");
+    }
+    function selectView(k){ sel=k; renderChips(); renderProfit(); }
+    function renderProfit(){
+      const [k,l,getter,desc]=VIEWS.find(v=>v[0]===sel);
+      const nEl=document.getElementById("p-num"), dEl=document.getElementById("p-desc");
+      let val, extra="";
+      if(getter){
+        val=getter(PORT);
+        if(k==="dividends"){ const t=PORT.totals; extra=` · ${eur(t.dividends)} dividends + ${eur(t.interest)} interest`; }
+        if(k==="today" && val===null){ nEl.textContent="n/a"; nEl.className="n num muted"; dEl.textContent=desc; return; }
+      } else {
+        if(!PROFIT){ nEl.textContent="…"; nEl.className="n num skeleton"; dEl.textContent=desc+" · loading"; return; }
+        val=PROFIT.periods[k];
+        if(val===null){ nEl.textContent="n/a"; nEl.className="n num muted"; dEl.textContent=desc+" · no price history"; return; }
+        extra=` · covers ${PROFIT.coverage_pct}% of holdings`;
+      }
+      nEl.textContent=signed(val); nEl.className="n num "+cls(val);
+      dEl.textContent=desc+extra;
+    }
+    function renderHero(){
+      document.getElementById("v-value").textContent=eur(PORT.totals.value);
+      document.getElementById("v-value").className="value num";
+      const d=PORT.totals.daily, dp=PORT.totals.daily_pct, el=document.getElementById("v-today");
+      if(d===null||d===undefined){ el.innerHTML=""; return; }
+      el.className="today "+cls(d);
+      el.innerHTML=`${arrow(d)} ${signed(d)} <span class="chip">${pct(dp)} today</span>`;
+    }
+    function doughnut(id, items, key, prev){
+      const labels=items.map(i=>i[key]), data=items.map(i=>i.value), tot=data.reduce((a,b)=>a+b,0);
+      if(prev) prev.destroy();
+      return new Chart(document.getElementById(id),{ type:"doughnut",
+        data:{labels,datasets:[{data,borderColor:"#151a21",borderWidth:2,
+          backgroundColor:labels.map((_,i)=>PALETTE[i%PALETTE.length])}]},
+        options:{cutout:"62%",plugins:{legend:{position:"right",labels:{color:"#e8edf2",boxWidth:11,padding:7,font:{size:11}}},
+          tooltip:{callbacks:{label:c=>`${c.label}: ${eur0(c.parsed)} (${(c.parsed/tot*100).toFixed(1)}%)`}}}} });
+    }
+    function renderAllocation(){
+      sc=doughnut("sector-chart", PORT.by_sector, "sector", sc);
+      bc=doughnut("broker-chart", PORT.by_broker, "broker", bc);
+    }
+
+    /* ---- holdings ---- */
+    function renderOpen(){
+      document.getElementById("open-rows").innerHTML = PORT.holdings.map(r=>{
+        const de = r.daily_eur===null ? '<span class="muted">—</span>'
+          : `<span class="${cls(r.daily_eur)}">${signed(r.daily_eur)}</span><span class="sub ${cls(r.daily_pct)}">${pct(r.daily_pct)}</span>`;
+        return `<div class="hrow">
+          <div class="cell c-name"><div class="nm">${r.name}</div>
+            <div class="tags">${r.brokers.map(b=>`<span class="tag">${b}</span>`).join("")}</div></div>
+          <div class="cell c-value"><span class="lbl">Value</span><span class="big num">${eur0(r.value_eur)}</span></div>
+          <div class="cell c-today num"><span class="lbl">Today</span>${de}</div>
+          <div class="cell c-overall num"><span class="lbl">Overall</span>
+            <span class="${cls(r.profit_eur)}">${signed(r.profit_eur)}</span>
+            <span class="sub ${cls(r.profit_pct)}">${pct(r.profit_pct)}</span></div>
+          <div class="cell c-price num"><span class="lbl">Price</span>${r.priced_live?r.price+" "+r.currency:'<span class="muted">—</span>'}</div>
+          <div class="cell c-qty num"><span class="lbl">Qty</span>${(+r.quantity).toLocaleString("en-IE",{maximumFractionDigits:3})}</div>
+        </div>`;
+      }).join("");
+    }
+    function renderClosed(){
+      if(!CLOSED) return;
+      let html=CLOSED.closed.map(r=>`<div class="closed-row"><span><span class="tag">${r.broker}</span> ${r.name}</span>
+        <span class="num ${cls(r.realized_eur)}">${signed(r.realized_eur)}</span></div>`).join("");
+      if(Math.abs(CLOSED.trims_total_eur)>0.005)
+        html+=`<div class="closed-row"><span class="muted">Realized on partial sells of current holdings</span>
+          <span class="num ${cls(CLOSED.trims_total_eur)}">${signed(CLOSED.trims_total_eur)}</span></div>`;
+      document.getElementById("closed-rows").innerHTML=html;
+      const t=document.getElementById("closed-total");
+      t.textContent=signed(CLOSED.total_realized_eur); t.className="num "+cls(CLOSED.total_realized_eur);
+    }
+    function showTab(w){
+      document.getElementById("tab-open").hidden=w!=="open";
+      document.getElementById("tab-closed").hidden=w!=="closed";
+      document.getElementById("t-open").classList.toggle("active",w==="open");
+      document.getElementById("t-closed").classList.toggle("active",w==="closed");
+    }
+
+    /* ---- performance ---- */
+    function setChartMode(m){
+      chartMode=m;
+      document.getElementById("m-profit").classList.toggle("active",m==="profit");
+      document.getElementById("m-value").classList.toggle("active",m==="value");
+      document.getElementById("chart-title").textContent=(m==="profit"?"Profit":"Value")+" since inception";
+      renderChart();
+    }
+    function renderChart(){
+      const h=HISTORY; if(!h.length) return;
+      const profit=chartMode==="profit";
+      const labels=h.map(d=>d.day), vals=h.map(d=>profit?d.total_profit:d.total_value);
+      const up=vals[vals.length-1]>=0, color=profit?(up?"#26a862":"#f0616d"):"#4c8dff";
+      const ctx=document.getElementById("chart");
+      if(chart) chart.destroy();
+      const g=ctx.getContext("2d").createLinearGradient(0,0,0,300);
+      g.addColorStop(0,color+"55"); g.addColorStop(1,color+"05");
+      chart=new Chart(ctx,{ type:"line",
+        data:{labels,datasets:[{data:vals,borderColor:color,backgroundColor:g,fill:true,
+          tension:.25,pointRadius:0,borderWidth:2.5}]},
+        options:{maintainAspectRatio:false,interaction:{intersect:false,mode:"index"},
+          plugins:{legend:{display:false},tooltip:{callbacks:{
+            title:i=>i[0].label, label:c=>(profit?"Profit ":"Value ")+eur0(c.parsed.y)}}},
+          scales:{x:{ticks:{color:"#5b6673",maxTicksLimit:6,font:{size:11}},grid:{display:false}},
+            y:{ticks:{color:"#5b6673",font:{size:11},callback:v=>"€"+(v/1000).toFixed(0)+"k"},grid:{color:"#1c232d"}}}} });
+    }
+    function renderPeriods(){
+      const el=document.getElementById("period-stats");
+      const items=[["Today",PORT.totals.daily,PORT.totals.daily_pct]];
+      const p=PROFIT?PROFIT.periods:{};
+      [["Week","week"],["Month","month"],["Year","year"]].forEach(([lab,k])=>items.push([lab, p[k]===undefined?null:p[k], null]));
+      el.innerHTML=items.map(([k,v,pc])=>`<div class="stat"><div class="k">${k}</div>
+        <div class="v num ${v==null?'muted':cls(v)}">${v==null?'…':signed(v)}</div></div>`).join("");
+    }
+
+    /* ---- live indicator ---- */
+    function setUpdated(){ const el=document.getElementById("live");
+      if(el) el.innerHTML=`<span class="dot"></span>Live · ${new Date().toLocaleTimeString("en-GB")}`; }
+
+    /* ---- data ---- */
+    async function loadAll(force){
+      renderChips();
+      try{
+        const [p,c,h]=await Promise.all([
+          fetch("/api/portfolio").then(r=>r.json()),
+          fetch("/api/closed").then(r=>r.json()),
+          fetch("/api/history").then(r=>r.json()),
+        ]);
+        PORT=p; CLOSED=c; HISTORY=h;
+        renderHero(); renderProfit(); renderOpen(); renderClosed(); renderAllocation();
+        renderChart(); renderPeriods(); setUpdated();
+      }catch(e){ document.getElementById("p-desc").textContent="Couldn't load data — retrying…"; }
+      PROFIT=null;
+      fetch("/api/profit").then(r=>r.json()).then(d=>{ PROFIT=d; renderProfit(); renderPeriods(); }).catch(()=>{});
+    }
+    async function refreshLive(){
+      if(document.hidden||!PORT) return;
+      try{
+        const p=await fetch("/api/portfolio").then(r=>r.json());
+        PORT=p; renderHero(); renderProfit(); renderOpen(); setUpdated();
+      }catch(e){}
+    }
+    loadAll();
+    setInterval(refreshLive,30000);
+    document.addEventListener("visibilitychange",()=>{ if(!document.hidden) refreshLive(); });
+  </script>
+</body>
+</html>

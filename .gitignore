@@ -1,0 +1,25 @@
+# ============================================================================
+#  PRIVATE — never committed. This is what keeps your data out of the public
+#  repo. The app falls back to the *.sample files (which ARE committed) so the
+#  project still runs for anyone who clones it.
+# ============================================================================
+
+# secrets: API keys + dashboard password
+.env
+config.toml
+
+# your real broker data (statements / transcribed trades)
+data/degiro_account.csv
+data/trades_trade_republic.json
+data/income_trade_republic.json
+
+# generated at runtime (rebuilt automatically)
+data/history.db
+data/t212_instruments.json
+data/sectors.json
+
+# python
+__pycache__/
+*.pyc
+.venv/
+venv/
