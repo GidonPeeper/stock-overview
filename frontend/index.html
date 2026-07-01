@@ -202,6 +202,7 @@
           </div>
         </div>
         <div id="chart-wrap"><canvas id="chart"></canvas></div>
+        <div style="margin-top:12px"><span class="chip" id="bench-toggle" onclick="toggleBench()">＋ Compare to S&amp;P 500</span></div>
         <div class="stats" id="period-stats"></div>
       </div>
     </section>
@@ -223,6 +224,12 @@
       </div>
       <div id="d-val" class="d-val num"></div>
       <div id="d-today"></div>
+      <div class="seg" id="d-range" style="margin:12px 0 2px">
+        <button data-r="1d" onclick="setDetailRange('1d')">1D</button>
+        <button data-r="5d" onclick="setDetailRange('5d')">1W</button>
+        <button data-r="1mo" class="active" onclick="setDetailRange('1mo')">1M</button>
+        <button data-r="1y" onclick="setDetailRange('1y')">1Y</button>
+      </div>
       <div id="d-chart-wrap"><canvas id="d-chart"></canvas></div>
       <div class="d-grid" id="d-grid"></div>
       <h2 style="font-size:12px;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;margin:6px 0 2px">Latest news</h2>
@@ -237,7 +244,8 @@
     const pct=n=>(n>=0?"+":"")+Number(n).toFixed(2)+"%";
     const cls=n=>n>=0?"pos":"neg"; const arrow=n=>n>=0?"▲":"▼";
     let PORT,PROFIT,HISTORY=[],CLOSED,SPARKS={},sel="total_return",chartMode="profit",sortBy="value";
-    let chart,sc,bc,dchart;
+    let chart,sc,bc,dchart,detailTicker=null,detailRange="1mo",BENCH=null,benchmarkOn=false;
+    async function fetchJSON(url){ const r=await fetch(url); if(!r.ok) throw new Error(url+" "+r.status); return r.json(); }
     const PALETTE=["#4c8dff","#26a862","#e3b341","#f0616d","#a371f7","#3fb950","#db61a2","#f0883e","#58a6ff","#bc8cff","#56d364","#8b98a9"];
     const VIEWS=[
       ["total_return","Total return", p=>p.totals.total_return, "Capital gains + dividends & interest — matches your broker apps"],
@@ -364,16 +372,28 @@
           : '<div class="muted" style="padding:8px 0">No recent news</div>';
       }).catch(()=>{ document.getElementById("d-news").innerHTML='<div class="muted" style="padding:8px 0">News unavailable</div>'; });
       else document.getElementById("d-news").innerHTML='<div class="muted" style="padding:8px 0">No ticker</div>';
+      // reset range to 1M and draw from the sparkline (instant), then it's ready
+      detailTicker=r.ticker; detailRange="1mo";
+      document.querySelectorAll("#d-range button").forEach(b=>b.classList.toggle("active",b.dataset.r==="1mo"));
       document.getElementById("modal").classList.add("open");
-      // build the chart once the sheet is laid out (avoids a 0-width canvas)
-      requestAnimationFrame(()=>{
-        const vals=SPARKS[r.ticker]; if(!vals||vals.length<2) return;
-        const up=vals[vals.length-1]>=vals[0], col=up?"#26a862":"#f0616d", ctx=document.getElementById("d-chart");
-        const g=ctx.getContext("2d").createLinearGradient(0,0,0,180); g.addColorStop(0,col+"44"); g.addColorStop(1,col+"05");
-        if(dchart) dchart.destroy();
-        dchart=new Chart(ctx,{type:"line",data:{labels:vals.map((_,i)=>i),datasets:[{data:vals,borderColor:col,backgroundColor:g,fill:true,tension:.25,pointRadius:0,borderWidth:2}]},
-          options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{enabled:false}},scales:{x:{display:false},y:{display:false}}}});
-      });
+      requestAnimationFrame(()=>drawDetailChart(SPARKS[r.ticker]||[]));
+    }
+    function drawDetailChart(vals){
+      const ctx=document.getElementById("d-chart");
+      if(dchart){ dchart.destroy(); dchart=null; }
+      if(!vals||vals.length<2){ return; }
+      const up=vals[vals.length-1]>=vals[0], col=up?"#26a862":"#f0616d";
+      const g=ctx.getContext("2d").createLinearGradient(0,0,0,180); g.addColorStop(0,col+"44"); g.addColorStop(1,col+"05");
+      dchart=new Chart(ctx,{type:"line",data:{labels:vals.map((_,i)=>i),datasets:[{data:vals,borderColor:col,backgroundColor:g,fill:true,tension:.2,pointRadius:0,borderWidth:2}]},
+        options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{enabled:false}},scales:{x:{display:false},y:{display:false}}}});
+    }
+    function setDetailRange(rng){
+      detailRange=rng;
+      document.querySelectorAll("#d-range button").forEach(b=>b.classList.toggle("active",b.dataset.r===rng));
+      if(!detailTicker) return;
+      if(rng==="1mo"&&SPARKS[detailTicker]){ drawDetailChart(SPARKS[detailTicker]); return; }
+      fetchJSON("/api/ticker_history/"+encodeURIComponent(detailTicker)+"?range="+rng)
+        .then(drawDetailChart).catch(()=>drawDetailChart([]));
     }
     function closeDetail(){ document.getElementById("modal").classList.remove("open"); }
     document.addEventListener("keydown",e=>{ if(e.key==="Escape") closeDetail(); });
@@ -388,11 +408,30 @@
       const up=vals[vals.length-1]>=0,color=profit?(up?"#26a862":"#f0616d"):"#4c8dff",ctx=document.getElementById("chart");
       if(chart) chart.destroy();
       const g=ctx.getContext("2d").createLinearGradient(0,0,0,300); g.addColorStop(0,color+"55"); g.addColorStop(1,color+"05");
-      chart=new Chart(ctx,{type:"line",data:{labels,datasets:[{data:vals,borderColor:color,backgroundColor:g,fill:true,tension:.25,pointRadius:0,borderWidth:2.5}]},
-        options:{maintainAspectRatio:false,interaction:{intersect:false,mode:"index"},plugins:{legend:{display:false},
-          tooltip:{callbacks:{title:i=>i[0].label,label:c=>(profit?"Profit ":"Value ")+eur0(c.parsed.y)}}},
+      const datasets=[{label:"Portfolio",data:vals,borderColor:color,backgroundColor:g,fill:true,tension:.25,pointRadius:0,borderWidth:2.5}];
+      const showBench = !profit && benchmarkOn && BENCH;
+      if(showBench){
+        datasets.push({label:"S&P 500 (same money invested)",data:labels.map(d=>BENCH[d]??null),
+          borderColor:"#e3b341",borderDash:[5,4],borderWidth:1.8,pointRadius:0,fill:false,tension:.2,spanGaps:true});
+      }
+      chart=new Chart(ctx,{type:"line",data:{labels,datasets},
+        options:{maintainAspectRatio:false,interaction:{intersect:false,mode:"index"},
+          plugins:{legend:{display:showBench,labels:{color:"#8b98a9",boxWidth:12,font:{size:11}}},
+          tooltip:{callbacks:{title:i=>i[0].label,label:c=>c.dataset.label+" "+eur0(c.parsed.y)}}},
           scales:{x:{ticks:{color:"#5b6673",maxTicksLimit:6,font:{size:11}},grid:{display:false}},
             y:{ticks:{color:"#5b6673",font:{size:11},callback:v=>"€"+(v/1000).toFixed(0)+"k"},grid:{color:"#1c232d"}}}}});
+    }
+    function toggleBench(){
+      benchmarkOn=!benchmarkOn;
+      document.getElementById("bench-toggle").classList.toggle("active",benchmarkOn);
+      if(benchmarkOn){
+        chartMode="value";
+        document.getElementById("m-profit").classList.remove("active");
+        document.getElementById("m-value").classList.add("active");
+        document.getElementById("chart-title").textContent="Value since inception";
+        if(!BENCH){ fetchJSON("/api/benchmark").then(b=>{ BENCH=b; renderChart(); }).catch(()=>renderChart()); return; }
+      }
+      renderChart();
     }
     function renderPeriods(){
       const el=document.getElementById("period-stats"),p=PROFIT?PROFIT.periods:{};
@@ -401,21 +440,25 @@
     }
     function setUpdated(){ const el=document.getElementById("live"); if(el) el.innerHTML=`<span class="dot"></span>Live · ${new Date().toLocaleTimeString("en-GB")}`; }
 
-    async function loadAll(){
-      renderChips();
+    async function loadAll(retry){
+      retry=retry||0; renderChips();
       try{
-        const [p,c,h]=await Promise.all([fetch("/api/portfolio").then(r=>r.json()),fetch("/api/closed").then(r=>r.json()),fetch("/api/history").then(r=>r.json())]);
+        const [p,c,h]=await Promise.all([fetchJSON("/api/portfolio"),fetchJSON("/api/closed"),fetchJSON("/api/history")]);
         PORT=p; CLOSED=c; HISTORY=h;
         renderHero(); renderProfit(); renderMovers(); renderOpen(); renderClosed(); renderAllocation(); renderChart(); renderPeriods(); setUpdated();
-      }catch(e){ document.getElementById("p-desc").textContent="Couldn't load — retrying…"; }
+      }catch(e){
+        document.getElementById("p-desc").textContent="Loading… the server may be waking up (free hosting).";
+        if(retry<6) setTimeout(()=>loadAll(retry+1),5000);
+        return;
+      }
       PROFIT=null;
-      fetch("/api/profit").then(r=>r.json()).then(d=>{ PROFIT=d; renderProfit(); renderPeriods(); }).catch(()=>{});
-      fetch("/api/indices").then(r=>r.json()).then(renderTicker).catch(()=>{});
-      fetch("/api/sparklines").then(r=>r.json()).then(s=>{ SPARKS=s; renderOpen(); renderMovers(); }).catch(()=>{});
+      fetchJSON("/api/profit").then(d=>{ PROFIT=d; renderProfit(); renderPeriods(); }).catch(()=>{});
+      fetchJSON("/api/indices").then(renderTicker).catch(()=>{});
+      fetchJSON("/api/sparklines").then(s=>{ SPARKS=s; renderOpen(); renderMovers(); }).catch(()=>{});
     }
     async function refreshLive(){
       if(document.hidden||!PORT) return;
-      try{ const p=await fetch("/api/portfolio").then(r=>r.json()); PORT=p; renderHero(); renderProfit(); renderMovers(); renderOpen(); setUpdated(); }catch(e){}
+      try{ const p=await fetchJSON("/api/portfolio"); PORT=p; renderHero(); renderProfit(); renderMovers(); renderOpen(); setUpdated(); }catch(e){}
     }
     loadAll();
     setInterval(refreshLive,30000);

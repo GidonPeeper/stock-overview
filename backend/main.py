@@ -331,6 +331,51 @@ def news(ticker: str) -> list[dict]:
     return market.news(ticker)
 
 
+@app.get("/api/ticker_history/{ticker}")
+def ticker_history(ticker: str, range: str = "1mo") -> list[float]:
+    """Price history for the detail-sheet chart at a chosen range."""
+    return market.ticker_history(ticker, range)
+
+
+@app.get("/api/benchmark")
+def benchmark() -> dict[str, float]:
+    """Money-weighted S&P 500 comparison: what the portfolio would be worth today
+    if every euro put in (or taken out) had gone into the S&P 500 instead, valued
+    at each snapshot month. Directly comparable to the portfolio value curve."""
+    hist = store.get_history()
+    if not hist:
+        return {}
+    sp = market.benchmark(hist[0]["day"][:7] + "-01")  # {YYYY-MM: close}
+    if not sp:
+        return {}
+    months = sorted(sp)
+
+    def sp_at(ym: str):
+        if ym in sp:
+            return sp[ym]
+        earlier = [m for m in months if m <= ym]
+        return sp[earlier[-1]] if earlier else None
+
+    trades = (trading212.get_trades() + degiro.get_trades() + traderepublic.get_trades())
+    events = sorted((t.when[:7], (1 if t.side == "BUY" else -1) * t.amount) for t in trades)
+
+    out: dict[str, float] = {}
+    units = 0.0
+    i = 0
+    for snap in hist:
+        ym = snap["day"][:7]
+        while i < len(events) and events[i][0] <= ym:
+            m, amt = events[i]
+            px = sp_at(m)
+            if px:
+                units += amt / px
+            i += 1
+        px = sp_at(ym)
+        if px is not None:
+            out[snap["day"]] = round(units * px, 2)
+    return out
+
+
 # Serve the dashboard explicitly at "/" (same reliable FileResponse the login
 # page uses) rather than relying on the static mount's directory-index behaviour,
 # which can 404 the root on some hosts.

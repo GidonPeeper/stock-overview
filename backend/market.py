@@ -86,6 +86,62 @@ def sparklines(tickers: list[str]) -> dict[str, list[float]]:
     return out
 
 
+_hist_cache: dict[str, tuple[list[float], float]] = {}
+# range -> (yfinance period, interval, cache TTL seconds)
+_RANGES = {
+    "1d": ("1d", "5m", 300), "5d": ("5d", "30m", 900),
+    "1mo": ("1mo", "1d", 1800), "1y": ("1y", "1d", 3600),
+}
+
+
+def ticker_history(ticker: str, rng: str) -> list[float]:
+    """Closing prices for one ticker over a range, for the detail-sheet chart."""
+    period, interval, ttl = _RANGES.get(rng, _RANGES["1mo"])
+    key = f"{ticker}:{rng}"
+    now = time.time()
+    c = _hist_cache.get(key)
+    if c and now - c[1] < ttl:
+        return c[0]
+    vals: list[float] = []
+    try:
+        import yfinance as yf
+
+        series = yf.download(ticker, period=period, interval=interval,
+                             progress=False, auto_adjust=True)["Close"]
+        vals = [round(float(v), 4) for v in series.dropna().values.flatten()]
+    except Exception:
+        pass
+    if vals:
+        _hist_cache[key] = (vals, now)
+    return vals
+
+
+_bench_cache: tuple[dict[str, float], float] | None = None
+
+
+def benchmark(start_iso: str, symbol: str = "^GSPC") -> dict[str, float]:
+    """Monthly closes for a benchmark index since `start_iso`, keyed YYYY-MM —
+    used to overlay 'what if this had tracked the S&P 500' on the value chart."""
+    global _bench_cache
+    now = time.time()
+    if _bench_cache and now - _bench_cache[1] < 3600:
+        return _bench_cache[0]
+    out: dict[str, float] = {}
+    try:
+        import yfinance as yf
+
+        close = yf.download(symbol, start=start_iso, interval="1mo",
+                            progress=False, auto_adjust=True)["Close"]
+        series = (close.iloc[:, 0] if hasattr(close, "columns") else close).dropna()
+        for ts, val in series.items():
+            out[ts.strftime("%Y-%m")] = round(float(val), 2)
+    except Exception:
+        pass
+    if out:
+        _bench_cache = (out, now)
+    return out
+
+
 def news(ticker: str, limit: int = 6) -> list[dict]:
     now = time.time()
     c = _news_cache.get(ticker)
