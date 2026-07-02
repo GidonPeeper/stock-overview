@@ -13,6 +13,7 @@ import json
 from pathlib import Path
 
 from .connectors import trading212
+from .datafiles import resolve as _resolve_data
 from .fx import FX_TO_EUR, to_eur
 
 DATA_DIR = Path(__file__).resolve().parents[1] / "data"
@@ -29,9 +30,7 @@ def _trading212() -> dict:
 
 
 def _degiro() -> dict:
-    csv_file = DATA_DIR / "degiro_account.csv"
-    if not csv_file.exists():
-        csv_file = DATA_DIR / "degiro_account.sample.csv"
+    csv_file = _resolve_data("degiro_account.csv")[0]
     if not csv_file.exists():
         return {"dividends": 0.0, "interest": 0.0}
     dividends = interest = 0.0
@@ -51,9 +50,7 @@ def _degiro() -> dict:
 
 
 def _trade_republic() -> dict:
-    f = DATA_DIR / "income_trade_republic.json"
-    if not f.exists():
-        f = DATA_DIR / "income_trade_republic.sample.json"
+    f = _resolve_data("income_trade_republic.json")[0]
     if not f.exists():
         return {"dividends": 0.0, "interest": 0.0}
     rows = json.loads(f.read_text()).get("income", [])

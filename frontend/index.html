@@ -140,6 +140,7 @@
       <div><h1>Stock Overview</h1><div id="live" class="live"></div></div>
       <button class="iconbtn" onclick="loadAll(true)" title="Refresh">↻</button>
     </header>
+    <div id="datastatus" hidden style="background:#3a2d12;color:#e3b341;border-radius:12px;padding:10px 14px;font-size:13px;margin-bottom:14px"></div>
     <div class="ticker" id="ticker"></div>
 
     <!-- OVERVIEW -->
@@ -205,6 +206,36 @@
         <div style="margin-top:12px"><span class="chip" id="bench-toggle" onclick="toggleBench()">＋ Compare to S&amp;P 500</span></div>
         <div class="stats" id="period-stats"></div>
       </div>
+      <div class="card">
+        <h2>Risk &amp; analytics</h2>
+        <div class="stats" id="ana-stats"><div class="skeleton">Loading…</div></div>
+        <div id="ana-ccy" style="margin-top:14px"></div>
+      </div>
+    </section>
+
+    <!-- INSIGHTS -->
+    <section id="page-insights" class="page">
+      <div class="card">
+        <h2>Daily brief</h2>
+        <div id="brief-date" class="muted" style="font-size:13px;margin-bottom:10px"></div>
+        <div id="brief-body" class="skeleton">Loading your brief…</div>
+      </div>
+      <div class="card">
+        <h2>Upcoming earnings (your holdings)</h2>
+        <div id="earnings" class="skeleton">Loading…</div>
+      </div>
+      <div class="card">
+        <h2>Rising stars — small caps to research</h2>
+        <div class="muted" style="font-size:12px;margin-bottom:10px">
+          Screener output, not advice. <span class="chip" style="padding:2px 9px" onclick="document.getElementById('rs-method').hidden=!document.getElementById('rs-method').hidden">How picks are scored</span>
+        </div>
+        <div id="rs-method" hidden style="font-size:12.5px;color:var(--muted);background:var(--panel2);border-radius:10px;padding:10px 12px;margin-bottom:10px"></div>
+        <div id="rising-stars" class="skeleton">Loading…</div>
+      </div>
+      <div class="card">
+        <h2>Market headlines — CNBC · MarketWatch · Yahoo Finance</h2>
+        <div id="headlines" class="news skeleton">Loading…</div>
+      </div>
     </section>
   </div>
 
@@ -212,6 +243,7 @@
     <button data-page="overview" class="active" onclick="showPage('overview')"><svg viewBox="0 0 24 24"><path d="M3 3v18h18"/><path d="M7 14l3-4 3 3 5-7"/></svg>Overview</button>
     <button data-page="holdings" onclick="showPage('holdings')"><svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="4" rx="1"/><rect x="3" y="10" width="18" height="4" rx="1"/><rect x="3" y="16" width="18" height="4" rx="1"/></svg>Holdings</button>
     <button data-page="performance" onclick="showPage('performance')"><svg viewBox="0 0 24 24"><path d="M3 17l6-6 4 4 8-8"/><path d="M17 7h4v4"/></svg>Performance</button>
+    <button data-page="insights" onclick="showPage('insights')"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 8v4l2.5 2.5"/></svg>Insights</button>
   </nav>
 
   <!-- detail sheet -->
@@ -267,11 +299,82 @@
       return `<svg class="spark ${cls2||''}" viewBox="0 0 ${w} ${h}" width="${w}" height="${h}" preserveAspectRatio="none"><polyline points="${pts}" fill="none" stroke="${col}" stroke-width="1.7"/></svg>`;
     }
 
+    let insightsLoaded=false, anaLoaded=false;
     function showPage(name){
       document.querySelectorAll(".page").forEach(p=>p.classList.toggle("active",p.id==="page-"+name));
       document.querySelectorAll(".tabbar button").forEach(b=>b.classList.toggle("active",b.dataset.page===name));
-      if(name==="performance"&&HISTORY.length) renderChart();
+      if(name==="performance"){ if(HISTORY.length) renderChart(); loadAnalytics(); }
+      if(name==="insights") loadInsights();
       window.scrollTo(0,0);
+    }
+
+    /* ---- analytics ---- */
+    function loadAnalytics(){
+      if(anaLoaded) return; anaLoaded=true;
+      fetchJSON("/api/analytics").then(a=>{
+        const items=[
+          ["Beta vs S&P", a.beta, v=>v, v=>""],
+          ["Volatility (ann.)", a.volatility_pct, v=>v+"%", ()=>"" ],
+          ["Sharpe ratio", a.sharpe, v=>v, ()=>"" ],
+          ["Max drawdown", a.max_drawdown_pct, v=>v+"%", ()=>"neg"],
+          ["Top-3 weight", a.top3_pct, v=>v+"%", ()=>"" ],
+          ["Effective positions", a.effective_positions, v=>v, ()=>"" ],
+        ].filter(([,v])=>v!==undefined&&v!==null);
+        document.getElementById("ana-stats").innerHTML=items.map(([k,v,f,c])=>
+          `<div class="stat"><div class="k">${k}</div><div class="v num ${c(v)}">${f(v)}</div></div>`).join("");
+        const ccy=a.currency_exposure||[];
+        document.getElementById("ana-ccy").innerHTML = ccy.length ?
+          `<div class="muted" style="font-size:12px;margin-bottom:6px">Currency exposure</div>
+           <div style="display:flex;height:10px;border-radius:6px;overflow:hidden">${
+             ccy.map((c,i)=>`<div title="${c.currency} ${c.pct}%" style="width:${c.pct}%;background:${PALETTE[i%PALETTE.length]}"></div>`).join("")
+           }</div>
+           <div style="display:flex;gap:14px;margin-top:6px;font-size:12px;color:var(--muted)">${
+             ccy.map((c,i)=>`<span><span style="color:${PALETTE[i%PALETTE.length]}">●</span> ${c.currency} ${c.pct}%</span>`).join("")
+           }</div>` : "";
+      }).catch(()=>{ document.getElementById("ana-stats").innerHTML='<div class="muted">Analytics unavailable</div>'; });
+    }
+
+    /* ---- insights ---- */
+    function loadInsights(){
+      if(insightsLoaded) return; insightsLoaded=true;
+      fetchJSON("/api/brief").then(b=>{
+        document.getElementById("brief-date").textContent=b.date;
+        document.getElementById("brief-body").className="";
+        document.getElementById("brief-body").innerHTML=
+          b.summary.map(p=>`<p style="margin:0 0 10px">${p}</p>`).join("");
+      }).catch(()=>{ document.getElementById("brief-body").textContent="Brief unavailable."; });
+      fetchJSON("/api/earnings").then(rows=>{
+        document.getElementById("earnings").className="";
+        document.getElementById("earnings").innerHTML = rows.length ? rows.map(r=>
+          `<div class="closed-row"><span><span class="tag">${r.ticker}</span></span>
+           <span class="num muted">${r.date} · in ${r.days_away}d</span></div>`).join("")
+          : '<span class="muted">No upcoming earnings found.</span>';
+      }).catch(()=>{ document.getElementById("earnings").textContent="Unavailable."; });
+      fetchJSON("/api/rising_stars").then(rs=>{
+        document.getElementById("rs-method").textContent=rs.method;
+        const el=document.getElementById("rising-stars"); el.className="";
+        el.innerHTML = rs.picks.length ? rs.picks.map(p=>
+          `<div class="closed-row"><span><b>${p.symbol}</b> <span class="muted">${p.name}</span><br>
+             <span style="font-size:11px;color:var(--faint)">${p.from_screener} · ${p.market_cap?("$"+(p.market_cap/1e9).toFixed(1)+"B"):"—"}${p.pe?(" · P/E "+p.pe):""}</span></span>
+           <span style="text-align:right"><span class="num ${cls(p.change_pct)}">${pct(p.change_pct)}</span><br>
+             <span style="font-size:11px;color:var(--faint)">score ${p.score}</span></span></div>`).join("")
+          : '<span class="muted">Screener unavailable right now.</span>';
+      }).catch(()=>{ document.getElementById("rising-stars").textContent="Unavailable."; });
+      fetchJSON("/api/headlines").then(items=>{
+        const el=document.getElementById("headlines"); el.className="news";
+        el.innerHTML=items.map(n=>`<a href="${n.url}" target="_blank" rel="noopener">${n.title}<div class="src">${n.source}</div></a>`).join("");
+      }).catch(()=>{ document.getElementById("headlines").textContent="Unavailable."; });
+    }
+
+    /* ---- data status banner ---- */
+    function loadDataStatus(){
+      fetchJSON("/api/datastatus").then(s=>{
+        const names={degiro:"DeGiro",trade_republic:"Trade Republic",tr_income:"TR income",trading212:"Trading 212"};
+        const sample=Object.entries(s).filter(([,v])=>!v.real).map(([k])=>names[k]);
+        const el=document.getElementById("datastatus");
+        if(sample.length){ el.hidden=false; el.textContent="⚠ Running on sample data for: "+sample.join(", ")+". Add your keys / statement files to see real figures (see README)."; }
+        else el.hidden=true;
+      }).catch(()=>{});
     }
     function renderChips(){ document.getElementById("profit-chips").innerHTML=VIEWS.map(([k,l])=>`<span class="chip ${k===sel?'active':''}" onclick="selectView('${k}')">${l}</span>`).join(""); }
     function selectView(k){ sel=k; renderChips(); renderProfit(); }
@@ -455,6 +558,7 @@
       fetchJSON("/api/profit").then(d=>{ PROFIT=d; renderProfit(); renderPeriods(); }).catch(()=>{});
       fetchJSON("/api/indices").then(renderTicker).catch(()=>{});
       fetchJSON("/api/sparklines").then(s=>{ SPARKS=s; renderOpen(); renderMovers(); }).catch(()=>{});
+      loadDataStatus();
     }
     async function refreshLive(){
       if(document.hidden||!PORT) return;

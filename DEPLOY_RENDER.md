@@ -24,14 +24,16 @@ gh repo create stock-overview --public --source=. --push
 
 ## 3. Add your private data as Secret Files
 Still on the service's **Environment** tab → **Secret Files** → add three files
-(paste the contents of your local files). The paths must be exactly:
+(paste the contents of your local files), named exactly:
 
-- `data/degiro_account.csv`
-- `data/trades_trade_republic.json`
-- `data/income_trade_republic.json`
+- `degiro_account.csv`
+- `trades_trade_republic.json`
+- `income_trade_republic.json`
 
-Without these, the app just runs on the bundled sample data (demo). With them,
-it shows your real portfolio — and they live only in Render, never in git.
+Render mounts Secret Files at the service root and `/etc/secrets/` — the app
+checks both automatically (plus `data/`), so a plain filename is all you need.
+Without these it runs on bundled sample data; the in-app banner shows which
+sources are live vs sample, so you can see at a glance what's missing.
 
 ## 4. Deploy, then install on your phone
 1. **Apply** → wait a few minutes for the build.

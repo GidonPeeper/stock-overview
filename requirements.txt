@@ -5,3 +5,5 @@ yfinance>=0.2.40
 python-dotenv>=1.0
 itsdangerous>=2.0
 python-multipart>=0.0.9
+lxml>=5.0
+

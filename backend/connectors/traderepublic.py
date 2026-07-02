@@ -14,12 +14,13 @@ from pathlib import Path
 from .base import Holding
 from ..positions import Trade, compute_positions
 
+from ..datafiles import resolve as _resolve_data
+
 DATA_DIR = Path(__file__).resolve().parents[2] / "data"
 
 
 def _data_file() -> Path:
-    real = DATA_DIR / "trades_trade_republic.json"
-    return real if real.exists() else DATA_DIR / "trades_trade_republic.sample.json"
+    return _resolve_data("trades_trade_republic.json")[0]
 
 
 def get_trades() -> list[Trade]:

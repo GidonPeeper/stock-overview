@@ -1,91 +1,96 @@
 # 📈 Stock Overview
 
-A self-hosted dashboard that **combines your stock portfolio across multiple
-brokers** — Trading 212, DeGiro and Trade Republic — into one live overview, with
-profit tracking, allocation breakdowns and a performance chart since inception.
+![Python](https://img.shields.io/badge/Python-3.12-3776AB?logo=python&logoColor=white)
+![FastAPI](https://img.shields.io/badge/FastAPI-0.110+-009688?logo=fastapi&logoColor=white)
+![License](https://img.shields.io/badge/License-MIT-green)
+![PWA](https://img.shields.io/badge/PWA-installable-5A0FC8)
 
-Runs locally or as an installable phone web-app. **Read-only by design: it can
-never place a trade or move money.**
+A self-hosted, mobile-first dashboard that **unifies your stock portfolio across
+multiple brokers** — Trading 212, DeGiro and Trade Republic — into one live app:
+merged positions, exact profit accounting, quant analytics, a daily market
+brief, and a transparent small-cap screener.
 
-> Clone it and it runs immediately on bundled **sample data** (demo mode). Add
-> your own keys and statements to see your real portfolio. Your private data
-> never enters the repository — see [Privacy](#-privacy).
+**Read-only by design: it can never place a trade or move money.**
+
+## ⚡ Try it in 60 seconds (demo mode)
+
+```bash
+git clone https://github.com/GidonPeeper/stock-overview.git && cd stock-overview
+python3 -m venv .venv && .venv/bin/pip install -r requirements.txt
+.venv/bin/uvicorn backend.main:app
+# → open http://127.0.0.1:8000  — bundled sample data, no keys needed
+```
 
 ## ✨ Features
 
-- **One combined view** — the same company held at several brokers is merged into
-  a single position (matched by ISIN).
-- **Trading 212** live via the official **read-only** API; **DeGiro** and
-  **Trade Republic** reconstructed from their exported statements.
-- **Profit, done properly** — realized + unrealized capital gains, dividends &
-  interest, and a "total return" that reconciles with each broker's own figure.
-  Exact EUR from the statements (real per-trade FX + fees), handling corporate
-  actions (splits, delistings, ISIN changes).
-- **Per-holding today / overall P/L**, sector & broker allocation doughnuts.
-- **Performance chart since inception**, reconstructed from trade history with
-  historical prices — toggle between profit and portfolio value.
-- **Installable PWA** with a login gate (Face ID via the phone Keychain).
-- **Auto-refreshes** while open (pauses in the background).
+| | |
+|---|---|
+| 🔀 **Merged holdings** | The same company held at several brokers becomes one position (matched by ISIN) |
+| 💶 **Exact P/L accounting** | Real per-trade FX + fees from broker statements; handles splits, delistings, ISIN changes; reconciles with each broker's own figures |
+| 📊 **Live market layer** | Index ticker strip, per-holding sparklines, today's movers, tap-through detail sheet with 1D/1W/1M/1Y chart + news |
+| 🧠 **Daily Brief** | A generated newsletter: your portfolio's day, risk check, and headlines interleaved from CNBC, MarketWatch & Yahoo Finance |
+| 🔬 **Quant analytics** | Beta vs S&P 500, annualized volatility, Sharpe, max drawdown, concentration, currency exposure — flow-adjusted so deposits don't fake returns |
+| 🌱 **Rising Stars screener** | Small-caps from Yahoo screeners, re-scored 0–100 with a fully disclosed methodology (momentum / valuation / size) — research leads, not advice |
+| 📅 **Earnings calendar** | Upcoming earnings dates for everything you hold |
+| 📉 **Performance since inception** | Portfolio value & profit reconstructed from full trade history, with a money-weighted S&P 500 benchmark overlay |
+| 📱 **Installable PWA** | Home-screen app with login (Face ID via Keychain), auto-refresh, offline-tolerant loading |
 
-## 🚀 Quick start
+## 🏗 Architecture
 
-```bash
-python3 -m venv .venv
-.venv/bin/pip install -r requirements.txt
-.venv/bin/uvicorn backend.main:app --reload
-# open http://127.0.0.1:8000  (demo data, no setup needed)
+```mermaid
+flowchart LR
+    subgraph Brokers["Data sources"]
+        T212["Trading 212<br/>official read-only API"]
+        DG["DeGiro<br/>statement CSV"]
+        TR["Trade Republic<br/>statement JSON"]
+        YF["yfinance<br/>quotes · history · news · screeners"]
+        RSS["RSS<br/>CNBC · MarketWatch · Yahoo"]
+    end
+    subgraph Backend["FastAPI backend"]
+        CON["connectors<br/>(unified Holding/Trade model)"]
+        POS["positions.py<br/>avg-cost engine, corporate actions"]
+        ANA["analytics.py<br/>beta · Sharpe · drawdown"]
+        INS["insights.py<br/>brief · screener · earnings"]
+        DB[("SQLite<br/>daily snapshots")]
+    end
+    UI["Single-page PWA<br/>4 tabs · Chart.js · no build step"]
+    T212 --> CON --> POS --> DB
+    DG --> CON
+    TR --> CON
+    YF --> ANA & INS
+    RSS --> INS
+    POS & ANA & INS & DB --> UI
 ```
 
 ## 🔑 Using your own data
 
-Everything below is git-ignored, so it stays private.
+Everything private is git-ignored and resolved from `data/`, the project root,
+or `/etc/secrets` (Render Secret Files) — the in-app banner tells you exactly
+which sources are live vs sample.
 
-1. **Trading 212** — generate a **read-only** API key/secret in the app
-   (Settings → API; no ordering scope). Copy `.env.sample` to `.env` and fill in
-   `T212_API_KEY` / `T212_API_SECRET`.
-2. **DeGiro** — export your account statement (all dates) as CSV to
-   `data/degiro_account.csv`. Add any ISIN→ticker entries you hold to
-   `backend/connectors/degiro.py`.
-3. **Trade Republic** — no API; transcribe trades/dividends from the statement
-   PDF into `data/trades_trade_republic.json` and `data/income_trade_republic.json`
-   (see the `.sample` files for the format).
+1. **Trading 212** — create a **read-only** API key (Settings → API, no ordering
+   scope), put it in `.env` (`cp .env.sample .env`).
+2. **DeGiro** — export your full account statement CSV to `data/degiro_account.csv`.
+3. **Trade Republic** — transcribe trades/dividends from the statement PDF into
+   `data/trades_trade_republic.json` / `income_trade_republic.json` (formats in
+   the `.sample` files).
+4. Optional: `NEWSAPI_KEY` in `.env` blends NewsAPI into the Daily Brief.
 
-To require a login (recommended before exposing it), also set `DASHBOARD_USER`,
-`DASHBOARD_PASSWORD` and `DASHBOARD_SECRET` in `.env`.
+## ☁️ Deploy
 
-## ☁️ Deploy (phone access, always-on)
+Free 24/7 hosting on Render with the repo public and your data private
+(env vars + Secret Files): see [`DEPLOY_RENDER.md`](DEPLOY_RENDER.md).
 
-Deployable to any host that runs a Python web service. See
-[`DEPLOY_RENDER.md`](DEPLOY_RENDER.md) for a free Render setup — the code comes
-from the (public) repo, while your keys go in as **environment variables** and
-your statement files as **Render Secret Files**, so nothing private is ever in
-git.
+## 🔒 Privacy & safety
 
-## 🔒 Privacy
+- The repo contains **code + sample data only** — statements and keys never
+  enter git (verified: no secrets anywhere in history).
+- The Trading 212 key is **read-only**: worst case is viewing, never trading.
+- The dashboard sits behind a session login; iOS unlocks it with Face ID.
 
-- **Secrets** (`.env`) and **statement files** (`data/*.csv`, `data/*.json`
-  except `*.sample`) are git-ignored — the repo only ever contains code + demo
-  data.
-- The **Trading 212 key is read-only**: a leak could at most reveal holdings, and
-  can never trade or withdraw.
+## 🛠 Stack
 
-## 🛠 Tech
-
-FastAPI · vanilla JS + Chart.js · SQLite · yfinance for market data. No build
-step, single-page frontend.
-
-## 📁 Layout
-
-```
-backend/
-  connectors/   trading212 (live) · degiro (CSV) · traderepublic (JSON)
-  positions.py  average-cost math (open, closed, realized) incl. corporate actions
-  prices.py     live quotes (price + previous close) via yfinance
-  realized.py · income.py · periods.py · sectors.py · backfill.py · fx.py
-  main.py       API + auth + serves the dashboard
-frontend/       single-page PWA (index.html) + login + icons
-data/           *.sample files (demo); your real files go here, git-ignored
-```
+FastAPI · vanilla JS + Chart.js (no build step) · SQLite · yfinance · RSS/stdlib.
 
 ## License
 

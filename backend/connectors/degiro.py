@@ -22,13 +22,14 @@ from .base import Holding
 from ..fx import to_eur
 from ..positions import Trade, compute_positions
 
+from ..datafiles import resolve as _resolve_data
+
 DATA_DIR = Path(__file__).resolve().parents[2] / "data"
 
 
 def _csv_file() -> Path:
-    """Real statement if present, otherwise the bundled sample (demo)."""
-    real = DATA_DIR / "degiro_account.csv"
-    return real if real.exists() else DATA_DIR / "degiro_account.sample.csv"
+    """Real statement wherever it's mounted (data/, root, /etc/secrets), else sample."""
+    return _resolve_data("degiro_account.csv")[0]
 
 # ISIN -> yfinance ticker for currently-held names. "" => no live price.
 # US listings price in USD; ".DE" in EUR. Extend as holdings change.

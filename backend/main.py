@@ -35,7 +35,7 @@ from collections import defaultdict
 from .connectors import degiro, traderepublic, trading212
 from .fx import BASE_CURRENCY, to_eur
 from .prices import fetch_quotes
-from . import income, market, periods, realized, sectors, store
+from . import analytics, datafiles, income, insights, market, periods, realized, sectors, store
 
 DEMO_MODE = not (os.getenv("T212_API_KEY") and os.getenv("T212_API_SECRET"))
 FRONTEND_DIR = Path(__file__).resolve().parents[1] / "frontend"
@@ -335,6 +335,49 @@ def news(ticker: str) -> list[dict]:
 def ticker_history(ticker: str, range: str = "1mo") -> list[float]:
     """Price history for the detail-sheet chart at a chosen range."""
     return market.ticker_history(ticker, range)
+
+
+@app.get("/api/datastatus")
+def datastatus() -> dict:
+    """Which data sources are live vs sample — shown as a banner in the UI."""
+    return datafiles.status()
+
+
+@app.get("/api/analytics")
+def analytics_endpoint() -> dict:
+    """Quant metrics: beta, volatility, Sharpe, max drawdown, concentration,
+    currency exposure. Computed from snapshot history + current holdings."""
+    rows, *_ = _open_holdings_rows()
+    holdings, _ = _merge_holdings(rows)
+    return analytics.summary(holdings)
+
+
+@app.get("/api/brief")
+def brief() -> dict:
+    """The Daily Brief: generated portfolio summary + renowned-source headlines."""
+    port = portfolio()
+    ana = analytics.summary(port["holdings"])
+    return insights.daily_brief(port, ana)
+
+
+@app.get("/api/headlines")
+def headlines_endpoint() -> list[dict]:
+    """Interleaved market headlines from CNBC / MarketWatch / Yahoo Finance
+    (+ NewsAPI when a NEWSAPI_KEY env var is provided)."""
+    return insights.headlines()
+
+
+@app.get("/api/earnings")
+def earnings() -> list[dict]:
+    """Upcoming earnings dates for your current holdings."""
+    rows, *_ = _open_holdings_rows()
+    return insights.earnings_calendar([r["ticker"] for r in rows])
+
+
+@app.get("/api/rising_stars")
+def rising_stars() -> dict:
+    """Transparent small-cap screener — method string included in the response."""
+    return insights.rising_stars()
 
 
 @app.get("/api/benchmark")
