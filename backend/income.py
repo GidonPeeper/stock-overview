@@ -59,6 +59,43 @@ def _trade_republic() -> dict:
     return {"dividends": round(dividends, 2), "interest": round(interest, 2)}
 
 
+def by_year() -> dict[str, float]:
+    """Dividends + interest received per calendar year (EUR), all brokers."""
+    years: dict[str, float] = {}
+
+    def add(year: str, amount: float):
+        if year and len(year) == 4:
+            years[year] = years.get(year, 0.0) + amount
+
+    # DeGiro: statement rows dated dd-mm-yyyy
+    csv_file = _resolve_data("degiro_account.csv")[0]
+    if csv_file.exists():
+        with csv_file.open(encoding="utf-8") as fh:
+            reader = csv.reader(fh)
+            next(reader, None)
+            for row in reader:
+                if len(row) < 9:
+                    continue
+                desc = row[5].lower()
+                if desc.startswith("dividend") or any(
+                        w in desc for w in ("rente", "interest", "securities lending")):
+                    eur = to_eur(_num(row[8]), row[7] if row[7] in FX_TO_EUR else "EUR")
+                    add(row[0][6:10], eur)
+
+    # Trade Republic: transcribed income file
+    f = _resolve_data("income_trade_republic.json")[0]
+    if f.exists():
+        for r in json.loads(f.read_text()).get("income", []):
+            add(str(r.get("date", ""))[:4], float(r.get("amount_eur", 0)))
+
+    # Trading 212: dividends API (paidOn timestamps)
+    for x in trading212.get_dividends():
+        add(str(x.get("paidOn", ""))[:4],
+            float(x.get("amountInEuro") or x.get("amount") or 0))
+
+    return years
+
+
 def summary() -> dict:
     by_broker = {
         "Trading212": _trading212(),

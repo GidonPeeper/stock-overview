@@ -35,7 +35,8 @@ from collections import defaultdict
 from .connectors import degiro, traderepublic, trading212
 from .fx import BASE_CURRENCY, to_eur
 from .prices import fetch_quotes
-from . import analytics, datafiles, income, insights, market, periods, realized, sectors, store
+from . import (analytics, datafiles, income, insights, market, periods,
+               realized, reports, sectors, store)
 
 DEMO_MODE = not (os.getenv("T212_API_KEY") and os.getenv("T212_API_SECRET"))
 FRONTEND_DIR = Path(__file__).resolve().parents[1] / "frontend"
@@ -378,6 +379,48 @@ def earnings() -> list[dict]:
 def rising_stars() -> dict:
     """Transparent small-cap screener — method string included in the response."""
     return insights.rising_stars()
+
+
+def _merged_holdings() -> list[dict]:
+    rows, *_ = _open_holdings_rows()
+    return _merge_holdings(rows)[0]
+
+
+@app.get("/api/health")
+def health() -> dict:
+    """Portfolio Health Score (0-100, graded A-E) with disclosed methodology."""
+    return reports.health_score(_merged_holdings())
+
+
+@app.get("/api/stress")
+def stress() -> dict:
+    """What-if scenarios: market ±, EUR/USD ± — scaled by your beta & FX exposure."""
+    return reports.stress(_merged_holdings())
+
+
+@app.get("/api/correlation")
+def correlation() -> dict:
+    """1-year daily-return correlation matrix across holdings."""
+    return reports.correlation([h["ticker"] for h in _merged_holdings()])
+
+
+@app.get("/api/income_projection")
+def income_projection() -> dict:
+    """Forward dividend income: trailing-12M dividends/share × shares, in EUR."""
+    return reports.income_projection(_merged_holdings())
+
+
+@app.get("/api/annual_report")
+def annual_report() -> dict:
+    """Realized P/L + dividend income per calendar year."""
+    return reports.annual_report()
+
+
+@app.get("/api/export/holdings.csv")
+def export_holdings():
+    csv_text = reports.holdings_csv(_merged_holdings())
+    return Response(csv_text, media_type="text/csv",
+                    headers={"Content-Disposition": "attachment; filename=holdings.csv"})
 
 
 @app.get("/api/benchmark")

@@ -160,6 +160,11 @@
         <div class="movers-grid" id="movers"><div class="skeleton">—</div></div>
       </div>
       <div class="card">
+        <h2>Portfolio health <span class="chip" style="padding:1px 8px;font-size:11px" onclick="document.getElementById('hs-method').hidden=!document.getElementById('hs-method').hidden">method</span></h2>
+        <div id="hs-method" hidden style="font-size:12.5px;color:var(--muted);background:var(--panel2);border-radius:10px;padding:10px 12px;margin-bottom:10px"></div>
+        <div id="health" class="skeleton">Scoring…</div>
+      </div>
+      <div class="card">
         <h2>Allocation</h2>
         <div class="alloc">
           <div><div class="t">By sector</div><canvas id="sector-chart" height="200"></canvas></div>
@@ -179,6 +184,7 @@
           <span class="s active" data-sort="value" onclick="setSort('value')">Value</span>
           <span class="s" data-sort="today" onclick="setSort('today')">Today</span>
           <span class="s" data-sort="overall" onclick="setSort('overall')">Overall</span>
+          <a class="s" href="/api/export/holdings.csv" download style="margin-left:auto;text-decoration:none;color:var(--muted)">⬇ CSV</a>
         </div>
         <div class="htable">
           <div class="hhead"><span>Holding</span><span></span><span>Value</span><span>Today</span><span>Overall</span><span>Price</span><span>Qty</span></div>
@@ -211,6 +217,15 @@
         <div class="stats" id="ana-stats"><div class="skeleton">Loading…</div></div>
         <div id="ana-ccy" style="margin-top:14px"></div>
       </div>
+      <div class="card">
+        <h2>Stress test — what a shock would cost</h2>
+        <div id="stress" class="skeleton">Loading…</div>
+      </div>
+      <div class="card">
+        <h2>Diversification map — 1y return correlation</h2>
+        <div id="corr-summary" class="muted" style="font-size:13px;margin-bottom:10px"></div>
+        <div id="corr" class="skeleton" style="overflow-x:auto">Loading…</div>
+      </div>
     </section>
 
     <!-- INSIGHTS -->
@@ -231,6 +246,14 @@
         </div>
         <div id="rs-method" hidden style="font-size:12.5px;color:var(--muted);background:var(--panel2);border-radius:10px;padding:10px 12px;margin-bottom:10px"></div>
         <div id="rising-stars" class="skeleton">Loading…</div>
+      </div>
+      <div class="card">
+        <h2>Dividend income projector</h2>
+        <div id="income-proj" class="skeleton">Loading…</div>
+      </div>
+      <div class="card">
+        <h2>Annual report — realized P/L &amp; dividends per year</h2>
+        <div id="annual" class="skeleton">Loading…</div>
       </div>
       <div class="card">
         <h2>Market headlines — CNBC · MarketWatch · Yahoo Finance</h2>
@@ -304,13 +327,14 @@
       document.querySelectorAll(".page").forEach(p=>p.classList.toggle("active",p.id==="page-"+name));
       document.querySelectorAll(".tabbar button").forEach(b=>b.classList.toggle("active",b.dataset.page===name));
       if(name==="performance"){ if(HISTORY.length) renderChart(); loadAnalytics(); }
-      if(name==="insights") loadInsights();
+      if(name==="insights"){ loadInsights(); }
       window.scrollTo(0,0);
     }
 
     /* ---- analytics ---- */
     function loadAnalytics(){
       if(anaLoaded) return; anaLoaded=true;
+      loadStressCorr();
       fetchJSON("/api/analytics").then(a=>{
         const items=[
           ["Beta vs S&P", a.beta, v=>v, v=>""],
@@ -337,6 +361,7 @@
     /* ---- insights ---- */
     function loadInsights(){
       if(insightsLoaded) return; insightsLoaded=true;
+      loadReports();
       fetchJSON("/api/brief").then(b=>{
         document.getElementById("brief-date").textContent=b.date;
         document.getElementById("brief-body").className="";
@@ -364,6 +389,79 @@
         const el=document.getElementById("headlines"); el.className="news";
         el.innerHTML=items.map(n=>`<a href="${n.url}" target="_blank" rel="noopener">${n.title}<div class="src">${n.source}</div></a>`).join("");
       }).catch(()=>{ document.getElementById("headlines").textContent="Unavailable."; });
+    }
+
+    /* ---- health score ---- */
+    function loadHealth(){
+      fetchJSON("/api/health").then(h=>{
+        document.getElementById("hs-method").textContent=h.method;
+        const gc = h.grade<="B" ? "pos" : (h.grade>="D" ? "neg" : "");
+        const el=document.getElementById("health"); el.className="";
+        el.innerHTML=`<div style="display:flex;align-items:center;gap:16px;margin-bottom:12px">
+            <div style="font-size:40px;font-weight:750" class="${gc}">${h.grade}</div>
+            <div><div style="font-size:17px;font-weight:650">${h.score} / 100</div>
+            <div class="muted" style="font-size:12px">portfolio health score</div></div></div>` +
+          h.components.map(c=>{
+            const p=Math.round(c.points/c.max*100);
+            return `<div style="margin-bottom:9px">
+              <div style="display:flex;justify-content:space-between;font-size:12.5px">
+                <span>${c.name}</span><span class="muted">${c.detail}</span></div>
+              <div style="height:6px;background:var(--panel2);border-radius:4px;margin-top:4px">
+                <div style="width:${p}%;height:6px;border-radius:4px;background:${p>=70?'var(--green)':p>=40?'#e3b341':'var(--red)'}"></div></div></div>`;
+          }).join("");
+      }).catch(()=>{ document.getElementById("health").textContent="Unavailable."; });
+    }
+
+    /* ---- stress + correlation (performance page) ---- */
+    function loadStressCorr(){
+      fetchJSON("/api/stress").then(s=>{
+        const el=document.getElementById("stress"); el.className="";
+        el.innerHTML=s.scenarios.map(x=>
+          `<div class="closed-row"><span>${x.name}<br><span style="font-size:11px;color:var(--faint)">${x.detail}</span></span>
+           <span class="num ${cls(x.impact_eur)}">${signed(x.impact_eur)}</span></div>`).join("");
+      }).catch(()=>{ document.getElementById("stress").textContent="Unavailable."; });
+      fetchJSON("/api/correlation").then(c=>{
+        const el=document.getElementById("corr"); el.className=""; el.style.overflowX="auto";
+        if(!c.tickers.length){ el.textContent="Unavailable."; return; }
+        if(c.best_diversifier) document.getElementById("corr-summary").innerHTML=
+          `Best diversifier pair: <b>${c.best_diversifier.pair.join(" ↔ ")}</b> (${c.best_diversifier.corr}) · `+
+          `most correlated: <b>${c.most_correlated.pair.join(" ↔ ")}</b> (${c.most_correlated.corr})`;
+        const n=c.tickers.length, cell=v=>{
+          if(v===null) return "background:var(--panel2)";
+          const t=(v+1)/2; // -1..1 -> 0..1
+          const r=Math.round(38+t*(240-38)), g=Math.round(168-t*(168-97)), b=Math.round(98+t*(109-98));
+          return `background:rgb(${r},${g},${b});opacity:.92`;
+        };
+        let html='<table style="border-collapse:collapse;font-size:9px"><tr><td></td>'+
+          c.tickers.map(t=>`<td style="padding:1px 2px;color:var(--faint);writing-mode:vertical-rl;transform:rotate(180deg)">${t}</td>`).join("")+"</tr>";
+        for(let i=0;i<n;i++){
+          html+=`<tr><td style="padding:1px 4px;color:var(--faint);font-size:10px">${c.tickers[i]}</td>`+
+            c.matrix[i].map((v,j)=>`<td title="${c.tickers[i]}×${c.tickers[j]}: ${v}" style="width:16px;height:16px;${cell(v)}"></td>`).join("")+"</tr>";
+        }
+        el.innerHTML=html+"</table><div class='muted' style='font-size:11px;margin-top:6px'>"+c.method+" Green = moves differently (diversifies), red = moves together.</div>";
+      }).catch(()=>{ document.getElementById("corr").textContent="Unavailable."; });
+    }
+
+    /* ---- income projection + annual (insights page) ---- */
+    function loadReports(){
+      fetchJSON("/api/income_projection").then(ip=>{
+        const el=document.getElementById("income-proj"); el.className="";
+        el.innerHTML=`<div style="display:flex;gap:10px;margin-bottom:12px">
+            <div class="stat" style="flex:1"><div class="k">Projected / year</div><div class="v num pos">${eur0(ip.projected_annual_eur)}</div></div>
+            <div class="stat" style="flex:1"><div class="k">≈ per month</div><div class="v num">${eur0(ip.projected_monthly_eur||0)}</div></div></div>`+
+          ip.holdings.slice(0,8).map(r=>`<div class="closed-row"><span><span class="tag">${r.ticker}</span> ${r.name}
+             <span style="font-size:11px;color:var(--faint)">yield ${r.yield_pct}%</span></span>
+           <span class="num pos">${eur(r.annual_eur)}/y</span></div>`).join("")+
+          `<div class="muted" style="font-size:11px;margin-top:8px">${ip.method||""}</div>`;
+      }).catch(()=>{ document.getElementById("income-proj").textContent="Unavailable."; });
+      fetchJSON("/api/annual_report").then(ar=>{
+        const el=document.getElementById("annual"); el.className="";
+        el.innerHTML='<div class="hhead" style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr"><span>Year</span><span style="text-align:right">Realized</span><span style="text-align:right">Dividends</span><span style="text-align:right">Total</span></div>'+
+          ar.years.map(y=>`<div style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr;padding:9px 0;border-bottom:1px solid var(--border)">
+            <span>${y.year}</span><span class="num ${cls(y.realized_eur)}" style="text-align:right">${signed(y.realized_eur)}</span>
+            <span class="num" style="text-align:right">${eur(y.dividends_eur)}</span>
+            <span class="num ${cls(y.total_eur)}" style="text-align:right;font-weight:600">${signed(y.total_eur)}</span></div>`).join("");
+      }).catch(()=>{ document.getElementById("annual").textContent="Unavailable."; });
     }
 
     /* ---- data status banner ---- */
@@ -559,6 +657,7 @@
       fetchJSON("/api/indices").then(renderTicker).catch(()=>{});
       fetchJSON("/api/sparklines").then(s=>{ SPARKS=s; renderOpen(); renderMovers(); }).catch(()=>{});
       loadDataStatus();
+      loadHealth();
     }
     async function refreshLive(){
       if(document.hidden||!PORT) return;
