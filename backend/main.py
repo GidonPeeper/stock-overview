@@ -17,7 +17,7 @@ import threading
 from datetime import date
 from pathlib import Path
 
-from fastapi import FastAPI, Form, Request
+from fastapi import FastAPI, File, Form, HTTPException, Request, UploadFile
 from fastapi.staticfiles import StaticFiles
 from starlette.middleware.sessions import SessionMiddleware
 from starlette.responses import FileResponse, RedirectResponse, Response
@@ -341,6 +341,46 @@ def ticker_history(ticker: str, range: str = "1mo") -> list[float]:
 @app.get("/api/datastatus")
 def datastatus() -> dict:
     """Which data sources are live vs sample — shown as a banner in the UI."""
+    return datafiles.status()
+
+
+@app.get("/settings", include_in_schema=False)
+def settings_page():
+    return FileResponse(FRONTEND_DIR / "settings.html")
+
+
+@app.post("/api/upload/{kind}")
+async def upload_statement(kind: str, file: UploadFile = File(...)) -> dict:
+    """Upload a broker statement from the browser/phone — takes effect
+    immediately. Light validation so a wrong file fails loudly, not silently."""
+    content = await file.read()
+    if len(content) > 10_000_000:
+        raise HTTPException(413, "File too large")
+    text = content.decode("utf-8", errors="replace")
+    if kind == "degiro":
+        if "Koop" not in text and "Verkoop" not in text:
+            raise HTTPException(400, "That doesn't look like a DeGiro account statement CSV "
+                                     "(no Koop/Verkoop rows found). Export: Activity → Account statement, all dates.")
+    elif kind in ("trade_republic", "tr_income"):
+        import json as _json
+        try:
+            payload = _json.loads(text)
+        except ValueError:
+            raise HTTPException(400, "Not valid JSON — see the .sample file for the format.")
+        need = "trades" if kind == "trade_republic" else "income"
+        if need not in payload:
+            raise HTTPException(400, f'JSON must contain a "{need}" list — see the .sample file.')
+    else:
+        raise HTTPException(404, "Unknown upload kind")
+    datafiles.save_upload(kind, content)
+    # the trendline was built from the old data — rebuild it from the new
+    global _backfill_started
+    try:
+        store.DB_PATH.unlink(missing_ok=True)
+    except OSError:
+        pass
+    with _backfill_lock:
+        _backfill_started = False
     return datafiles.status()
 
 

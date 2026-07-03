@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <title>Settings — Stock Overview</title>
+  <meta name="theme-color" content="#0b0e11" />
+  <link rel="apple-touch-icon" href="/icon-180.png" />
+  <style>
+    :root{ --bg:#0b0e11; --panel:#151a21; --panel2:#1c232d; --text:#e8edf2; --muted:#8b98a9;
+      --faint:#5b6673; --green:#26a862; --red:#f0616d; --accent:#4c8dff; --border:#232b36; }
+    *{ box-sizing:border-box; }
+    body{ margin:0; background:var(--bg); color:var(--text);
+      font:15px/1.55 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif; }
+    .wrap{ max-width:660px; margin:0 auto; padding:22px 16px 60px; padding-top:calc(18px + env(safe-area-inset-top)); }
+    a.back{ color:var(--accent); text-decoration:none; font-size:14px; }
+    h1{ font-size:21px; margin:10px 0 4px; }
+    .sub{ color:var(--muted); font-size:13.5px; margin-bottom:20px; }
+    .card{ background:var(--panel); border:1px solid var(--border); border-radius:16px; padding:18px; margin-bottom:14px; }
+    .card h2{ font-size:12px; color:var(--muted); margin:0 0 12px; text-transform:uppercase; letter-spacing:.05em; }
+    .row{ display:flex; justify-content:space-between; align-items:center; gap:10px; padding:10px 0; border-bottom:1px solid var(--border); }
+    .row:last-child{ border-bottom:none; }
+    .pill{ font-size:11px; padding:3px 10px; border-radius:20px; font-weight:600; }
+    .live{ background:rgba(38,168,98,.15); color:var(--green); }
+    .sample{ background:rgba(227,179,65,.15); color:#e3b341; }
+    .up{ margin-top:8px; }
+    .up input[type=file]{ font-size:12px; color:var(--muted); max-width:210px; }
+    .up button{ background:var(--accent); border:none; color:#fff; padding:7px 14px; border-radius:9px;
+      font-size:13px; font-weight:600; cursor:pointer; }
+    .msg{ font-size:12.5px; margin-top:6px; min-height:16px; }
+    .ok{ color:var(--green); } .err{ color:var(--red); }
+    code{ background:var(--panel2); padding:1px 6px; border-radius:5px; font-size:12px; }
+    .files{ font-size:12px; color:var(--faint); margin-top:10px; }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <a class="back" href="/">← Back to dashboard</a>
+    <h1>Data sources</h1>
+    <div class="sub">Upload your broker statements here — changes apply instantly. On free
+      hosting the disk resets on each redeploy, so re-upload after updates (or add the same
+      files as Render Secret Files to make them permanent).</div>
+
+    <div class="card">
+      <h2>Status</h2>
+      <div id="status"><span style="color:var(--faint)">Loading…</span></div>
+      <div class="files" id="files"></div>
+    </div>
+
+    <div class="card">
+      <h2>DeGiro — account statement (CSV)</h2>
+      <div class="sub" style="margin-bottom:8px">DeGiro → Activity → Account statement → export CSV, all dates since account opening.</div>
+      <div class="up"><input type="file" id="f-degiro" accept=".csv" />
+        <button onclick="up('degiro')">Upload</button></div>
+      <div class="msg" id="m-degiro"></div>
+    </div>
+
+    <div class="card">
+      <h2>Trade Republic — trades (JSON)</h2>
+      <div class="sub" style="margin-bottom:8px">Transcribed from your TR statement PDF — format in <code>trades_trade_republic.sample.json</code>.</div>
+      <div class="up"><input type="file" id="f-trade_republic" accept=".json" />
+        <button onclick="up('trade_republic')">Upload</button></div>
+      <div class="msg" id="m-trade_republic"></div>
+    </div>
+
+    <div class="card">
+      <h2>Trade Republic — dividends &amp; interest (JSON)</h2>
+      <div class="sub" style="margin-bottom:8px">Format in <code>income_trade_republic.sample.json</code>.</div>
+      <div class="up"><input type="file" id="f-tr_income" accept=".json" />
+        <button onclick="up('tr_income')">Upload</button></div>
+      <div class="msg" id="m-tr_income"></div>
+    </div>
+
+    <div class="card">
+      <h2>Trading 212</h2>
+      <div class="sub" style="margin:0">Connected via read-only API key — set
+        <code>T212_API_KEY</code> and <code>T212_API_SECRET</code> as environment variables on the host.</div>
+    </div>
+  </div>
+
+  <script>
+    const NAMES={degiro:"DeGiro statement",trade_republic:"Trade Republic trades",
+                 tr_income:"TR dividends & interest",trading212:"Trading 212 API"};
+    function renderStatus(s){
+      document.getElementById("status").innerHTML=Object.entries(NAMES).map(([k,label])=>{
+        const v=s[k]; if(!v) return "";
+        return `<div class="row"><span>${label}<br><span style="font-size:11px;color:var(--faint)">${v.expected}</span></span>
+          <span class="pill ${v.real?'live':'sample'}">${v.real?'LIVE':'SAMPLE'}</span></div>`;
+      }).join("");
+      const seen=s._files_seen||{};
+      document.getElementById("files").innerHTML=Object.keys(seen).length
+        ? "Files the server can see: "+Object.entries(seen).map(([d,fs])=>`<br><code>${d}</code>: ${fs.join(", ")}`).join("")
+        : "";
+    }
+    fetch("/api/datastatus").then(r=>r.json()).then(renderStatus);
+    async function up(kind){
+      const inp=document.getElementById("f-"+kind), msg=document.getElementById("m-"+kind);
+      if(!inp.files.length){ msg.textContent="Choose a file first."; msg.className="msg err"; return; }
+      msg.textContent="Uploading…"; msg.className="msg";
+      const fd=new FormData(); fd.append("file", inp.files[0]);
+      const r=await fetch("/api/upload/"+kind,{method:"POST",body:fd});
+      if(r.ok){ msg.textContent="✓ Uploaded — live now. Pull down / refresh the dashboard."; msg.className="msg ok"; renderStatus(await r.json()); }
+      else { const e=await r.json().catch(()=>({detail:"Upload failed"})); msg.textContent="✗ "+(e.detail||"Upload failed"); msg.className="msg err"; }
+    }
+  </script>
+</body>
+</html>
