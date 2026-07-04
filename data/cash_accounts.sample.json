@@ -1,0 +1,8 @@
+{
+  "_note": "SAMPLE demo data. Your real accounts are managed in-app (Settings) and stored in cash_accounts.json (git-ignored).",
+  "accounts": [
+    {"name": "Main checking", "institution": "Rabobank", "balance": 2450.00, "currency": "EUR"},
+    {"name": "Savings", "institution": "Rabobank", "balance": 8000.00, "currency": "EUR"},
+    {"name": "Card & travel", "institution": "Revolut", "balance": 640.50, "currency": "EUR"}
+  ]
+}

@@ -31,6 +31,14 @@
     .ok{ color:var(--green); } .err{ color:var(--red); }
     code{ background:var(--panel2); padding:1px 6px; border-radius:5px; font-size:12px; }
     .files{ font-size:12px; color:var(--faint); margin-top:10px; }
+    .ipt{ background:var(--panel2); border:1px solid var(--border); color:var(--text);
+      border-radius:9px; padding:8px 10px; font-size:13.5px; font-family:inherit; }
+    .ipt:focus{ outline:none; border-color:var(--accent); }
+    .btn{ background:var(--accent); border:none; color:#fff; padding:8px 15px; border-radius:9px;
+      font-size:13px; font-weight:600; cursor:pointer; font-family:inherit; }
+    .bal{ width:100px; text-align:right; }
+    .del{ background:none; border:none; color:var(--faint); cursor:pointer; font-size:14px; padding:4px; }
+    .del:hover{ color:var(--red); }
   </style>
 </head>
 <body>
@@ -76,6 +84,22 @@
       <div class="sub" style="margin:0">Connected via read-only API key — set
         <code>T212_API_KEY</code> and <code>T212_API_SECRET</code> as environment variables on the host.</div>
     </div>
+
+    <div class="card" id="cash">
+      <h2>Bank &amp; cash accounts</h2>
+      <div class="sub" style="margin-bottom:10px">Balances change often, so you edit them here in
+        seconds — type the new number and save. (Personal bank APIs are gated behind PSD2 licensing;
+        auto-sync via Enable Banking can be added later.)</div>
+      <div id="cash-list"><span style="color:var(--faint)">Loading…</span></div>
+      <div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:14px;align-items:center">
+        <input id="c-name" placeholder="Account name" style="flex:2;min-width:110px" class="ipt" />
+        <input id="c-inst" placeholder="Bank (e.g. Rabobank)" style="flex:2;min-width:110px" class="ipt" />
+        <input id="c-bal" placeholder="Balance" type="number" step="0.01" style="flex:1;min-width:80px" class="ipt" />
+        <select id="c-cur" class="ipt" style="width:74px"><option>EUR</option><option>USD</option><option>GBP</option></select>
+        <button class="btn" onclick="addAccount()">Add</button>
+      </div>
+      <div class="msg" id="m-cash"></div>
+    </div>
   </div>
 
   <script>
@@ -93,6 +117,46 @@
         : "";
     }
     fetch("/api/datastatus").then(r=>r.json()).then(renderStatus);
+    /* ---- cash accounts ---- */
+    function renderCash(c){
+      const el=document.getElementById("cash-list");
+      if(!c.accounts.length){ el.innerHTML='<span style="color:var(--faint)">No accounts yet — add your first below.</span>'; return; }
+      el.innerHTML=(c.sample?'<div class="msg" style="color:#e3b341;margin-bottom:6px">Demo accounts shown — add a real one to replace them.</div>':'')+
+        c.accounts.map(a=>`<div class="row"><span>${a.name}<br>
+            <span style="font-size:11px;color:var(--faint)">${a.institution||"—"} · ${a.currency}</span></span>
+          <span style="display:flex;gap:6px;align-items:center">
+            <input class="ipt bal" type="number" step="0.01" value="${a.balance}" id="bal-${btoa(a.name).replace(/=/g,'')}" />
+            <button class="btn" style="padding:7px 11px" onclick="saveAccount('${a.name.replace(/'/g,"\\'")}','${(a.institution||"").replace(/'/g,"\\'")}','${a.currency}')">Save</button>
+            <button class="del" title="Remove" onclick="delAccount('${a.name.replace(/'/g,"\\'")}')">✕</button>
+          </span></div>`).join("")+
+        `<div class="row"><span style="font-weight:650">Total cash</span><span style="font-weight:650">€${(c.total_eur||0).toLocaleString("en-IE",{maximumFractionDigits:0})}</span></div>`;
+    }
+    function loadCash(){ fetch("/api/cash").then(r=>r.json()).then(renderCash); }
+    async function postCash(fd, okMsg){
+      const msg=document.getElementById("m-cash");
+      const r=await fetch("/api/cash",{method:"POST",body:fd});
+      if(r.ok){ msg.textContent=okMsg; msg.className="msg ok"; renderCash(await r.json()); }
+      else{ const e=await r.json().catch(()=>({detail:"Failed"})); msg.textContent="✗ "+e.detail; msg.className="msg err"; }
+    }
+    function saveAccount(name, inst, cur){
+      const v=document.getElementById("bal-"+btoa(name).replace(/=/g,'')).value;
+      const fd=new FormData(); fd.append("name",name); fd.append("institution",inst);
+      fd.append("balance",v); fd.append("currency",cur);
+      postCash(fd, "✓ Saved");
+    }
+    function addAccount(){
+      const n=document.getElementById("c-name").value, b=document.getElementById("c-bal").value;
+      if(!n||!b){ const m=document.getElementById("m-cash"); m.textContent="Name and balance required."; m.className="msg err"; return; }
+      const fd=new FormData(); fd.append("name",n); fd.append("institution",document.getElementById("c-inst").value);
+      fd.append("balance",b); fd.append("currency",document.getElementById("c-cur").value);
+      postCash(fd, "✓ Added"); document.getElementById("c-name").value=""; document.getElementById("c-bal").value="";
+    }
+    async function delAccount(name){
+      const r=await fetch("/api/cash/"+encodeURIComponent(name),{method:"DELETE"});
+      if(r.ok) renderCash(await r.json());
+    }
+    loadCash();
+
     async function up(kind){
       const inp=document.getElementById("f-"+kind), msg=document.getElementById("m-"+kind);
       if(!inp.files.length){ msg.textContent="Choose a file first."; msg.className="msg err"; return; }

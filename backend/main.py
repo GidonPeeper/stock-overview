@@ -35,7 +35,7 @@ from collections import defaultdict
 from .connectors import degiro, traderepublic, trading212
 from .fx import BASE_CURRENCY, to_eur
 from .prices import fetch_quotes
-from . import (analytics, datafiles, income, insights, market, periods,
+from . import (analytics, cash, datafiles, income, insights, market, periods,
                realized, reports, sectors, store)
 
 DEMO_MODE = not (os.getenv("T212_API_KEY") and os.getenv("T212_API_SECRET"))
@@ -347,6 +347,25 @@ def datastatus() -> dict:
 @app.get("/settings", include_in_schema=False)
 def settings_page():
     return FileResponse(FRONTEND_DIR / "settings.html")
+
+
+@app.get("/api/cash")
+def cash_get() -> dict:
+    """Bank/cash accounts + EUR total (edited in-app on the Settings page)."""
+    return cash.load()
+
+
+@app.post("/api/cash")
+def cash_upsert(name: str = Form(...), institution: str = Form(""),
+                balance: float = Form(...), currency: str = Form("EUR")) -> dict:
+    if not name.strip():
+        raise HTTPException(400, "Account name is required")
+    return cash.upsert(name, institution, balance, currency)
+
+
+@app.delete("/api/cash/{name}")
+def cash_delete(name: str) -> dict:
+    return cash.delete(name)
 
 
 @app.post("/api/upload/{kind}")

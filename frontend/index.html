@@ -123,7 +123,13 @@
     .tabbar{ position:fixed; left:0; right:0; bottom:0; height:calc(var(--tabbar-h) + env(safe-area-inset-bottom)); padding-bottom:env(safe-area-inset-bottom); background:rgba(10,13,16,.9); backdrop-filter:blur(14px); -webkit-backdrop-filter:blur(14px); border-top:1px solid var(--border); display:flex; z-index:10; }
     .tabbar button{ flex:1; background:none; border:none; color:var(--faint); cursor:pointer; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:3px; font-size:10.5px; font-weight:550; letter-spacing:.01em; font-family:inherit; transition:color .15s; }
     .tabbar button svg{ width:22px; height:22px; stroke:currentColor; fill:none; stroke-width:2; stroke-linecap:round; stroke-linejoin:round; } .tabbar button.active{ color:var(--accent); }
-    .skeleton{ color:var(--faint); }
+    .skeleton{ color:transparent; position:relative; overflow:hidden; border-radius:8px;
+      background:var(--panel2); min-height:1em; display:inline-block; min-width:120px; }
+    .skeleton::after{ content:""; position:absolute; inset:0;
+      background:linear-gradient(90deg, transparent, rgba(255,255,255,.05), transparent);
+      animation:shimmer 1.4s infinite; }
+    @keyframes shimmer{ from{transform:translateX(-100%)} to{transform:translateX(100%)} }
+    div.skeleton{ display:block; }
 
     /* detail sheet */
     .modal{ position:fixed; inset:0; z-index:20; display:none; }
@@ -163,6 +169,10 @@
         <div class="label">Total value</div>
         <div id="v-value" class="value num skeleton">—</div>
         <div id="v-today" class="today"></div>
+      </div>
+      <div class="card">
+        <h2>Where your money is <a href="/settings#cash" class="chip" style="padding:1px 9px;font-size:11px;text-decoration:none;float:right">edit</a></h2>
+        <div id="money" class="skeleton">Loading…</div>
       </div>
       <div class="card">
         <h2>Profit / Loss</h2>
@@ -312,7 +322,7 @@
     const signed=n=>(n>=0?"+":"")+eur(n);
     const pct=n=>(n>=0?"+":"")+Number(n).toFixed(2)+"%";
     const cls=n=>n>=0?"pos":"neg"; const arrow=n=>n>=0?"▲":"▼";
-    let PORT,PROFIT,HISTORY=[],CLOSED,SPARKS={},sel="total_return",chartMode="profit",sortBy="value";
+    let PORT,PROFIT,HISTORY=[],CLOSED,SPARKS={},CASH=null,sel="total_return",chartMode="profit",sortBy="value";
     let chart,sc,bc,dchart,detailTicker=null,detailRange="1mo",BENCH=null,benchmarkOn=false;
     async function fetchJSON(url){ const r=await fetch(url); if(!r.ok) throw new Error(url+" "+r.status); return r.json(); }
     const PALETTE=["#4c8dff","#26a862","#e3b341","#f0616d","#a371f7","#3fb950","#db61a2","#f0883e","#58a6ff","#bc8cff","#56d364","#8b98a9"];
@@ -403,6 +413,33 @@
         const el=document.getElementById("headlines"); el.className="news";
         el.innerHTML=items.map(n=>`<a href="${n.url}" target="_blank" rel="noopener">${n.title}<div class="src">${n.source}</div></a>`).join("");
       }).catch(()=>{ document.getElementById("headlines").textContent="Unavailable."; });
+    }
+
+    /* ---- where your money is ---- */
+    const INST_COLORS={rabobank:"#f0883e",revolut:"#a371f7",bunq:"#3fb950",ing:"#f0616d",abn:"#26a862"};
+    function renderMoney(){
+      if(!PORT||!CASH) return;
+      const inv=PORT.totals.value, cashTotal=CASH.total_eur||0, net=inv+cashTotal;
+      const rows=[{label:"Investments", sub:PORT.by_broker.map(b=>b.broker).join(" · "),
+                   value:inv, color:"var(--accent)"}]
+        .concat((CASH.accounts||[]).map(a=>({label:a.name, sub:a.institution,
+          value:a.balance_eur, color:INST_COLORS[(a.institution||"").toLowerCase()]||"#8b98a9"})));
+      const el=document.getElementById("money"); el.className="";
+      el.innerHTML=`
+        <div style="display:flex;align-items:baseline;gap:10px;margin-bottom:4px">
+          <span class="num" style="font-size:27px;font-weight:750;letter-spacing:-.02em">${eur0(net)}</span>
+          <span class="muted" style="font-size:12.5px">net worth${CASH.sample?' · demo cash':''}</span>
+        </div>
+        <div style="display:flex;height:10px;border-radius:6px;overflow:hidden;margin:10px 0 12px">${
+          rows.map(r=>`<div title="${r.label} ${eur0(r.value)}" style="width:${Math.max(net?r.value/net*100:0,1.5)}%;background:${r.color}"></div>`).join("")}
+        </div>`+
+        rows.map(r=>`<div class="closed-row"><span><span style="color:${r.color}">●</span> ${r.label}
+            <span style="font-size:11px;color:var(--faint)">${r.sub||""}</span></span>
+          <span class="num" style="font-weight:600">${eur0(r.value)} <span class="muted" style="font-weight:400;font-size:12px">${net?(r.value/net*100).toFixed(1):0}%</span></span></div>`).join("");
+    }
+    function loadCash(){
+      fetchJSON("/api/cash").then(c=>{ CASH=c; renderMoney(); })
+        .catch(()=>{ document.getElementById("money").textContent="Unavailable."; });
     }
 
     /* ---- health score ---- */
@@ -502,9 +539,19 @@
         extra=` · covers ${PROFIT.coverage_pct}% of holdings`; }
       nEl.textContent=signed(val); nEl.className="n num "+cls(val); dEl.textContent=desc+extra;
     }
+    let heroAnimated=false;
     function renderHero(){
-      document.getElementById("v-value").textContent=eur(PORT.totals.value);
-      document.getElementById("v-value").className="value num";
+      const vEl=document.getElementById("v-value"); vEl.className="value num";
+      const target=PORT.totals.value;
+      if(!heroAnimated){                       // count up on first paint
+        heroAnimated=true;
+        const t0=performance.now(), dur=700;
+        (function tick(now){
+          const p=Math.min((now-t0)/dur,1), ease=1-Math.pow(1-p,3);
+          vEl.textContent=eur(target*ease);
+          if(p<1) requestAnimationFrame(tick);
+        })(t0);
+      } else vEl.textContent=eur(target);
       const d=PORT.totals.daily,dp=PORT.totals.daily_pct,el=document.getElementById("v-today");
       if(d===null||d===undefined){ el.innerHTML=""; return; }
       el.className="today "+cls(d); el.innerHTML=`${arrow(d)} ${signed(d)} <span class="chip">${pct(dp)} today</span>`;
@@ -673,6 +720,8 @@
       fetchJSON("/api/sparklines").then(s=>{ SPARKS=s; renderOpen(); renderMovers(); }).catch(()=>{});
       loadDataStatus();
       loadHealth();
+      loadCash();
+      renderMoney();
     }
     async function refreshLive(){
       if(document.hidden||!PORT) return;

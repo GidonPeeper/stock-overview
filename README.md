@@ -34,6 +34,8 @@ python3 -m venv .venv && .venv/bin/pip install -r requirements.txt
 | 📅 **Earnings calendar** | Upcoming earnings dates for everything you hold |
 | 📉 **Performance since inception** | Portfolio value & profit reconstructed from full trade history, with a money-weighted S&P 500 benchmark overlay |
 | 📱 **Installable PWA** | Home-screen app with login (Face ID via Keychain), auto-refresh, offline-tolerant loading |
+| 🏦 **Net worth view** | Bank/cash accounts (e.g. Rabobank, Revolut) alongside investments — balances edited in-app in seconds, "where your money is" breakdown |
+| ⚙️ **Self-service data** | In-app statement uploads with validation + a live/sample diagnostic per source — no host dashboard needed |
 
 ## 🏗 Architecture
 
