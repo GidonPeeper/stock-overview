@@ -86,7 +86,9 @@ Free 24/7 hosting on Render with the repo public and your data private
 ## 🔒 Privacy & safety
 
 - The repo contains **code + sample data only** — statements and keys never
-  enter git (verified: no secrets anywhere in history).
+  enter git in plaintext (verified: no secrets anywhere in history). The owner's
+  data ships only as `data/vault.enc`: Fernet-encrypted (PBKDF2, 600k
+  iterations) with a key that lives exclusively in the host's environment.
 - The Trading 212 key is **read-only**: worst case is viewing, never trading.
 - The dashboard sits behind a session login; iOS unlocks it with Face ID.
 
