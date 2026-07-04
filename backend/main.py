@@ -32,6 +32,9 @@ except ImportError:
 
 from collections import defaultdict
 
+from . import vault
+_VAULT_STATE = vault.unlock()  # hydrate private data files before anything reads them
+
 from .connectors import degiro, traderepublic, trading212
 from .fx import BASE_CURRENCY, to_eur
 from .prices import fetch_quotes
@@ -341,7 +344,9 @@ def ticker_history(ticker: str, range: str = "1mo") -> list[float]:
 @app.get("/api/datastatus")
 def datastatus() -> dict:
     """Which data sources are live vs sample — shown as a banner in the UI."""
-    return datafiles.status()
+    out = datafiles.status()
+    out["_vault"] = _VAULT_STATE
+    return out
 
 
 @app.get("/settings", include_in_schema=False)

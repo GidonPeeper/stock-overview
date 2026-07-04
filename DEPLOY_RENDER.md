@@ -22,7 +22,20 @@ gh repo create stock-overview --public --source=. --push
    - `DASHBOARD_USER`, `DASHBOARD_PASSWORD` — your phone login
    - `DASHBOARD_SECRET` — any long random string (keeps you logged in)
 
-## 3. Add your private data as Secret Files
+## 3. Private data — the vault (recommended, zero-touch)
+
+Your statement files can ship inside the public repo as **encrypted ciphertext**
+(`data/vault.enc`), decrypted on boot with a key derived from the
+`DASHBOARD_SECRET` (or `DATA_KEY`) env var — which only exists on the host and
+in your local `.env`, never in git. With the vault present, every deploy
+self-hydrates your real data automatically — no uploads, no secret files.
+
+After updating a statement locally, rebuild and push it:
+```bash
+.venv/bin/python -m backend.vault && git add data/vault.enc && git commit -m "update data" && git push
+```
+
+## 3b. Alternative: Secret Files
 Still on the service's **Environment** tab → **Secret Files** → add three files
 (paste the contents of your local files), named exactly:
 
