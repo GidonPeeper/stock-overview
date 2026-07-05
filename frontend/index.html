@@ -22,12 +22,22 @@
       --shadow:0 1px 2px rgba(0,0,0,.4), 0 8px 24px -12px rgba(0,0,0,.5);
       --tabbar-h:64px;
     }
+    :root[data-theme="light"]{
+      --bg:#f4f6f9; --panel:#ffffff; --panel2:#eef1f5; --panel3:#e2e7ee;
+      --text:#17202b; --muted:#5b6673; --faint:#93a0af;
+      --green:#118a53; --red:#d43d4f; --accent:#2f6fed; --border:#e4e9ef;
+      --shadow:0 1px 2px rgba(23,32,43,.06), 0 8px 24px -16px rgba(23,32,43,.18);
+    }
     *{ box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
+    html{ color-scheme:dark; } :root[data-theme="light"] html, [data-theme="light"] body{ color-scheme:light; }
     html,body{ margin:0; background:var(--bg); color:var(--text);
       font:15px/1.5 "Inter",-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;
-      -webkit-font-smoothing:antialiased; }
+      -webkit-font-smoothing:antialiased; transition:background .25s,color .25s; }
     body{ padding-bottom:calc(var(--tabbar-h) + env(safe-area-inset-bottom));
       background-image:radial-gradient(1100px 420px at 50% -180px, rgba(76,141,255,.07), transparent 65%); }
+    [data-theme="light"] body{ background-image:radial-gradient(1100px 420px at 50% -180px, rgba(47,111,237,.06), transparent 65%); }
+    [data-theme="light"] .tabbar{ background:rgba(255,255,255,.88) !important; }
+    [data-theme="light"] .card{ background:var(--panel) !important; }
     .num{ font-variant-numeric:tabular-nums; font-feature-settings:"tnum"; }
     .pos{ color:var(--green); } .neg{ color:var(--red); } .muted{ color:var(--muted); }
     .wrap{ max-width:960px; margin:0 auto; padding:16px 16px 24px; padding-top:calc(14px + env(safe-area-inset-top)); }
@@ -156,6 +166,7 @@
     <header>
       <div><h1>Stock Overview</h1><div id="live" class="live"></div></div>
       <div style="display:flex;gap:8px">
+        <button class="iconbtn" id="themebtn" onclick="toggleTheme()" title="Light / dark">☀</button>
         <a class="iconbtn" href="/settings" title="Data sources" style="text-decoration:none">⚙</a>
         <button class="iconbtn" onclick="loadAll(true)" title="Refresh">↻</button>
       </div>
@@ -246,6 +257,22 @@
         <div id="stress" class="skeleton">Loading…</div>
       </div>
       <div class="card">
+        <h2>Wealth projector — 10 years ahead</h2>
+        <div id="proj-sub" class="muted" style="font-size:12.5px;margin-bottom:10px"></div>
+        <div style="height:240px"><canvas id="proj-chart"></canvas></div>
+        <div style="display:flex;gap:8px;align-items:center;margin-top:14px;flex-wrap:wrap">
+          <span class="muted" style="font-size:13px">Goal:</span>
+          <input id="goal-input" type="number" placeholder="e.g. 250000" style="background:var(--panel2);border:1px solid var(--border);color:var(--text);border-radius:9px;padding:7px 10px;font-size:13.5px;font-family:inherit;width:120px" />
+          <button class="chip" style="border-color:rgba(76,141,255,.5);color:var(--accent)" onclick="setGoal()">Set</button>
+          <span id="goal-eta" style="font-size:13px"></span>
+        </div>
+      </div>
+      <div class="card">
+        <h2>Hindsight — what your exits are worth today</h2>
+        <div id="hind-total" style="margin-bottom:10px"></div>
+        <div id="hindsight" class="skeleton">Loading…</div>
+      </div>
+      <div class="card">
         <h2>Diversification map — 1y return correlation</h2>
         <div id="corr-summary" class="muted" style="font-size:13px;margin-bottom:10px"></div>
         <div id="corr" class="skeleton" style="overflow-x:auto">Loading…</div>
@@ -322,7 +349,29 @@
     const signed=n=>(n>=0?"+":"")+eur(n);
     const pct=n=>(n>=0?"+":"")+Number(n).toFixed(2)+"%";
     const cls=n=>n>=0?"pos":"neg"; const arrow=n=>n>=0?"▲":"▼";
-    let PORT,PROFIT,HISTORY=[],CLOSED,SPARKS={},CASH=null,sel="total_return",chartMode="profit",sortBy="value";
+    /* ---- theme ---- */
+    (function(){ const t=localStorage.getItem("theme")||
+        (matchMedia("(prefers-color-scheme: light)").matches?"light":"dark");
+      document.documentElement.dataset.theme=t; })();
+    function isLight(){ return document.documentElement.dataset.theme==="light"; }
+    function chartColors(){ return isLight()
+      ? {tick:"#93a0af", grid:"#e4e9ef", ring:"#ffffff", legend:"#17202b"}
+      : {tick:"#5b6673", grid:"#1c232d", ring:"#12171e", legend:"#e8edf2"}; }
+    function applyThemeUI(){
+      const light=isLight();
+      document.getElementById("themebtn").textContent = light ? "☾" : "☀";
+      document.querySelector('meta[name="theme-color"]').content = light ? "#f4f6f9" : "#0b0e11";
+    }
+    function toggleTheme(){
+      document.documentElement.dataset.theme = isLight() ? "dark" : "light";
+      localStorage.setItem("theme", document.documentElement.dataset.theme);
+      applyThemeUI();
+      if(HISTORY.length) renderChart();
+      if(PORT){ renderAllocation(); }
+      if(PROJ) renderProjection();
+    }
+    applyThemeUI();
+    let PORT,PROFIT,HISTORY=[],CLOSED,SPARKS={},CASH=null,PROJ=null,sel="total_return",chartMode="profit",sortBy="value";
     let chart,sc,bc,dchart,detailTicker=null,detailRange="1mo",BENCH=null,benchmarkOn=false;
     async function fetchJSON(url){ const r=await fetch(url); if(!r.ok) throw new Error(url+" "+r.status); return r.json(); }
     const PALETTE=["#4c8dff","#26a862","#e3b341","#f0616d","#a371f7","#3fb950","#db61a2","#f0883e","#58a6ff","#bc8cff","#56d364","#8b98a9"];
@@ -359,6 +408,7 @@
     function loadAnalytics(){
       if(anaLoaded) return; anaLoaded=true;
       loadStressCorr();
+      loadProjection();
       fetchJSON("/api/analytics").then(a=>{
         const items=[
           ["Beta vs S&P", a.beta, v=>v, v=>""],
@@ -415,27 +465,42 @@
       }).catch(()=>{ document.getElementById("headlines").textContent="Unavailable."; });
     }
 
-    /* ---- where your money is ---- */
-    const INST_COLORS={rabobank:"#f0883e",revolut:"#a371f7",bunq:"#3fb950",ing:"#f0616d",abn:"#26a862"};
+    /* ---- where your money is (net-worth ledger, grouped by asset class) ---- */
+    const TYPE_META={
+      invest:{label:"Investments", color:"var(--accent)"},
+      cash:{label:"Cash", color:"#e3b341"},
+      savings:{label:"Savings", color:"#3fb950"},
+      retirement:{label:"Retirement · 401(k) / pension", color:"#a371f7"},
+      other:{label:"Other assets", color:"#8b98a9"},
+    };
     function renderMoney(){
       if(!PORT||!CASH) return;
-      const inv=PORT.totals.value, cashTotal=CASH.total_eur||0, net=inv+cashTotal;
-      const rows=[{label:"Investments", sub:PORT.by_broker.map(b=>b.broker).join(" · "),
-                   value:inv, color:"var(--accent)"}]
-        .concat((CASH.accounts||[]).map(a=>({label:a.name, sub:a.institution,
-          value:a.balance_eur, color:INST_COLORS[(a.institution||"").toLowerCase()]||"#8b98a9"})));
+      const inv=PORT.totals.value, net=inv+(CASH.total_eur||0);
+      const groups=[{type:"invest", total:inv,
+        rows:[{label:"Brokers", sub:PORT.by_broker.map(b=>b.broker).join(" · "), value:inv}]}];
+      ["cash","savings","retirement","other"].forEach(t=>{
+        const accs=(CASH.accounts||[]).filter(a=>a.type===t);
+        if(accs.length) groups.push({type:t, total:accs.reduce((s,a)=>s+a.balance_eur,0),
+          rows:accs.map(a=>({label:a.name, sub:a.institution, value:a.balance_eur}))});
+      });
       const el=document.getElementById("money"); el.className="";
       el.innerHTML=`
         <div style="display:flex;align-items:baseline;gap:10px;margin-bottom:4px">
           <span class="num" style="font-size:27px;font-weight:750;letter-spacing:-.02em">${eur0(net)}</span>
-          <span class="muted" style="font-size:12.5px">net worth${CASH.sample?' · demo cash':''}</span>
+          <span class="muted" style="font-size:12.5px">net worth${CASH.sample?' · demo accounts':''}</span>
         </div>
         <div style="display:flex;height:10px;border-radius:6px;overflow:hidden;margin:10px 0 12px">${
-          rows.map(r=>`<div title="${r.label} ${eur0(r.value)}" style="width:${Math.max(net?r.value/net*100:0,1.5)}%;background:${r.color}"></div>`).join("")}
+          groups.map(g=>`<div title="${TYPE_META[g.type].label} ${eur0(g.total)}" style="width:${Math.max(net?g.total/net*100:0,1.5)}%;background:${TYPE_META[g.type].color}"></div>`).join("")}
         </div>`+
-        rows.map(r=>`<div class="closed-row"><span><span style="color:${r.color}">●</span> ${r.label}
-            <span style="font-size:11px;color:var(--faint)">${r.sub||""}</span></span>
-          <span class="num" style="font-weight:600">${eur0(r.value)} <span class="muted" style="font-weight:400;font-size:12px">${net?(r.value/net*100).toFixed(1):0}%</span></span></div>`).join("");
+        groups.map(g=>{
+          const m=TYPE_META[g.type];
+          return `<div style="display:flex;justify-content:space-between;margin:12px 0 2px;font-size:11.5px;text-transform:uppercase;letter-spacing:.05em">
+              <span style="color:${m.color};font-weight:650">● ${m.label}</span>
+              <span class="muted num">${eur0(g.total)} · ${net?(g.total/net*100).toFixed(1):0}%</span></div>`+
+            g.rows.map(r=>`<div class="closed-row" style="padding:7px 0"><span>${r.label}
+                <span style="font-size:11px;color:var(--faint)">${r.sub||""}</span></span>
+              <span class="num" style="font-weight:600">${eur0(r.value)}</span></div>`).join("");
+        }).join("");
     }
     function loadCash(){
       fetchJSON("/api/cash").then(c=>{ CASH=c; renderMoney(); })
@@ -491,6 +556,57 @@
         }
         el.innerHTML=html+"</table><div class='muted' style='font-size:11px;margin-top:6px'>"+c.method+" Green = moves differently (diversifies), red = moves together.</div>";
       }).catch(()=>{ document.getElementById("corr").textContent="Unavailable."; });
+    }
+
+    /* ---- wealth projector + hindsight (performance page) ---- */
+    let projChart;
+    const SCEN_STYLE={cautious:["#8b98a9",[4,4]], expected:["#4c8dff",[]], optimistic:["#26a862",[6,4]]};
+    function renderProjection(){
+      if(!PROJ||!PROJ.scenarios) return;
+      document.getElementById("proj-sub").textContent=
+        `Starting from ${eur0(PROJ.start_value)} with your median contribution of ${eur0(PROJ.monthly_contribution)}/month. ${PROJ.method||""}`;
+      const labels=PROJ.scenarios.expected.points.map(p=>p.ym);
+      const tc=chartColors();
+      if(projChart) projChart.destroy();
+      projChart=new Chart(document.getElementById("proj-chart"),{type:"line",
+        data:{labels,datasets:Object.entries(PROJ.scenarios).map(([n,s])=>({
+          label:`${n} (${(s.annual_rate*100).toFixed(0)}%/y)`, data:s.points.map(p=>p.value),
+          borderColor:SCEN_STYLE[n][0], borderDash:SCEN_STYLE[n][1], borderWidth:2,
+          pointRadius:0, tension:.2, fill:false }))},
+        options:{maintainAspectRatio:false,interaction:{intersect:false,mode:"index"},
+          plugins:{legend:{labels:{color:tc.legend,boxWidth:12,font:{size:11}}},
+            tooltip:{callbacks:{label:c=>c.dataset.label+": "+eur0(c.parsed.y)}}},
+          scales:{x:{ticks:{color:tc.tick,maxTicksLimit:6,font:{size:11}},grid:{display:false}},
+            y:{ticks:{color:tc.tick,font:{size:11},callback:v=>"€"+(v/1000).toFixed(0)+"k"},grid:{color:tc.grid}}}}});
+      renderGoal();
+    }
+    function renderGoal(){
+      const goal=+localStorage.getItem("goal")||0, el=document.getElementById("goal-eta");
+      if(!goal||!PROJ){ el.textContent=""; return; }
+      document.getElementById("goal-input").value=goal;
+      const etas=Object.entries(PROJ.scenarios).map(([n,s])=>{
+        const hit=s.points.find(p=>p.value>=goal);
+        return `${n}: ${hit?hit.ym:">10y"}`;
+      });
+      el.innerHTML=`<span class="pos" style="font-weight:600">${eur0(goal)}</span> <span class="muted">reached — ${etas.join(" · ")}</span>`;
+    }
+    function setGoal(){
+      const v=+document.getElementById("goal-input").value;
+      if(v>0){ localStorage.setItem("goal",v); renderGoal(); }
+    }
+    function loadProjection(){
+      fetchJSON("/api/projection").then(p=>{ PROJ=p; renderProjection(); }).catch(()=>{});
+      fetchJSON("/api/hindsight").then(h=>{
+        const el=document.getElementById("hindsight"); el.className="";
+        const t=document.getElementById("hind-total");
+        t.innerHTML=`<span class="num ${h.total_delta_eur>0?'neg':'pos'}" style="font-size:24px;font-weight:750">${signed(h.total_delta_eur)}</span>
+          <span class="muted" style="font-size:12.5px"> if you'd never sold — <span class="chip" style="padding:1px 8px;font-size:11px" onclick="alert(${JSON.stringify(h.method)})">method</span></span>`;
+        const row=r=>`<div class="closed-row"><span>${r.name}<br>
+            <span style="font-size:11px;color:var(--faint)">sold for ${eur0(r.sold_for_eur)} · worth now ${eur0(r.worth_now_eur)}</span></span>
+          <span class="num ${r.delta_eur>0?'neg':'pos'}" style="font-weight:600">${r.delta_eur>0?"−":"+"}${eur0(Math.abs(r.delta_eur))}</span></div>`;
+        el.innerHTML=(h.regrets.length?`<div class="muted" style="font-size:11.5px;text-transform:uppercase;letter-spacing:.04em;margin:4px 0">Sold too early</div>`+h.regrets.map(row).join(""):"")+
+          (h.good_exits.length?`<div class="muted" style="font-size:11.5px;text-transform:uppercase;letter-spacing:.04em;margin:10px 0 4px">Well-timed exits</div>`+h.good_exits.map(row).join(""):"");
+      }).catch(()=>{ document.getElementById("hindsight").textContent="Unavailable."; });
     }
 
     /* ---- income projection + annual (insights page) ---- */
@@ -570,9 +686,10 @@
     function doughnut(id,items,key,prev){
       const labels=items.map(i=>i[key]),data=items.map(i=>i.value),tot=data.reduce((a,b)=>a+b,0);
       if(prev) prev.destroy();
+      const tc=chartColors();
       return new Chart(document.getElementById(id),{type:"doughnut",
-        data:{labels,datasets:[{data,borderColor:"#151a21",borderWidth:2,backgroundColor:labels.map((_,i)=>PALETTE[i%PALETTE.length])}]},
-        options:{cutout:"62%",plugins:{legend:{position:"right",labels:{color:"#e8edf2",boxWidth:11,padding:7,font:{size:11}}},
+        data:{labels,datasets:[{data,borderColor:tc.ring,borderWidth:2,backgroundColor:labels.map((_,i)=>PALETTE[i%PALETTE.length])}]},
+        options:{cutout:"62%",plugins:{legend:{position:"right",labels:{color:tc.legend,boxWidth:11,padding:7,font:{size:11}}},
           tooltip:{callbacks:{label:c=>`${c.label}: ${eur0(c.parsed)} (${(c.parsed/tot*100).toFixed(1)}%)`}}}}});
     }
     function renderAllocation(){ sc=doughnut("sector-chart",PORT.by_sector,"sector",sc); bc=doughnut("broker-chart",PORT.by_broker,"broker",bc); }
@@ -677,12 +794,13 @@
         datasets.push({label:"S&P 500 (same money invested)",data:labels.map(d=>BENCH[d]??null),
           borderColor:"#e3b341",borderDash:[5,4],borderWidth:1.8,pointRadius:0,fill:false,tension:.2,spanGaps:true});
       }
+      const tc=chartColors();
       chart=new Chart(ctx,{type:"line",data:{labels,datasets},
         options:{maintainAspectRatio:false,interaction:{intersect:false,mode:"index"},
-          plugins:{legend:{display:showBench,labels:{color:"#8b98a9",boxWidth:12,font:{size:11}}},
+          plugins:{legend:{display:showBench,labels:{color:tc.tick,boxWidth:12,font:{size:11}}},
           tooltip:{callbacks:{title:i=>i[0].label,label:c=>c.dataset.label+" "+eur0(c.parsed.y)}}},
-          scales:{x:{ticks:{color:"#5b6673",maxTicksLimit:6,font:{size:11}},grid:{display:false}},
-            y:{ticks:{color:"#5b6673",font:{size:11},callback:v=>"€"+(v/1000).toFixed(0)+"k"},grid:{color:"#1c232d"}}}}});
+          scales:{x:{ticks:{color:tc.tick,maxTicksLimit:6,font:{size:11}},grid:{display:false}},
+            y:{ticks:{color:tc.tick,font:{size:11},callback:v=>"€"+(v/1000).toFixed(0)+"k"},grid:{color:tc.grid}}}}});
     }
     function toggleBench(){
       benchmarkOn=!benchmarkOn;

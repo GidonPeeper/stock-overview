@@ -211,6 +211,99 @@ def annual_report() -> dict:
     ]}
 
 
+# -------------------------------------------------------------- hindsight
+HINDSIGHT_METHOD = (
+    "For every position you exited, the shares you sold are revalued at "
+    "today's price: (quantity sold × price now) − what you sold them for. "
+    "Positive = selling early cost you money; negative = the exit saved you "
+    "money. FX at today's rate; delisted names count as €0 now."
+)
+
+
+def hindsight() -> dict:
+    from .backfill import HIST_TICKER
+    from .positions import compute_positions
+    from .prices import fetch_quotes
+
+    trades = (trading212.get_trades() + degiro.get_trades()
+              + traderepublic.get_trades())
+    # per instrument: total qty sold + proceeds (EUR)
+    sold: dict[str, dict] = {}
+    for t in sorted(trades, key=lambda x: x.when):
+        if t.side != "SELL":
+            continue
+        s = sold.setdefault(t.key, {"name": t.name, "qty": 0.0, "proceeds": 0.0})
+        s["name"] = t.name
+        s["qty"] += t.quantity
+        s["proceeds"] += to_eur(t.amount, t.currency)
+
+    tickers = {isin: HIST_TICKER.get(isin, "") for isin in sold}
+    quotes = fetch_quotes([tk for tk in tickers.values() if tk])
+
+    rows = []
+    for isin, s in sold.items():
+        tk = tickers.get(isin, "")
+        if tk and tk in quotes:
+            ccy = "EUR" if tk.endswith((".AS", ".DE", ".PA", ".MI", ".F")) else \
+                  ("GBP" if tk.endswith(".L") else "USD")
+            value_now = to_eur(quotes[tk]["price"] * s["qty"], ccy)
+        elif tk == "":
+            value_now = 0.0  # delisted / worthless now
+        else:
+            continue  # unpriceable ticker -> skip rather than guess
+        delta = value_now - s["proceeds"]
+        if s["proceeds"] < 1:  # ignore zero-proceeds corporate-action noise
+            continue
+        rows.append({"name": s["name"], "ticker": tk or "delisted",
+                     "sold_for_eur": round(s["proceeds"], 2),
+                     "worth_now_eur": round(value_now, 2),
+                     "delta_eur": round(delta, 2)})
+    rows.sort(key=lambda r: -r["delta_eur"])
+    total = round(sum(r["delta_eur"] for r in rows), 2)
+    return {"method": HINDSIGHT_METHOD, "total_delta_eur": total,
+            "regrets": [r for r in rows if r["delta_eur"] > 0][:6],
+            "good_exits": [r for r in rows if r["delta_eur"] < 0][-6:][::-1]}
+
+
+# ------------------------------------------------------------- projection
+def projection() -> dict:
+    """Project net worth 10 years out under three return scenarios, using the
+    portfolio's real average monthly contribution."""
+    from . import store as _store
+
+    hist = _store.get_history()
+    if not hist:
+        return {"scenarios": {}}
+    start = hist[-1]["total_value"]
+    # median positive monthly contribution over the last 24 months
+    by_month: dict[str, float] = {}
+    for s in hist:
+        by_month[s["day"][:7]] = s["total_cost"]
+    months = sorted(by_month)[-25:]
+    flows = [by_month[b] - by_month[a] for a, b in zip(months, months[1:])]
+    pos = sorted(f for f in flows if f > 0)
+    contrib = round(pos[len(pos) // 2], 2) if pos else 0.0
+
+    scenarios = {"cautious": 0.03, "expected": 0.06, "optimistic": 0.09}
+    out = {}
+    from datetime import date
+    y0, m0 = date.today().year, date.today().month
+    for name, rate in scenarios.items():
+        v = start
+        pts = []
+        for i in range(1, 121):
+            v = v * (1 + rate / 12) + contrib
+            if i % 3 == 0:  # quarterly points keep the payload light
+                y, m = y0 + (m0 + i - 1) // 12, (m0 + i - 1) % 12 + 1
+                pts.append({"ym": f"{y}-{m:02d}", "value": round(v)})
+        out[name] = {"annual_rate": rate, "points": pts}
+    return {"start_value": round(start), "monthly_contribution": contrib,
+            "scenarios": out,
+            "method": "Compounds today's value monthly at 3/6/9% annually, "
+                      f"adding your median monthly contribution (€{contrib:,.0f}, "
+                      "from the last 24 months). A projection, not a promise."}
+
+
 # ------------------------------------------------------------------ export
 def holdings_csv(holdings: list[dict]) -> str:
     buf = io.StringIO()

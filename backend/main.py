@@ -362,10 +362,11 @@ def cash_get() -> dict:
 
 @app.post("/api/cash")
 def cash_upsert(name: str = Form(...), institution: str = Form(""),
-                balance: float = Form(...), currency: str = Form("EUR")) -> dict:
+                balance: float = Form(...), currency: str = Form("EUR"),
+                type: str = Form("cash")) -> dict:
     if not name.strip():
         raise HTTPException(400, "Account name is required")
-    return cash.upsert(name, institution, balance, currency)
+    return cash.upsert(name, institution, balance, currency, type)
 
 
 @app.delete("/api/cash/{name}")
@@ -478,6 +479,19 @@ def income_projection() -> dict:
 def annual_report() -> dict:
     """Realized P/L + dividend income per calendar year."""
     return reports.annual_report()
+
+
+@app.get("/api/hindsight")
+def hindsight_endpoint() -> dict:
+    """What your exits are worth today vs what you sold them for."""
+    return reports.hindsight()
+
+
+@app.get("/api/projection")
+def projection_endpoint() -> dict:
+    """10-year net-worth projection under 3/6/9% scenarios with your real
+    contribution rate."""
+    return reports.projection()
 
 
 @app.get("/api/export/holdings.csv")
