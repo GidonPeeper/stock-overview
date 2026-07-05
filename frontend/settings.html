@@ -6,9 +6,12 @@
   <title>Settings — Stock Overview</title>
   <meta name="theme-color" content="#0b0e11" />
   <link rel="apple-touch-icon" href="/icon-180.png" />
+  <script>document.documentElement.dataset.theme=localStorage.getItem("theme")||(matchMedia("(prefers-color-scheme: light)").matches?"light":"dark");</script>
   <style>
     :root{ --bg:#0b0e11; --panel:#151a21; --panel2:#1c232d; --text:#e8edf2; --muted:#8b98a9;
       --faint:#5b6673; --green:#26a862; --red:#f0616d; --accent:#4c8dff; --border:#232b36; }
+    :root[data-theme="light"]{ --bg:#f4f6f9; --panel:#ffffff; --panel2:#eef1f5; --text:#17202b;
+      --muted:#5b6673; --faint:#93a0af; --green:#118a53; --red:#d43d4f; --accent:#2f6fed; --border:#e4e9ef; }
     *{ box-sizing:border-box; }
     body{ margin:0; background:var(--bg); color:var(--text);
       font:15px/1.55 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif; }
@@ -86,16 +89,22 @@
     </div>
 
     <div class="card" id="cash">
-      <h2>Bank &amp; cash accounts</h2>
-      <div class="sub" style="margin-bottom:10px">Balances change often, so you edit them here in
-        seconds — type the new number and save. (Personal bank APIs are gated behind PSD2 licensing;
-        auto-sync via Enable Banking can be added later.)</div>
+      <h2>Bank, savings &amp; retirement accounts</h2>
+      <div class="sub" style="margin-bottom:10px">Cash, savings and pension pots — 401(k), IRA,
+        pensioen, lijfrente. Balances change often, so you edit them here in seconds. (Personal bank
+        APIs are gated behind PSD2 licensing; auto-sync via Enable Banking can be added later.)</div>
       <div id="cash-list"><span style="color:var(--faint)">Loading…</span></div>
       <div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:14px;align-items:center">
         <input id="c-name" placeholder="Account name" style="flex:2;min-width:110px" class="ipt" />
-        <input id="c-inst" placeholder="Bank (e.g. Rabobank)" style="flex:2;min-width:110px" class="ipt" />
+        <input id="c-inst" placeholder="Institution (e.g. Rabobank)" style="flex:2;min-width:110px" class="ipt" />
         <input id="c-bal" placeholder="Balance" type="number" step="0.01" style="flex:1;min-width:80px" class="ipt" />
         <select id="c-cur" class="ipt" style="width:74px"><option>EUR</option><option>USD</option><option>GBP</option></select>
+        <select id="c-type" class="ipt" style="width:150px">
+          <option value="cash">Cash</option>
+          <option value="savings">Savings</option>
+          <option value="retirement">Retirement / 401(k)</option>
+          <option value="other">Other asset</option>
+        </select>
         <button class="btn" onclick="addAccount()">Add</button>
       </div>
       <div class="msg" id="m-cash"></div>
@@ -118,18 +127,20 @@
     }
     fetch("/api/datastatus").then(r=>r.json()).then(renderStatus);
     /* ---- cash accounts ---- */
+    const TYPE_LABEL={cash:"Cash",savings:"Savings",retirement:"Retirement",other:"Other"};
     function renderCash(c){
       const el=document.getElementById("cash-list");
       if(!c.accounts.length){ el.innerHTML='<span style="color:var(--faint)">No accounts yet — add your first below.</span>'; return; }
       el.innerHTML=(c.sample?'<div class="msg" style="color:#e3b341;margin-bottom:6px">Demo accounts shown — add a real one to replace them.</div>':'')+
-        c.accounts.map(a=>`<div class="row"><span>${a.name}<br>
+        c.accounts.map(a=>`<div class="row"><span>${a.name}
+            <span class="pill" style="background:var(--panel2);color:var(--muted);margin-left:4px">${TYPE_LABEL[a.type]||"Cash"}</span><br>
             <span style="font-size:11px;color:var(--faint)">${a.institution||"—"} · ${a.currency}</span></span>
           <span style="display:flex;gap:6px;align-items:center">
             <input class="ipt bal" type="number" step="0.01" value="${a.balance}" id="bal-${btoa(a.name).replace(/=/g,'')}" />
-            <button class="btn" style="padding:7px 11px" onclick="saveAccount('${a.name.replace(/'/g,"\\'")}','${(a.institution||"").replace(/'/g,"\\'")}','${a.currency}')">Save</button>
+            <button class="btn" style="padding:7px 11px" onclick="saveAccount('${a.name.replace(/'/g,"\\'")}','${(a.institution||"").replace(/'/g,"\\'")}','${a.currency}','${a.type||"cash"}')">Save</button>
             <button class="del" title="Remove" onclick="delAccount('${a.name.replace(/'/g,"\\'")}')">✕</button>
           </span></div>`).join("")+
-        `<div class="row"><span style="font-weight:650">Total cash</span><span style="font-weight:650">€${(c.total_eur||0).toLocaleString("en-IE",{maximumFractionDigits:0})}</span></div>`;
+        `<div class="row"><span style="font-weight:650">Total (all accounts)</span><span style="font-weight:650">€${(c.total_eur||0).toLocaleString("en-IE",{maximumFractionDigits:0})}</span></div>`;
     }
     function loadCash(){ fetch("/api/cash").then(r=>r.json()).then(renderCash); }
     async function postCash(fd, okMsg){
@@ -138,10 +149,10 @@
       if(r.ok){ msg.textContent=okMsg; msg.className="msg ok"; renderCash(await r.json()); }
       else{ const e=await r.json().catch(()=>({detail:"Failed"})); msg.textContent="✗ "+e.detail; msg.className="msg err"; }
     }
-    function saveAccount(name, inst, cur){
+    function saveAccount(name, inst, cur, type){
       const v=document.getElementById("bal-"+btoa(name).replace(/=/g,'')).value;
       const fd=new FormData(); fd.append("name",name); fd.append("institution",inst);
-      fd.append("balance",v); fd.append("currency",cur);
+      fd.append("balance",v); fd.append("currency",cur); fd.append("type",type||"cash");
       postCash(fd, "✓ Saved");
     }
     function addAccount(){
@@ -149,6 +160,7 @@
       if(!n||!b){ const m=document.getElementById("m-cash"); m.textContent="Name and balance required."; m.className="msg err"; return; }
       const fd=new FormData(); fd.append("name",n); fd.append("institution",document.getElementById("c-inst").value);
       fd.append("balance",b); fd.append("currency",document.getElementById("c-cur").value);
+      fd.append("type",document.getElementById("c-type").value);
       postCash(fd, "✓ Added"); document.getElementById("c-name").value=""; document.getElementById("c-bal").value="";
     }
     async function delAccount(name){
