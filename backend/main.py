@@ -32,14 +32,15 @@ except ImportError:
 
 from collections import defaultdict
 
-from . import vault
+from . import github_sync, vault
+github_sync.pull_vault()       # fetch freshest cloud vault first (no-op without token)
 _VAULT_STATE = vault.unlock()  # hydrate private data files before anything reads them
 
 from .connectors import degiro, traderepublic, trading212
 from .fx import BASE_CURRENCY, to_eur
 from .prices import fetch_quotes
 from . import (analytics, cash, datafiles, income, insights, market, periods,
-               realized, reports, sectors, store)
+               realized, reports, sectors, store, watch)
 
 DEMO_MODE = not (os.getenv("T212_API_KEY") and os.getenv("T212_API_SECRET"))
 FRONTEND_DIR = Path(__file__).resolve().parents[1] / "frontend"
@@ -346,6 +347,7 @@ def datastatus() -> dict:
     """Which data sources are live vs sample — shown as a banner in the UI."""
     out = datafiles.status()
     out["_vault"] = _VAULT_STATE
+    out["_sync"] = github_sync.last_result
     return out
 
 
@@ -366,12 +368,16 @@ def cash_upsert(name: str = Form(...), institution: str = Form(""),
                 type: str = Form("cash")) -> dict:
     if not name.strip():
         raise HTTPException(400, "Account name is required")
-    return cash.upsert(name, institution, balance, currency, type)
+    out = cash.upsert(name, institution, balance, currency, type)
+    github_sync.push_vault_async()
+    return out
 
 
 @app.delete("/api/cash/{name}")
 def cash_delete(name: str) -> dict:
-    return cash.delete(name)
+    out = cash.delete(name)
+    github_sync.push_vault_async()
+    return out
 
 
 @app.post("/api/upload/{kind}")
@@ -406,6 +412,7 @@ async def upload_statement(kind: str, file: UploadFile = File(...)) -> dict:
         pass
     with _backfill_lock:
         _backfill_started = False
+    github_sync.push_vault_async()
     return datafiles.status()
 
 
@@ -479,6 +486,34 @@ def income_projection() -> dict:
 def annual_report() -> dict:
     """Realized P/L + dividend income per calendar year."""
     return reports.annual_report()
+
+
+@app.get("/api/watchlist")
+def watchlist_get() -> dict:
+    """Watchlist with live quotes, daily change and sparklines."""
+    return watch.load()
+
+
+@app.post("/api/watchlist")
+def watchlist_add(ticker: str = Form(...), name: str = Form("")) -> dict:
+    out = watch.add(ticker.strip(), name.strip() or ticker.strip())
+    github_sync.push_vault_async()
+    return out
+
+
+@app.delete("/api/watchlist/{ticker}")
+def watchlist_remove(ticker: str) -> dict:
+    out = watch.remove(ticker)
+    github_sync.push_vault_async()
+    return out
+
+
+@app.get("/api/search")
+def search_tickers(q: str) -> list[dict]:
+    """Global ticker search (Yahoo symbol search via yfinance)."""
+    if not q.strip():
+        return []
+    return watch.search(q.strip())
 
 
 @app.get("/api/hindsight")
