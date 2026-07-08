@@ -1,0 +1,8 @@
+{
+  "_note": "SAMPLE demo watchlist. Yours is managed in-app and stored in watchlist.json (git-ignored).",
+  "tickers": [
+    {"ticker": "NVDA", "name": "NVIDIA Corporation"},
+    {"ticker": "ASML.AS", "name": "ASML Holding"},
+    {"ticker": "BRK-B", "name": "Berkshire Hathaway"}
+  ]
+}

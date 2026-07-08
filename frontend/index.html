@@ -231,6 +231,17 @@
         <div id="closed-rows" class="skeleton">Loading…</div>
         <div class="closed-total"><span>Total realized</span><span id="closed-total" class="num"></span></div>
       </div>
+      <div class="card">
+        <h2>Watchlist</h2>
+        <div style="position:relative;margin-bottom:12px">
+          <input id="search-input" placeholder="Search any stock or ETF… (e.g. Ferrari, NVDA)" autocomplete="off"
+            style="width:100%;background:var(--panel2);border:1px solid var(--border);color:var(--text);border-radius:11px;padding:11px 13px;font-size:14px;font-family:inherit"
+            oninput="searchTickers(this.value)" />
+          <div id="search-results" hidden
+            style="position:absolute;top:calc(100% + 6px);left:0;right:0;background:var(--panel);border:1px solid var(--border);border-radius:12px;box-shadow:var(--shadow);z-index:15;max-height:280px;overflow-y:auto"></div>
+        </div>
+        <div id="watchlist" class="skeleton">Loading…</div>
+      </div>
     </section>
 
     <!-- PERFORMANCE -->
@@ -260,7 +271,15 @@
         <h2>Wealth projector — 10 years ahead</h2>
         <div id="proj-sub" class="muted" style="font-size:12.5px;margin-bottom:10px"></div>
         <div style="height:240px"><canvas id="proj-chart"></canvas></div>
-        <div style="display:flex;gap:8px;align-items:center;margin-top:14px;flex-wrap:wrap">
+        <div style="margin-top:14px">
+          <div style="display:flex;justify-content:space-between;font-size:12.5px;margin-bottom:4px">
+            <span class="muted">What if I invest</span>
+            <span id="contrib-label" class="num" style="font-weight:650"></span>
+          </div>
+          <input id="contrib-slider" type="range" min="0" max="8000" step="100" style="width:100%"
+            oninput="setContrib(+this.value)" />
+        </div>
+        <div style="display:flex;gap:8px;align-items:center;margin-top:12px;flex-wrap:wrap">
           <span class="muted" style="font-size:13px">Goal:</span>
           <input id="goal-input" type="number" placeholder="e.g. 250000" style="background:var(--panel2);border:1px solid var(--border);color:var(--text);border-radius:9px;padding:7px 10px;font-size:13.5px;font-family:inherit;width:120px" />
           <button class="chip" style="border-color:rgba(76,141,255,.5);color:var(--accent)" onclick="setGoal()">Set</button>
@@ -558,11 +577,110 @@
       }).catch(()=>{ document.getElementById("corr").textContent="Unavailable."; });
     }
 
+    /* ---- watchlist + global search ---- */
+    let WATCH=null, searchTimer;
+    function loadWatchlist(){
+      fetchJSON("/api/watchlist").then(w=>{ WATCH=w; renderWatchlist(); }).catch(()=>{
+        document.getElementById("watchlist").textContent="Unavailable."; });
+    }
+    function renderWatchlist(){
+      const el=document.getElementById("watchlist"); el.className="";
+      if(!WATCH||!WATCH.tickers.length){ el.innerHTML='<span class="muted">Search above to start watching stocks you don\'t own yet.</span>'; return; }
+      el.innerHTML=(WATCH.sample?'<div class="muted" style="font-size:12px;margin-bottom:6px">Demo watchlist — add your own to replace it.</div>':'')+
+        WATCH.tickers.map(t=>`<div class="closed-row" style="cursor:pointer" onclick="openTicker('${t.ticker}')">
+          <span style="display:flex;align-items:center;gap:10px">${sparkSVG(t.spark)}
+            <span>${t.name}<br><span style="font-size:11px;color:var(--faint)">${t.ticker}</span></span></span>
+          <span style="display:flex;align-items:center;gap:10px">
+            <span style="text-align:right"><span class="num" style="font-weight:600">${t.price??"—"}</span><br>
+              <span class="num sub ${t.daily_pct==null?'muted':cls(t.daily_pct)}" style="margin:0">${t.daily_pct==null?"":pct(t.daily_pct)}</span></span>
+            <button onclick="event.stopPropagation();unwatch('${t.ticker}')" title="Remove"
+              style="background:none;border:none;color:var(--faint);cursor:pointer;font-size:14px">✕</button>
+          </span></div>`).join("");
+    }
+    function searchTickers(q){
+      clearTimeout(searchTimer);
+      const box=document.getElementById("search-results");
+      if(!q.trim()){ box.hidden=true; return; }
+      searchTimer=setTimeout(()=>{
+        fetchJSON("/api/search?q="+encodeURIComponent(q)).then(rs=>{
+          box.hidden=false;
+          box.innerHTML=rs.length?rs.map(r=>
+            `<div style="padding:10px 13px;cursor:pointer;border-bottom:1px solid var(--border)"
+               onclick="pickSearch('${r.ticker}','${(r.name||'').replace(/'/g,"\\'")}')">
+               <b>${r.ticker}</b> <span class="muted">${r.name}</span>
+               <span style="float:right;font-size:11px;color:var(--faint)">${r.exchange}</span></div>`).join("")
+            :'<div class="muted" style="padding:10px 13px">No matches</div>';
+        }).catch(()=>{ box.hidden=true; });
+      },350);
+    }
+    function pickSearch(ticker,name){
+      document.getElementById("search-results").hidden=true;
+      document.getElementById("search-input").value="";
+      openTicker(ticker,name);
+    }
+    function watchAdd(ticker,name){
+      const fd=new FormData(); fd.append("ticker",ticker); fd.append("name",name);
+      fetch("/api/watchlist",{method:"POST",body:fd}).then(r=>r.json()).then(w=>{ WATCH=w; renderWatchlist(); updateWatchBtn(ticker); });
+    }
+    function unwatch(ticker){
+      fetch("/api/watchlist/"+encodeURIComponent(ticker),{method:"DELETE"}).then(r=>r.json()).then(w=>{ WATCH=w; renderWatchlist(); updateWatchBtn(ticker); });
+    }
+    function isWatched(t){ return WATCH&&!WATCH.sample&&WATCH.tickers.some(x=>x.ticker===t); }
+    function updateWatchBtn(ticker){
+      const b=document.getElementById("d-watch");
+      if(b&&b.dataset.ticker===ticker)
+        b.textContent=isWatched(ticker)?"★ Watching — remove":"☆ Add to watchlist";
+    }
+    /* detail sheet for ANY ticker (watchlist / search results) */
+    function openTicker(ticker,name){
+      const w=WATCH&&WATCH.tickers.find(t=>t.ticker===ticker);
+      document.getElementById("d-name").textContent=(w&&w.name)||name||ticker;
+      document.getElementById("d-tags").innerHTML=`<span class="tag">${ticker}</span>`;
+      document.getElementById("d-val").textContent=w&&w.price?w.price:"";
+      const dt=document.getElementById("d-today");
+      dt.className=w&&w.daily_pct!=null?cls(w.daily_pct):"muted";
+      dt.innerHTML=w&&w.daily_pct!=null?`${arrow(w.daily_pct)} ${pct(w.daily_pct)} today`:"";
+      document.getElementById("d-grid").innerHTML=
+        `<div class="b" style="grid-column:1/-1"><button id="d-watch" data-ticker="${ticker}"
+          onclick="isWatched('${ticker}')?unwatch('${ticker}'):watchAdd('${ticker}','${((w&&w.name)||name||ticker).replace(/'/g,"\\'")}')"
+          style="background:none;border:none;color:var(--accent);font:inherit;font-weight:600;cursor:pointer;padding:2px 0">${isWatched(ticker)?"★ Watching — remove":"☆ Add to watchlist"}</button></div>`;
+      detailTicker=ticker; detailRange="1mo";
+      document.querySelectorAll("#d-range button").forEach(b=>b.classList.toggle("active",b.dataset.r==="1mo"));
+      document.getElementById("d-news").innerHTML='<div class="skeleton" style="padding:8px 0">Loading…</div>';
+      fetchJSON("/api/news/"+encodeURIComponent(ticker)).then(items=>{
+        document.getElementById("d-news").innerHTML=items.length
+          ?items.map(n=>`<a href="${n.url}" target="_blank" rel="noopener">${n.title}<div class="src">${n.publisher}</div></a>`).join("")
+          :'<div class="muted" style="padding:8px 0">No recent news</div>';
+      }).catch(()=>{});
+      document.getElementById("modal").classList.add("open");
+      requestAnimationFrame(()=>{
+        if(w&&w.spark&&w.spark.length>1) drawDetailChart(w.spark);
+        else fetchJSON("/api/ticker_history/"+encodeURIComponent(ticker)+"?range=1mo").then(drawDetailChart).catch(()=>{});
+      });
+    }
+
     /* ---- wealth projector + hindsight (performance page) ---- */
     let projChart;
     const SCEN_STYLE={cautious:["#8b98a9",[4,4]], expected:["#4c8dff",[]], optimistic:["#26a862",[6,4]]};
+    function setContrib(v){
+      if(!PROJ) return;
+      PROJ.user_contrib=v;
+      // recompute all scenario curves client-side with the what-if contribution
+      const labels=PROJ.scenarios.expected.points.map(p=>p.ym);
+      Object.values(PROJ.scenarios).forEach(s=>{
+        let val=PROJ.start_value; const pts=[];
+        for(let i=1;i<=120;i++){ val=val*(1+s.annual_rate/12)+v; if(i%3===0) pts.push({ym:labels[pts.length], value:Math.round(val)}); }
+        s.points=pts;
+      });
+      renderProjection();
+    }
     function renderProjection(){
       if(!PROJ||!PROJ.scenarios) return;
+      const contrib = PROJ.user_contrib ?? PROJ.monthly_contribution;
+      const slider=document.getElementById("contrib-slider");
+      if(document.activeElement!==slider) slider.value=contrib;
+      document.getElementById("contrib-label").textContent=
+        `${eur0(contrib)}/month${PROJ.user_contrib!=null&&PROJ.user_contrib!==PROJ.monthly_contribution?` (your actual: ${eur0(PROJ.monthly_contribution)})`:""}`;
       document.getElementById("proj-sub").textContent=
         `Starting from ${eur0(PROJ.start_value)} with your median contribution of ${eur0(PROJ.monthly_contribution)}/month. ${PROJ.method||""}`;
       const labels=PROJ.scenarios.expected.points.map(p=>p.ym);
@@ -840,6 +958,7 @@
       loadHealth();
       loadCash();
       renderMoney();
+      loadWatchlist();
     }
     async function refreshLive(){
       if(document.hidden||!PORT) return;

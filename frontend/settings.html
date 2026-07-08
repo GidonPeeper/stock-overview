@@ -59,6 +59,17 @@
     </div>
 
     <div class="card">
+      <h2>Cloud persistence</h2>
+      <div id="sync-status" class="sub" style="margin-bottom:8px">Checking…</div>
+      <div class="sub" style="margin:0">Free hosting wipes its disk on every restart. With a GitHub
+        token set, every edit here is encrypted into the vault and committed to a
+        <code>data-sync</code> branch automatically — so balances and uploads survive restarts and
+        deploys. Setup: GitHub → Settings → Developer settings → Fine-grained tokens → new token
+        with <b>Contents: read &amp; write</b> on this repo only → add it as env var
+        <code>GITHUB_TOKEN</code> on the host.</div>
+    </div>
+
+    <div class="card">
       <h2>DeGiro — account statement (CSV)</h2>
       <div class="sub" style="margin-bottom:8px">DeGiro → Activity → Account statement → export CSV, all dates since account opening.</div>
       <div class="up"><input type="file" id="f-degiro" accept=".csv" />
@@ -124,6 +135,11 @@
       document.getElementById("files").innerHTML=Object.keys(seen).length
         ? "Files the server can see: "+Object.entries(seen).map(([d,fs])=>`<br><code>${d}</code>: ${fs.join(", ")}`).join("")
         : "";
+      const sy=s._sync||{}, el=document.getElementById("sync-status");
+      if(el) el.innerHTML = sy.enabled
+        ? (sy.ok===false ? `<span style="color:var(--red)">● Sync error (${sy.error||"?"}) — check the token's permissions.</span>`
+                         : `<span style="color:var(--green)">● Cloud sync ON</span> — edits persist across restarts${sy.at?` (last sync ${sy.at})`:""}.`)
+        : `<span style="color:#e3b341">● Cloud sync OFF</span> — edits survive only until the next restart. Add a GITHUB_TOKEN to fix this permanently.`;
     }
     fetch("/api/datastatus").then(r=>r.json()).then(renderStatus);
     /* ---- cash accounts ---- */
