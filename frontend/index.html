@@ -186,6 +186,11 @@
         <div id="money" class="skeleton">Loading…</div>
       </div>
       <div class="card">
+        <h2>Freedom Day <span class="chip" style="padding:1px 8px;font-size:11px" onclick="const m=document.getElementById('fd-method');m.hidden=!m.hidden">method</span></h2>
+        <div id="fd-method" hidden style="font-size:12.5px;color:var(--muted);background:var(--panel2);border-radius:10px;padding:10px 12px;margin-bottom:10px"></div>
+        <div id="freedom" class="skeleton">Loading…</div>
+      </div>
+      <div class="card">
         <h2>Profit / Loss</h2>
         <div class="chips" id="profit-chips"></div>
         <div class="pdisplay"><div id="p-num" class="n num skeleton">—</div><div id="p-desc" class="d"></div></div>
@@ -494,7 +499,8 @@
     };
     function renderMoney(){
       if(!PORT||!CASH) return;
-      const inv=PORT.totals.value, net=inv+(CASH.total_eur||0);
+      const inv=PORT.totals.value, assets=inv+(CASH.total_eur||0);
+      const debt=FIN?FIN.totals.debt_eur:0, net=assets-debt;
       const groups=[{type:"invest", total:inv,
         rows:[{label:"Brokers", sub:PORT.by_broker.map(b=>b.broker).join(" · "), value:inv}]}];
       ["cash","savings","retirement","other"].forEach(t=>{
@@ -503,27 +509,68 @@
           rows:accs.map(a=>({label:a.name, sub:a.institution, value:a.balance_eur}))});
       });
       const el=document.getElementById("money"); el.className="";
+      const loans=FIN?FIN.loans:[];
       el.innerHTML=`
         <div style="display:flex;align-items:baseline;gap:10px;margin-bottom:4px">
           <span class="num" style="font-size:27px;font-weight:750;letter-spacing:-.02em">${eur0(net)}</span>
-          <span class="muted" style="font-size:12.5px">net worth${CASH.sample?' · demo accounts':''}</span>
+          <span class="muted" style="font-size:12.5px">net worth${debt?` = ${eur0(assets)} assets − ${eur0(debt)} debt`:""}${CASH.sample?' · demo accounts':''}</span>
         </div>
         <div style="display:flex;height:10px;border-radius:6px;overflow:hidden;margin:10px 0 12px">${
-          groups.map(g=>`<div title="${TYPE_META[g.type].label} ${eur0(g.total)}" style="width:${Math.max(net?g.total/net*100:0,1.5)}%;background:${TYPE_META[g.type].color}"></div>`).join("")}
+          groups.map(g=>`<div title="${TYPE_META[g.type].label} ${eur0(g.total)}" style="width:${Math.max(assets?g.total/assets*100:0,1.5)}%;background:${TYPE_META[g.type].color}"></div>`).join("")}
         </div>`+
         groups.map(g=>{
           const m=TYPE_META[g.type];
           return `<div style="display:flex;justify-content:space-between;margin:12px 0 2px;font-size:11.5px;text-transform:uppercase;letter-spacing:.05em">
               <span style="color:${m.color};font-weight:650">● ${m.label}</span>
-              <span class="muted num">${eur0(g.total)} · ${net?(g.total/net*100).toFixed(1):0}%</span></div>`+
+              <span class="muted num">${eur0(g.total)} · ${assets?(g.total/assets*100).toFixed(1):0}%</span></div>`+
             g.rows.map(r=>`<div class="closed-row" style="padding:7px 0"><span>${r.label}
                 <span style="font-size:11px;color:var(--faint)">${r.sub||""}</span></span>
               <span class="num" style="font-weight:600">${eur0(r.value)}</span></div>`).join("");
-        }).join("");
+        }).join("")+
+        (loans.length?`<div style="display:flex;justify-content:space-between;margin:12px 0 2px;font-size:11.5px;text-transform:uppercase;letter-spacing:.05em">
+            <span style="color:var(--red);font-weight:650">● Loans</span>
+            <span class="muted num">−${eur0(debt)}</span></div>`+
+          loans.map(l=>`<div class="closed-row" style="padding:7px 0"><span>${l.name}
+              <span style="font-size:11px;color:var(--faint)">${l.rate?l.rate+"% · ":""}${l.monthly_payment?eur0(l.monthly_payment)+"/mo":""}${l.payoff?` · paid off ${fmtYM(l.payoff)}`:""}</span></span>
+            <span class="num neg" style="font-weight:600">−${eur0(l.balance_eur)}</span></div>`).join(""):"");
     }
     function loadCash(){
       fetchJSON("/api/cash").then(c=>{ CASH=c; renderMoney(); })
         .catch(()=>{ document.getElementById("money").textContent="Unavailable."; });
+    }
+
+    /* ---- finances: loans, income, payments + Freedom Day ---- */
+    let FIN=null;
+    function loadFinances(){
+      fetchJSON("/api/finances").then(f=>{ FIN=f; renderMoney(); renderFreedom(); })
+        .catch(()=>{ document.getElementById("freedom").textContent="Unavailable."; });
+    }
+    function fmtYM(ym){ if(!ym) return null;
+      const [y,m]=ym.split("-"); return new Date(y,m-1,1).toLocaleDateString("en-GB",{month:"long",year:"numeric"}); }
+    function renderFreedom(){
+      const el=document.getElementById("freedom"); if(!FIN) return;
+      const fr=FIN.freedom, t=FIN.totals;
+      if(!fr){ el.className=""; el.innerHTML='<span class="muted">Add your income and monthly payments in <a href="/settings#fin" style="color:var(--accent)">Settings</a> to unlock your Freedom Day.</span>'; return; }
+      document.getElementById("fd-method").textContent=fr.method;
+      const R=44, C=2*Math.PI*R, off=C*(1-fr.progress_pct/100);
+      el.className="";
+      el.innerHTML=`<div style="display:flex;align-items:center;gap:18px;flex-wrap:wrap">
+        <svg width="110" height="110" viewBox="0 0 110 110" style="flex:0 0 auto">
+          <circle cx="55" cy="55" r="${R}" fill="none" stroke="var(--panel3)" stroke-width="9"/>
+          <circle cx="55" cy="55" r="${R}" fill="none" stroke="var(--accent)" stroke-width="9"
+            stroke-linecap="round" stroke-dasharray="${C}" stroke-dashoffset="${off}"
+            transform="rotate(-90 55 55)" style="transition:stroke-dashoffset 1s ease"/>
+          <text x="55" y="60" text-anchor="middle" fill="var(--text)" font-size="20" font-weight="700" font-family="inherit">${fr.progress_pct}%</text>
+        </svg>
+        <div style="flex:1;min-width:200px">
+          <div style="font-size:22px;font-weight:750">${fr.months_away===0?"You're free 🎉":(fmtYM(fr.eta_ym)||"Beyond 60 years")}</div>
+          <div class="muted" style="font-size:13px;margin:2px 0 10px">the day your investments could cover your life (${eur0(fr.target_eur)} target)</div>
+          <div style="display:flex;gap:16px;flex-wrap:wrap;font-size:13px">
+            <span><b class="num">${eur0(t.free_cashflow)}</b> <span class="muted">free/month</span></span>
+            <span><b class="num">${fr.runway_months??"—"}</b> <span class="muted">months runway</span></span>
+            <span><b class="num neg">${eur0(t.debt_eur)}</b> <span class="muted">debt</span></span>
+          </div>
+        </div></div>`;
     }
 
     /* ---- health score ---- */
@@ -957,6 +1004,7 @@
       loadDataStatus();
       loadHealth();
       loadCash();
+      loadFinances();
       renderMoney();
       loadWatchlist();
     }

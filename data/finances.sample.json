@@ -1,0 +1,13 @@
+{
+  "_note": "SAMPLE demo data. Yours is managed in-app (Settings) and stored in finances.json (git-ignored).",
+  "loans": [
+    {"name": "Student loan (DUO)", "balance": 14500, "rate": 2.56, "monthly_payment": 120, "currency": "EUR"}
+  ],
+  "income": [
+    {"name": "Salary", "monthly_eur": 3200}
+  ],
+  "expenses": [
+    {"name": "Rent & utilities", "monthly_eur": 1150},
+    {"name": "Groceries & living", "monthly_eur": 550}
+  ]
+}

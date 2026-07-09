@@ -14,6 +14,7 @@ data/trades_trade_republic.json
 data/income_trade_republic.json
 data/cash_accounts.json
 data/watchlist.json
+data/finances.json
 
 # generated at runtime (rebuilt automatically)
 data/history.db

@@ -39,8 +39,8 @@ _VAULT_STATE = vault.unlock()  # hydrate private data files before anything read
 from .connectors import degiro, traderepublic, trading212
 from .fx import BASE_CURRENCY, to_eur
 from .prices import fetch_quotes
-from . import (analytics, cash, datafiles, income, insights, market, periods,
-               realized, reports, sectors, store, watch)
+from . import (analytics, cash, datafiles, finances, income, insights, market,
+               periods, realized, reports, sectors, store, watch)
 
 DEMO_MODE = not (os.getenv("T212_API_KEY") and os.getenv("T212_API_SECRET"))
 FRONTEND_DIR = Path(__file__).resolve().parents[1] / "frontend"
@@ -486,6 +486,43 @@ def income_projection() -> dict:
 def annual_report() -> dict:
     """Realized P/L + dividend income per calendar year."""
     return reports.annual_report()
+
+
+def _liquid_assets() -> float:
+    """Investments (latest snapshot) + cash — cheap, no live pricing needed."""
+    hist = store.get_history()
+    invest = hist[-1]["total_value"] if hist else 0.0
+    return invest + (cash.load().get("total_eur") or 0.0)
+
+
+@app.get("/api/finances")
+def finances_get() -> dict:
+    """Loans, income, monthly payments + cash-flow totals and Freedom Day."""
+    return finances.load(_liquid_assets())
+
+
+@app.post("/api/finances/{kind}")
+def finances_upsert(kind: str, name: str = Form(...), balance: float = Form(0),
+                    rate: float = Form(0), monthly_payment: float = Form(0),
+                    monthly_eur: float = Form(0), currency: str = Form("EUR")) -> dict:
+    if kind not in finances.KINDS:
+        raise HTTPException(404, "Unknown kind")
+    if not name.strip():
+        raise HTTPException(400, "Name is required")
+    fields = {"balance": balance, "rate": rate, "monthly_payment": monthly_payment,
+              "currency": currency.upper()} if kind == "loans" else {"monthly_eur": monthly_eur}
+    out = finances.upsert(kind, name, fields)
+    github_sync.push_vault_async()
+    return out
+
+
+@app.delete("/api/finances/{kind}/{name}")
+def finances_delete(kind: str, name: str) -> dict:
+    if kind not in finances.KINDS:
+        raise HTTPException(404, "Unknown kind")
+    out = finances.delete(kind, name)
+    github_sync.push_vault_async()
+    return out
 
 
 @app.get("/api/watchlist")

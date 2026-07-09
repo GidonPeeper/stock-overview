@@ -120,6 +120,41 @@
       </div>
       <div class="msg" id="m-cash"></div>
     </div>
+
+    <div class="card" id="fin">
+      <h2>Loans, income &amp; monthly payments</h2>
+      <div class="sub" style="margin-bottom:10px">Powers your net worth (assets − debt), cash flow
+        and Freedom Day. Re-adding a name updates it. Stored like your bank accounts — encrypted
+        and cloud-synced when the token is set.</div>
+
+      <div style="font-size:11.5px;text-transform:uppercase;letter-spacing:.05em;color:var(--muted);margin:8px 0 2px">Loans</div>
+      <div id="fin-loans"><span style="color:var(--faint)">Loading…</span></div>
+      <div style="display:flex;gap:6px;flex-wrap:wrap;margin:8px 0 14px">
+        <input id="l-name" placeholder="Loan name" class="ipt" style="flex:2;min-width:110px" />
+        <input id="l-bal" placeholder="Balance €" type="number" step="0.01" class="ipt" style="flex:1;min-width:85px" />
+        <input id="l-rate" placeholder="Rate %" type="number" step="0.01" class="ipt" style="width:80px" />
+        <input id="l-pay" placeholder="€/month" type="number" step="0.01" class="ipt" style="width:90px" />
+        <button class="btn" onclick="addFin('loans')">Add</button>
+      </div>
+
+      <div style="font-size:11.5px;text-transform:uppercase;letter-spacing:.05em;color:var(--muted);margin:8px 0 2px">Expected income</div>
+      <div id="fin-income"><span style="color:var(--faint)">Loading…</span></div>
+      <div style="display:flex;gap:6px;flex-wrap:wrap;margin:8px 0 14px">
+        <input id="i-name" placeholder="Source (e.g. Salary)" class="ipt" style="flex:2;min-width:130px" />
+        <input id="i-amt" placeholder="€/month" type="number" step="0.01" class="ipt" style="width:100px" />
+        <button class="btn" onclick="addFin('income')">Add</button>
+      </div>
+
+      <div style="font-size:11.5px;text-transform:uppercase;letter-spacing:.05em;color:var(--muted);margin:8px 0 2px">Monthly payments</div>
+      <div id="fin-expenses"><span style="color:var(--faint)">Loading…</span></div>
+      <div style="display:flex;gap:6px;flex-wrap:wrap;margin:8px 0 4px">
+        <input id="e-name" placeholder="Payment (e.g. Rent)" class="ipt" style="flex:2;min-width:130px" />
+        <input id="e-amt" placeholder="€/month" type="number" step="0.01" class="ipt" style="width:100px" />
+        <button class="btn" onclick="addFin('expenses')">Add</button>
+      </div>
+      <div class="msg" id="m-fin"></div>
+      <div id="fin-totals" class="sub" style="margin-top:8px"></div>
+    </div>
   </div>
 
   <script>
@@ -184,6 +219,54 @@
       if(r.ok) renderCash(await r.json());
     }
     loadCash();
+
+    /* ---- loans / income / payments ---- */
+    const E=s=>String(s).replace(/'/g,"\\'");
+    function renderFin(f){
+      const eur0=n=>"€"+Number(n||0).toLocaleString("en-IE",{maximumFractionDigits:0});
+      const demo=f.sample?'<div class="msg" style="color:#e3b341">Demo entries — add your own to replace them.</div>':"";
+      document.getElementById("fin-loans").innerHTML=demo+(f.loans.map(l=>
+        `<div class="row"><span>${l.name}<br><span style="font-size:11px;color:var(--faint)">${l.rate||0}% · ${eur0(l.monthly_payment)}/mo${l.payoff?` · paid off ${l.payoff}`:""}</span></span>
+         <span style="display:flex;gap:8px;align-items:center"><b>${eur0(l.balance_eur)}</b>
+         <button class="del" onclick="delFin('loans','${E(l.name)}')">✕</button></span></div>`).join("")||'<span style="color:var(--faint)">None</span>');
+      const li=(x,k)=>`<div class="row"><span>${x.name}</span><span style="display:flex;gap:8px;align-items:center"><b>${eur0(x.monthly_eur)}/mo</b>
+         <button class="del" onclick="delFin('${k}','${E(x.name)}')">✕</button></span></div>`;
+      document.getElementById("fin-income").innerHTML=f.income.map(x=>li(x,"income")).join("")||'<span style="color:var(--faint)">None</span>';
+      document.getElementById("fin-expenses").innerHTML=f.expenses.map(x=>li(x,"expenses")).join("")||'<span style="color:var(--faint)">None</span>';
+      const t=f.totals;
+      document.getElementById("fin-totals").innerHTML=
+        `Debt <b>${eur0(t.debt_eur)}</b> · income <b>${eur0(t.monthly_income)}/mo</b> · payments <b>${eur0(t.monthly_payments)}/mo</b> · free cash flow <b style="color:${t.free_cashflow>=0?'var(--green)':'var(--red)'}">${eur0(t.free_cashflow)}/mo</b>`;
+    }
+    function loadFin(){ fetch("/api/finances").then(r=>r.json()).then(renderFin); }
+    async function postFin(kind, fd, ok){
+      const msg=document.getElementById("m-fin");
+      const r=await fetch("/api/finances/"+kind,{method:"POST",body:fd});
+      if(r.ok){ msg.textContent=ok; msg.className="msg ok"; renderFin(await r.json()); }
+      else{ const e=await r.json().catch(()=>({detail:"Failed"})); msg.textContent="✗ "+e.detail; msg.className="msg err"; }
+    }
+    function addFin(kind){
+      const fd=new FormData();
+      if(kind==="loans"){
+        const n=document.getElementById("l-name").value, b=document.getElementById("l-bal").value;
+        if(!n||!b){ const m=document.getElementById("m-fin"); m.textContent="Loan name and balance required."; m.className="msg err"; return; }
+        fd.append("name",n); fd.append("balance",b);
+        fd.append("rate",document.getElementById("l-rate").value||0);
+        fd.append("monthly_payment",document.getElementById("l-pay").value||0);
+        ["l-name","l-bal","l-rate","l-pay"].forEach(id=>document.getElementById(id).value="");
+      }else{
+        const p=kind==="income"?"i":"e";
+        const n=document.getElementById(p+"-name").value, a=document.getElementById(p+"-amt").value;
+        if(!n||!a){ const m=document.getElementById("m-fin"); m.textContent="Name and amount required."; m.className="msg err"; return; }
+        fd.append("name",n); fd.append("monthly_eur",a);
+        [p+"-name",p+"-amt"].forEach(id=>document.getElementById(id).value="");
+      }
+      postFin(kind, fd, "✓ Saved — synced");
+    }
+    async function delFin(kind,name){
+      const r=await fetch("/api/finances/"+kind+"/"+encodeURIComponent(name),{method:"DELETE"});
+      if(r.ok) renderFin(await r.json());
+    }
+    loadFin();
 
     async function up(kind){
       const inp=document.getElementById("f-"+kind), msg=document.getElementById("m-"+kind);
