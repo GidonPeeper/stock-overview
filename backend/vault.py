@@ -23,7 +23,8 @@ VAULT = DATA_DIR / "vault.enc"
 
 # Private files bundled when present.
 FILES = ["degiro_account.csv", "trades_trade_republic.json",
-         "income_trade_republic.json", "cash_accounts.json", "watchlist.json"]
+         "income_trade_republic.json", "cash_accounts.json", "watchlist.json",
+         "finances.json"]
 
 _ITERATIONS = 600_000
 
