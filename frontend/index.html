@@ -186,11 +186,6 @@
         <div id="money" class="skeleton">Loading…</div>
       </div>
       <div class="card">
-        <h2>Freedom Day <span class="chip" style="padding:1px 8px;font-size:11px" onclick="const m=document.getElementById('fd-method');m.hidden=!m.hidden">method</span></h2>
-        <div id="fd-method" hidden style="font-size:12.5px;color:var(--muted);background:var(--panel2);border-radius:10px;padding:10px 12px;margin-bottom:10px"></div>
-        <div id="freedom" class="skeleton">Loading…</div>
-      </div>
-      <div class="card">
         <h2>Profit / Loss</h2>
         <div class="chips" id="profit-chips"></div>
         <div class="pdisplay"><div id="p-num" class="n num skeleton">—</div><div id="p-desc" class="d"></div></div>
@@ -309,6 +304,22 @@
         <h2>Daily brief</h2>
         <div id="brief-date" class="muted" style="font-size:13px;margin-bottom:10px"></div>
         <div id="brief-body" class="skeleton">Loading your brief…</div>
+      </div>
+      <div class="card">
+        <h2>Cheapest broker for your next trade</h2>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:12px">
+          <input id="tc-amount" type="number" value="1000" min="1" step="50"
+            style="background:var(--panel2);border:1px solid var(--border);color:var(--text);border-radius:10px;padding:9px 12px;font-size:14px;font-family:inherit;width:110px"
+            oninput="renderTradeCost()" />
+          <div class="seg" style="margin:0">
+            <button id="tc-us" class="active" onclick="setTcType('us')">US stock</button>
+            <button id="tc-eu" onclick="setTcType('eu')">EU stock</button>
+            <button id="tc-etf" onclick="setTcType('etf')">ETF</button>
+          </div>
+        </div>
+        <div id="tradecost"></div>
+        <div class="muted" style="font-size:11px;margin-top:8px">Buy-only cost, including FX conversion where the broker charges it.
+          Approximate NL retail fee schedules (mid-2026) — spreads excluded; always check the broker's current tariff.</div>
       </div>
       <div class="card">
         <h2>Upcoming earnings (your holdings)</h2>
@@ -539,39 +550,13 @@
         .catch(()=>{ document.getElementById("money").textContent="Unavailable."; });
     }
 
-    /* ---- finances: loans, income, payments + Freedom Day ---- */
+    /* ---- finances: loans, income, payments ---- */
     let FIN=null;
     function loadFinances(){
-      fetchJSON("/api/finances").then(f=>{ FIN=f; renderMoney(); renderFreedom(); })
-        .catch(()=>{ document.getElementById("freedom").textContent="Unavailable."; });
+      fetchJSON("/api/finances").then(f=>{ FIN=f; renderMoney(); }).catch(()=>{});
     }
     function fmtYM(ym){ if(!ym) return null;
       const [y,m]=ym.split("-"); return new Date(y,m-1,1).toLocaleDateString("en-GB",{month:"long",year:"numeric"}); }
-    function renderFreedom(){
-      const el=document.getElementById("freedom"); if(!FIN) return;
-      const fr=FIN.freedom, t=FIN.totals;
-      if(!fr){ el.className=""; el.innerHTML='<span class="muted">Add your income and monthly payments in <a href="/settings#fin" style="color:var(--accent)">Settings</a> to unlock your Freedom Day.</span>'; return; }
-      document.getElementById("fd-method").textContent=fr.method;
-      const R=44, C=2*Math.PI*R, off=C*(1-fr.progress_pct/100);
-      el.className="";
-      el.innerHTML=`<div style="display:flex;align-items:center;gap:18px;flex-wrap:wrap">
-        <svg width="110" height="110" viewBox="0 0 110 110" style="flex:0 0 auto">
-          <circle cx="55" cy="55" r="${R}" fill="none" stroke="var(--panel3)" stroke-width="9"/>
-          <circle cx="55" cy="55" r="${R}" fill="none" stroke="var(--accent)" stroke-width="9"
-            stroke-linecap="round" stroke-dasharray="${C}" stroke-dashoffset="${off}"
-            transform="rotate(-90 55 55)" style="transition:stroke-dashoffset 1s ease"/>
-          <text x="55" y="60" text-anchor="middle" fill="var(--text)" font-size="20" font-weight="700" font-family="inherit">${fr.progress_pct}%</text>
-        </svg>
-        <div style="flex:1;min-width:200px">
-          <div style="font-size:22px;font-weight:750">${fr.months_away===0?"You're free 🎉":(fmtYM(fr.eta_ym)||"Beyond 60 years")}</div>
-          <div class="muted" style="font-size:13px;margin:2px 0 10px">the day your investments could cover your life (${eur0(fr.target_eur)} target)</div>
-          <div style="display:flex;gap:16px;flex-wrap:wrap;font-size:13px">
-            <span><b class="num">${eur0(t.free_cashflow)}</b> <span class="muted">free/month</span></span>
-            <span><b class="num">${fr.runway_months??"—"}</b> <span class="muted">months runway</span></span>
-            <span><b class="num neg">${eur0(t.debt_eur)}</b> <span class="muted">debt</span></span>
-          </div>
-        </div></div>`;
-    }
 
     /* ---- health score ---- */
     function loadHealth(){
@@ -773,6 +758,36 @@
           (h.good_exits.length?`<div class="muted" style="font-size:11.5px;text-transform:uppercase;letter-spacing:.04em;margin:10px 0 4px">Well-timed exits</div>`+h.good_exits.map(row).join(""):"");
       }).catch(()=>{ document.getElementById("hindsight").textContent="Unavailable."; });
     }
+
+    /* ---- trade cost comparison (fees are approximate + disclosed) ---- */
+    let tcType="us";
+    const FEES={
+      us:[["Trading 212",a=>a*0.0015,"€0 commission · 0.15% FX fee"],
+          ["Trade Republic",()=>1,"€1 flat · trades in EUR, no FX fee"],
+          ["DeGiro",a=>2+a*0.0025,"€2 fixed · 0.25% AutoFX"]],
+      eu:[["Trading 212",()=>0,"€0 commission · no FX on EUR stocks"],
+          ["Trade Republic",()=>1,"€1 flat"],
+          ["DeGiro",()=>3,"≈€3 fixed (Euronext)"]],
+      etf:[["Trading 212",()=>0,"€0 commission (EUR-listed UCITS)"],
+          ["Trade Republic",()=>1,"€1 flat · €0 via savings plan"],
+          ["DeGiro",()=>1,"€1 handling (core selection; others ≈€3)"]],
+    };
+    function setTcType(t){ tcType=t;
+      ["us","eu","etf"].forEach(x=>document.getElementById("tc-"+x).classList.toggle("active",x===t));
+      renderTradeCost(); }
+    function renderTradeCost(){
+      const a=Math.max(+document.getElementById("tc-amount").value||0,0);
+      const rows=FEES[tcType].map(([name,fn,sub])=>({name,sub,cost:fn(a)})).sort((x,y)=>x.cost-y.cost);
+      const worst=rows[rows.length-1].cost;
+      document.getElementById("tradecost").innerHTML=rows.map((r,i)=>
+        `<div class="closed-row"><span>${r.name}
+            ${i===0?'<span class="tag" style="background:rgba(38,168,98,.15);color:var(--green);font-weight:650">cheapest</span>':""}
+            <br><span style="font-size:11px;color:var(--faint)">${r.sub}</span></span>
+          <span style="text-align:right"><span class="num" style="font-weight:650">${eur(r.cost)}</span>
+            <span class="muted" style="font-size:11px"> · ${a?(r.cost/a*100).toFixed(2):0}%</span>
+            ${i===0&&worst>r.cost?`<br><span class="pos" style="font-size:11px">saves ${eur(worst-r.cost)} vs priciest</span>`:""}</span></div>`).join("");
+    }
+    renderTradeCost();
 
     /* ---- income projection + annual (insights page) ---- */
     function loadReports(){
