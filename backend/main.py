@@ -347,7 +347,8 @@ def datastatus() -> dict:
     """Which data sources are live vs sample — shown as a banner in the UI."""
     out = datafiles.status()
     out["_vault"] = _VAULT_STATE
-    out["_sync"] = github_sync.last_result
+    out["_sync"] = {**github_sync.last_result,
+                    "token": bool(os.getenv("GITHUB_TOKEN"))}
     return out
 
 

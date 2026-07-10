@@ -123,9 +123,9 @@
 
     <div class="card" id="fin">
       <h2>Loans, income &amp; monthly payments</h2>
-      <div class="sub" style="margin-bottom:10px">Powers your net worth (assets − debt), cash flow
-        and Freedom Day. Re-adding a name updates it. Stored like your bank accounts — encrypted
-        and cloud-synced when the token is set.</div>
+      <div class="sub" style="margin-bottom:10px">Powers your net worth (assets − debt) and cash
+        flow. Re-adding a name updates it. Stored like your bank accounts — encrypted and
+        cloud-synced when the token is set.</div>
 
       <div style="font-size:11.5px;text-transform:uppercase;letter-spacing:.05em;color:var(--muted);margin:8px 0 2px">Loans</div>
       <div id="fin-loans"><span style="color:var(--faint)">Loading…</span></div>
@@ -171,11 +171,14 @@
         ? "Files the server can see: "+Object.entries(seen).map(([d,fs])=>`<br><code>${d}</code>: ${fs.join(", ")}`).join("")
         : "";
       const sy=s._sync||{}, el=document.getElementById("sync-status");
-      if(el) el.innerHTML = sy.enabled
+      window.SYNC_ON = !!sy.token && sy.ok!==false;
+      if(el) el.innerHTML = sy.token
         ? (sy.ok===false ? `<span style="color:var(--red)">● Sync error (${sy.error||"?"}) — check the token's permissions.</span>`
-                         : `<span style="color:var(--green)">● Cloud sync ON</span> — edits persist across restarts${sy.at?` (last sync ${sy.at})`:""}.`)
-        : `<span style="color:#e3b341">● Cloud sync OFF</span> — edits survive only until the next restart. Add a GITHUB_TOKEN to fix this permanently.`;
+                         : `<span style="color:var(--green)">● Cloud sync ON</span> — every save is permanent${sy.at?` (last sync ${sy.at})`:""}.`)
+        : `<span style="color:#e3b341">● Cloud sync OFF</span> — saves work now but reset on the next restart/redeploy. Add a GITHUB_TOKEN to make them permanent.`;
     }
+    function savedMsg(){ return window.SYNC_ON ? "✓ Saved — permanent (cloud-synced)"
+      : "✓ Saved — ⚠ resets on next restart until GITHUB_TOKEN is set (see Cloud persistence above)"; }
     fetch("/api/datastatus").then(r=>r.json()).then(renderStatus);
     /* ---- cash accounts ---- */
     const TYPE_LABEL={cash:"Cash",savings:"Savings",retirement:"Retirement",other:"Other"};
@@ -204,7 +207,7 @@
       const v=document.getElementById("bal-"+btoa(name).replace(/=/g,'')).value;
       const fd=new FormData(); fd.append("name",name); fd.append("institution",inst);
       fd.append("balance",v); fd.append("currency",cur); fd.append("type",type||"cash");
-      postCash(fd, "✓ Saved");
+      postCash(fd, savedMsg());
     }
     function addAccount(){
       const n=document.getElementById("c-name").value, b=document.getElementById("c-bal").value;
@@ -212,7 +215,7 @@
       const fd=new FormData(); fd.append("name",n); fd.append("institution",document.getElementById("c-inst").value);
       fd.append("balance",b); fd.append("currency",document.getElementById("c-cur").value);
       fd.append("type",document.getElementById("c-type").value);
-      postCash(fd, "✓ Added"); document.getElementById("c-name").value=""; document.getElementById("c-bal").value="";
+      postCash(fd, savedMsg()); document.getElementById("c-name").value=""; document.getElementById("c-bal").value="";
     }
     async function delAccount(name){
       const r=await fetch("/api/cash/"+encodeURIComponent(name),{method:"DELETE"});
@@ -260,7 +263,7 @@
         fd.append("name",n); fd.append("monthly_eur",a);
         [p+"-name",p+"-amt"].forEach(id=>document.getElementById(id).value="");
       }
-      postFin(kind, fd, "✓ Saved — synced");
+      postFin(kind, fd, savedMsg());
     }
     async function delFin(kind,name){
       const r=await fetch("/api/finances/"+kind+"/"+encodeURIComponent(name),{method:"DELETE"});
@@ -274,7 +277,7 @@
       msg.textContent="Uploading…"; msg.className="msg";
       const fd=new FormData(); fd.append("file", inp.files[0]);
       const r=await fetch("/api/upload/"+kind,{method:"POST",body:fd});
-      if(r.ok){ msg.textContent="✓ Uploaded — live now. Pull down / refresh the dashboard."; msg.className="msg ok"; renderStatus(await r.json()); }
+      if(r.ok){ msg.textContent=savedMsg().replace("Saved","Uploaded — live now."); msg.className="msg ok"; renderStatus(await r.json()); }
       else { const e=await r.json().catch(()=>({detail:"Upload failed"})); msg.textContent="✗ "+(e.detail||"Upload failed"); msg.className="msg err"; }
     }
   </script>
