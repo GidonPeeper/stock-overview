@@ -366,10 +366,10 @@ def cash_get() -> dict:
 @app.post("/api/cash")
 def cash_upsert(name: str = Form(...), institution: str = Form(""),
                 balance: float = Form(...), currency: str = Form("EUR"),
-                type: str = Form("cash")) -> dict:
+                type: str = Form("cash"), rate: float = Form(0)) -> dict:
     if not name.strip():
         raise HTTPException(400, "Account name is required")
-    out = cash.upsert(name, institution, balance, currency, type)
+    out = cash.upsert(name, institution, balance, currency, type, rate)
     github_sync.push_vault_async()
     return out
 

@@ -109,6 +109,7 @@
         <input id="c-name" placeholder="Account name" style="flex:2;min-width:110px" class="ipt" />
         <input id="c-inst" placeholder="Institution (e.g. Rabobank)" style="flex:2;min-width:110px" class="ipt" />
         <input id="c-bal" placeholder="Balance" type="number" step="0.01" style="flex:1;min-width:80px" class="ipt" />
+        <input id="c-rate" placeholder="Interest %" type="number" step="0.01" style="width:92px" class="ipt" />
         <select id="c-cur" class="ipt" style="width:74px"><option>EUR</option><option>USD</option><option>GBP</option></select>
         <select id="c-type" class="ipt" style="width:150px">
           <option value="cash">Cash</option>
@@ -188,10 +189,10 @@
       el.innerHTML=(c.sample?'<div class="msg" style="color:#e3b341;margin-bottom:6px">Demo accounts shown — add a real one to replace them.</div>':'')+
         c.accounts.map(a=>`<div class="row"><span>${a.name}
             <span class="pill" style="background:var(--panel2);color:var(--muted);margin-left:4px">${TYPE_LABEL[a.type]||"Cash"}</span><br>
-            <span style="font-size:11px;color:var(--faint)">${a.institution||"—"} · ${a.currency}</span></span>
+            <span style="font-size:11px;color:var(--faint)">${a.institution||"—"} · ${a.currency}${a.rate?` · ${a.rate}% interest`:""}</span></span>
           <span style="display:flex;gap:6px;align-items:center">
             <input class="ipt bal" type="number" step="0.01" value="${a.balance}" id="bal-${btoa(a.name).replace(/=/g,'')}" />
-            <button class="btn" style="padding:7px 11px" onclick="saveAccount('${a.name.replace(/'/g,"\\'")}','${(a.institution||"").replace(/'/g,"\\'")}','${a.currency}','${a.type||"cash"}')">Save</button>
+            <button class="btn" style="padding:7px 11px" onclick="saveAccount('${a.name.replace(/'/g,"\\'")}','${(a.institution||"").replace(/'/g,"\\'")}','${a.currency}','${a.type||"cash"}',${a.rate||0})">Save</button>
             <button class="del" title="Remove" onclick="delAccount('${a.name.replace(/'/g,"\\'")}')">✕</button>
           </span></div>`).join("")+
         `<div class="row"><span style="font-weight:650">Total (all accounts)</span><span style="font-weight:650">€${(c.total_eur||0).toLocaleString("en-IE",{maximumFractionDigits:0})}</span></div>`;
@@ -203,10 +204,11 @@
       if(r.ok){ msg.textContent=okMsg; msg.className="msg ok"; renderCash(await r.json()); }
       else{ const e=await r.json().catch(()=>({detail:"Failed"})); msg.textContent="✗ "+e.detail; msg.className="msg err"; }
     }
-    function saveAccount(name, inst, cur, type){
+    function saveAccount(name, inst, cur, type, rate){
       const v=document.getElementById("bal-"+btoa(name).replace(/=/g,'')).value;
       const fd=new FormData(); fd.append("name",name); fd.append("institution",inst);
       fd.append("balance",v); fd.append("currency",cur); fd.append("type",type||"cash");
+      fd.append("rate",rate||0);
       postCash(fd, savedMsg());
     }
     function addAccount(){
@@ -215,7 +217,8 @@
       const fd=new FormData(); fd.append("name",n); fd.append("institution",document.getElementById("c-inst").value);
       fd.append("balance",b); fd.append("currency",document.getElementById("c-cur").value);
       fd.append("type",document.getElementById("c-type").value);
-      postCash(fd, savedMsg()); document.getElementById("c-name").value=""; document.getElementById("c-bal").value="";
+      fd.append("rate",document.getElementById("c-rate").value||0);
+      postCash(fd, savedMsg()); ["c-name","c-bal","c-rate"].forEach(id=>document.getElementById(id).value="");
     }
     async function delAccount(name){
       const r=await fetch("/api/cash/"+encodeURIComponent(name),{method:"DELETE"});

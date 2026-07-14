@@ -186,6 +186,10 @@
         <div id="money" class="skeleton">Loading…</div>
       </div>
       <div class="card">
+        <h2>Cash optimizer — where your cash earns most</h2>
+        <div id="cashopt" class="skeleton">Loading…</div>
+      </div>
+      <div class="card">
         <h2>Profit / Loss</h2>
         <div class="chips" id="profit-chips"></div>
         <div class="pdisplay"><div id="p-num" class="n num skeleton">—</div><div id="p-desc" class="d"></div></div>
@@ -517,7 +521,7 @@
       ["cash","savings","retirement","other"].forEach(t=>{
         const accs=(CASH.accounts||[]).filter(a=>a.type===t);
         if(accs.length) groups.push({type:t, total:accs.reduce((s,a)=>s+a.balance_eur,0),
-          rows:accs.map(a=>({label:a.name, sub:a.institution, value:a.balance_eur}))});
+          rows:accs.map(a=>({label:a.name, sub:(a.institution||"")+(a.rate?` · ${a.rate}%`:""), value:a.balance_eur}))});
       });
       const el=document.getElementById("money"); el.className="";
       const loans=FIN?FIN.loans:[];
@@ -546,8 +550,53 @@
             <span class="num neg" style="font-weight:600">−${eur0(l.balance_eur)}</span></div>`).join(""):"");
     }
     function loadCash(){
-      fetchJSON("/api/cash").then(c=>{ CASH=c; renderMoney(); })
+      fetchJSON("/api/cash").then(c=>{ CASH=c; renderMoney(); renderCashOpt(); })
         .catch(()=>{ document.getElementById("money").textContent="Unavailable."; });
+    }
+
+    /* ---- cash optimizer: most interest, insured & safe ---- */
+    // Deposit-protection map. "insured" = covered by a bank deposit-guarantee
+    // scheme; Trading 212 pays via money-market funds (investor protection, not
+    // a deposit guarantee) so it's flagged separately.
+    const PROTECT={
+      "rabobank":{ok:true,label:"Dutch DGS, €100k"},
+      "bank of america":{ok:true,label:"FDIC, $250k"},
+      "revolut":{ok:true,label:"EU deposit guarantee via bank, €100k"},
+      "trade republic":{ok:true,label:"German DGS via partner banks, €100k"},
+      "trading 212":{ok:false,label:"money-market funds — investor protection, not a deposit guarantee"},
+    };
+    function renderCashOpt(){
+      const el=document.getElementById("cashopt"); if(!CASH) return;
+      const rows=(CASH.accounts||[]).filter(a=>(a.type==="cash"||a.type==="savings")&&a.balance_eur>0)
+        .map(a=>({...a, prot:PROTECT[(a.institution||"").toLowerCase()]||{ok:null,label:"check your bank's deposit guarantee"}}));
+      if(!rows.length){ el.className=""; el.innerHTML='<span class="muted">Add cash accounts (with their interest rates) in Settings to get advice.</span>'; return; }
+      el.className="";
+      const cur={}; rows.forEach(a=>{ (cur[a.currency]=cur[a.currency]||[]).push(a); });
+      let plans="", totalGain=0, totalGainSafe=0;
+      Object.entries(cur).forEach(([ccy,accs])=>{
+        const best=[...accs].sort((a,b)=>b.rate-a.rate)[0];
+        const bestIns=[...accs].filter(a=>a.prot.ok).sort((a,b)=>b.rate-a.rate)[0];
+        accs.forEach(a=>{
+          if(best&&a.rate<best.rate-0.01){
+            const g=a.balance_eur*(best.rate-a.rate)/100; totalGain+=g;
+            plans+=`<div class="closed-row" style="padding:8px 0"><span>Move <b>${eur0(a.balance_eur)}</b> from ${a.name} (${a.rate}%)
+                <br><span style="font-size:11px;color:var(--faint)">→ ${best.name} at ${best.rate}% · ${best.prot.label}</span></span>
+              <span class="num pos" style="font-weight:650">+${eur(g)}/yr</span></div>`;
+          }
+          if(bestIns&&a.rate<bestIns.rate-0.01) totalGainSafe+=a.balance_eur*(bestIns.rate-a.rate)/100;
+        });
+      });
+      el.innerHTML=`
+        <div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:12px">
+          <div class="stat" style="flex:1;min-width:130px"><div class="k">Cash earning now</div>
+            <div class="v num">${eur0(CASH.interest_eur_yr||0)}/yr <span class="muted" style="font-size:12px;font-weight:400">(${CASH.blended_rate_pct||0}% blended)</span></div></div>
+          <div class="stat" style="flex:1;min-width:130px"><div class="k">Left on the table</div>
+            <div class="v num ${totalGain>1?'pos':''}">${totalGain>1?"+"+eur0(totalGain)+"/yr":"€0 — optimized ✓"}</div></div>
+        </div>
+        ${plans||'<span class="muted">Your cash is already at your best rates.</span>'}
+        <div class="muted" style="font-size:11px;margin-top:10px">Highest-rate moves shown; keep an everyday buffer where you bank.
+          Trading 212 interest comes from money-market funds (very low risk but <b>not</b> a bank deposit guarantee — insured-only uplift: +${eur0(totalGainSafe)}/yr).
+          Same-currency moves only, so no FX risk is introduced. Not financial advice.</div>`;
     }
 
     /* ---- finances: loans, income, payments ---- */
