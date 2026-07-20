@@ -505,13 +505,15 @@ def finances_get() -> dict:
 @app.post("/api/finances/{kind}")
 def finances_upsert(kind: str, name: str = Form(...), balance: float = Form(0),
                     rate: float = Form(0), monthly_payment: float = Form(0),
-                    monthly_eur: float = Form(0), currency: str = Form("EUR")) -> dict:
+                    monthly_eur: float = Form(0), currency: str = Form("EUR"),
+                    fixed: bool = Form(True)) -> dict:
     if kind not in finances.KINDS:
         raise HTTPException(404, "Unknown kind")
     if not name.strip():
         raise HTTPException(400, "Name is required")
     fields = {"balance": balance, "rate": rate, "monthly_payment": monthly_payment,
-              "currency": currency.upper()} if kind == "loans" else {"monthly_eur": monthly_eur}
+              "currency": currency.upper()} if kind == "loans" else {
+              "monthly_eur": monthly_eur, "fixed": fixed}
     out = finances.upsert(kind, name, fields)
     github_sync.push_vault_async()
     return out

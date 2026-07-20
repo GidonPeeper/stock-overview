@@ -1,13 +1,14 @@
 {
-  "_note": "SAMPLE demo data. Yours is managed in-app (Settings) and stored in finances.json (git-ignored).",
+  "_note": "SAMPLE demo data. Yours is managed in-app (Settings) and stored in finances.json (git-ignored). Income/expense items have fixed:true (recurring) or fixed:false (variable, e.g. groceries).",
   "loans": [
     {"name": "Student loan (DUO)", "balance": 14500, "rate": 2.56, "monthly_payment": 120, "currency": "EUR"}
   ],
   "income": [
-    {"name": "Salary", "monthly_eur": 3200}
+    {"name": "Salary", "monthly_eur": 3200, "fixed": true},
+    {"name": "Allowance", "monthly_eur": 250, "fixed": true}
   ],
   "expenses": [
-    {"name": "Rent & utilities", "monthly_eur": 1150},
-    {"name": "Groceries & living", "monthly_eur": 550}
+    {"name": "Rent & utilities", "monthly_eur": 1150, "fixed": true},
+    {"name": "Groceries & living", "monthly_eur": 550, "fixed": false}
   ]
 }

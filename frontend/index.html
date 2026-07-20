@@ -186,6 +186,10 @@
         <div id="money" class="skeleton">Loading…</div>
       </div>
       <div class="card">
+        <h2>Fixed monthly <a href="/settings#fin" class="chip" style="padding:1px 9px;font-size:11px;text-decoration:none;float:right">edit</a></h2>
+        <div id="fixedflow" class="skeleton">Loading…</div>
+      </div>
+      <div class="card">
         <h2>Cash optimizer — where your cash earns most</h2>
         <div id="cashopt" class="skeleton">Loading…</div>
       </div>
@@ -602,10 +606,42 @@
     /* ---- finances: loans, income, payments ---- */
     let FIN=null;
     function loadFinances(){
-      fetchJSON("/api/finances").then(f=>{ FIN=f; renderMoney(); }).catch(()=>{});
+      fetchJSON("/api/finances").then(f=>{ FIN=f; renderMoney(); renderFixed(); }).catch(()=>{});
     }
     function fmtYM(ym){ if(!ym) return null;
       const [y,m]=ym.split("-"); return new Date(y,m-1,1).toLocaleDateString("en-GB",{month:"long",year:"numeric"}); }
+
+    /* ---- fixed monthly cash flow (recurring in vs out, variable excluded) ---- */
+    function renderFixed(){
+      const el=document.getElementById("fixedflow"); if(!FIN||!FIN.fixed) return;
+      const f=FIN.fixed; el.className="";
+      if(!f.income.length && !f.outgoings.length){
+        el.innerHTML='<span class="muted">Add your salary, allowance and rent in <a href="/settings#fin" style="color:var(--accent)">Settings</a> to see your fixed monthly flow.</span>';
+        return;
+      }
+      const net=f.net, netCls=net>=0?"pos":"neg";
+      const row=(x,sign,color)=>`<div class="closed-row" style="padding:7px 0">
+          <span><span style="color:${color}">●</span> ${x.name}${x.kind==="loan"?' <span style="font-size:10px;color:var(--faint)">loan</span>':''}</span>
+          <span class="num" style="font-weight:600;color:${color}">${sign}${eur0(x.monthly_eur)}</span></div>`;
+      el.innerHTML=`
+        <div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:12px">
+          <div class="stat" style="flex:1;min-width:104px"><div class="k">Coming in</div>
+            <div class="v num pos">${eur0(f.income_total)}<span class="muted" style="font-size:11px;font-weight:400">/mo</span></div></div>
+          <div class="stat" style="flex:1;min-width:104px"><div class="k">Going out</div>
+            <div class="v num neg">${eur0(f.outgoings_total)}<span class="muted" style="font-size:11px;font-weight:400">/mo</span></div></div>
+          <div class="stat" style="flex:1;min-width:104px"><div class="k">Left over</div>
+            <div class="v num ${netCls}">${net>=0?"":"−"}${eur0(Math.abs(net))}<span class="muted" style="font-size:11px;font-weight:400">/mo</span></div></div>
+        </div>
+        <div style="display:flex;height:9px;border-radius:5px;overflow:hidden;margin-bottom:4px;background:var(--panel2)">
+          <div title="Committed to fixed costs" style="width:${Math.min(f.committed_pct,100)}%;background:var(--red)"></div>
+          <div title="Left over" style="flex:1;background:var(--green)"></div></div>
+        <div class="muted" style="font-size:11.5px;margin-bottom:12px">${f.committed_pct}% of your fixed income is committed — ${net>=0?`<b class="pos">${eur0(net)}/mo</b> stays free`:`<b class="neg">short ${eur0(-net)}/mo</b>`}.</div>
+        <div style="font-size:11px;text-transform:uppercase;letter-spacing:.05em;color:var(--muted);margin-bottom:2px">Coming in</div>
+        ${f.income.map(x=>row(x,"+","var(--green)")).join("")||'<div class="muted" style="font-size:12px">None</div>'}
+        <div style="font-size:11px;text-transform:uppercase;letter-spacing:.05em;color:var(--muted);margin:12px 0 2px">Going out</div>
+        ${f.outgoings.map(x=>row(x,"−","var(--red)")).join("")||'<div class="muted" style="font-size:12px">None</div>'}
+        <div class="muted" style="font-size:11px;margin-top:10px">Recurring items only — variable spending like groceries is excluded. Mark items variable in Settings.</div>`;
+    }
 
     /* ---- health score ---- */
     function loadHealth(){

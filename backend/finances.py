@@ -5,8 +5,10 @@ accounts: git-ignored JSON, bundled into the encrypted vault, and synced to
 the data-sync branch when a GITHUB_TOKEN is set — so entries persist across
 restarts and deploys.
 
-Also computes the fun part: Freedom Day — the projected date your liquid
-assets could sustain your monthly payments forever on a 4% withdrawal rate.
+Income and expense items carry a `fixed` flag (default True). The "fixed
+monthly" view sums only the recurring, unchanging items — salary, allowance,
+rent, loan repayments — and excludes anything marked variable (groceries,
+nights out) so you see the dependable backbone of your month.
 """
 
 from __future__ import annotations
@@ -71,12 +73,37 @@ def load(liquid_assets_eur: float | None = None) -> dict:
            "totals": {"debt_eur": round(total_debt, 2),
                       "monthly_income": monthly_income,
                       "monthly_payments": monthly_payments,
-                      "free_cashflow": free_cashflow}}
+                      "free_cashflow": free_cashflow},
+           "fixed": _fixed_flow(data)}
 
     if liquid_assets_eur is not None and monthly_payments > 0:
         out["freedom"] = _freedom(liquid_assets_eur - total_debt,
                                   monthly_payments, free_cashflow)
     return out
+
+
+def _fixed_flow(data: dict) -> dict:
+    """Recurring, unchanging monthly cash flow. Income/expense items are fixed
+    unless explicitly marked ``fixed: false`` (e.g. groceries); every loan
+    repayment is fixed by nature."""
+    def keep(x) -> bool:
+        return x.get("fixed", True) is not False
+
+    income = [{"name": i["name"], "monthly_eur": round(float(i.get("monthly_eur", 0)), 2)}
+              for i in data["income"] if keep(i)]
+    outgoings = [{"name": e["name"], "monthly_eur": round(float(e.get("monthly_eur", 0)), 2),
+                  "kind": "expense"}
+                 for e in data["expenses"] if keep(e)]
+    outgoings += [{"name": l["name"], "monthly_eur": round(float(l.get("monthly_payment", 0)), 2),
+                   "kind": "loan"}
+                  for l in data["loans"] if float(l.get("monthly_payment", 0)) > 0]
+
+    in_total = round(sum(i["monthly_eur"] for i in income), 2)
+    out_total = round(sum(o["monthly_eur"] for o in outgoings), 2)
+    return {"income": income, "outgoings": outgoings,
+            "income_total": in_total, "outgoings_total": out_total,
+            "net": round(in_total - out_total, 2),
+            "committed_pct": round(out_total / in_total * 100, 1) if in_total else 0.0}
 
 
 def _freedom(net_liquid: float, monthly_spend: float, contribution: float,
