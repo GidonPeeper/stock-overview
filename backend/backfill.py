@@ -18,40 +18,17 @@ from collections import defaultdict
 from datetime import date
 
 from .connectors import degiro, traderepublic, trading212
+from .instruments import TICKERS, price_currency
 from .positions import compute_positions
 from . import store
 
-# ISIN -> market-data ticker for every instrument ever traded (incl. closed).
-# "" => no usable price history (delisted / obscure); skipped in valuation.
-HIST_TICKER = {
-    "GB00B03MLX29": "SHELL.AS", "US09075V1026": "BNTX", "US34619R1023": "",
-    "US0378331005": "AAPL", "US4884452065": "ZVRA", "US62914V1061": "NIO",
-    "US98422D1054": "XPEV", "US0079031078": "AMD", "US69608A1088": "PLTR",
-    "US6311031081": "NDAQ", "US35953D1046": "FUBO", "US33813J1060": "",
-    "US21077C1071": "LOGC", "US84677R1068": "", "US74374T1097": "",
-    "US44951Y1029": "", "US83406F1021": "SOFI", "US22041X1028": "CRSR",
-    "US30303M1027": "META", "US01671P1003": "", "GB00BP6MXD84": "SHEL",
-    "US30231G1022": "XOM", "US6745991058": "OXY", "US83304A1060": "SNAP",
-    "US64110L1061": "NFLX", "US88160R1014": "TSLA", "US02079K3059": "GOOGL",
-    "NL0012969182": "ADYEN.AS", "US21077C3051": "LOGC", "US76954A1034": "RIVN",
-    "US5801351017": "MCD", "US36315X1019": "LKFT", "FR001400J770": "AF.PA",
-    "US4581401001": "INTC", "US67066G1040": "NVDA", "NL0011872650": "BFIT.AS",
-    "IE00BZCQB185": "QDV5.DE", "USN070592100": "ASML", "NL0010273215": "ASML.AS",
-    "US44951Y2019": "", "NL0000888691": "AMG.AS", "NL0011585146": "RACE",
-    "US46222L1089": "IONQ", "NL0000334118": "ASM.AS", "NL0012866412": "BESI.AS",
-    "US91324P1021": "UNH", "NL0000009165": "HEIA.AS", "US00724F1012": "ADBE",
-    "US68389X1054": "ORCL", "US5949181045": "MSFT", "US86800U3023": "SMCI",
-    "US79466L3024": "CRM", "IE00BJ38QD84": "ZPRR.DE", "US6541061031": "NKE",
-    "US0231351067": "AMZN", "US60770K1079": "MRNA", "US70450Y1038": "PYPL",
-}
+# ISIN -> market-data ticker for every instrument ever traded (incl. closed);
+# shared table in backend/instruments.py. "" => no usable price history.
+HIST_TICKER = TICKERS
 
 
 def _ticker_currency(t: str) -> str:
-    if t.endswith((".AS", ".DE", ".PA", ".MI", ".F")):
-        return "EUR"
-    if t.endswith(".L"):
-        return "GBP"
-    return "USD"
+    return price_currency(t)
 
 
 def _all_trades():

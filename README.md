@@ -35,16 +35,16 @@ python3 -m venv .venv && .venv/bin/pip install -r requirements.txt
 | 📉 **Performance since inception** | Portfolio value & profit reconstructed from full trade history, with a money-weighted S&P 500 benchmark overlay |
 | 📱 **Installable PWA** | Home-screen app with login (Face ID via Keychain), auto-refresh, offline-tolerant loading |
 | 🏦 **Net worth view** | Bank/cash accounts (e.g. Rabobank, Revolut) alongside investments — balances edited in-app in seconds, "where your money is" breakdown |
-| ⚙️ **Self-service data** | In-app statement uploads with validation + a live/sample diagnostic per source — no host dashboard needed |
+| ⚙️ **Self-service data** | Upload the broker's own exports (DeGiro PDF, Trade Republic CSV, Trading 212 PDF) in-app; each is converted, validated against the statement's own totals, and shown live/sample per source |
 
 ## 🏗 Architecture
 
 ```mermaid
 flowchart LR
     subgraph Brokers["Data sources"]
-        T212["Trading 212<br/>official read-only API"]
-        DG["DeGiro<br/>statement CSV"]
-        TR["Trade Republic<br/>statement JSON"]
+        T212["Trading 212<br/>read-only API · or activity-statement PDF"]
+        DG["DeGiro<br/>account-statement PDF / CSV"]
+        TR["Trade Republic<br/>transaction-export CSV"]
         YF["yfinance<br/>quotes · history · news · screeners"]
         RSS["RSS<br/>CNBC · MarketWatch · Yahoo"]
     end
@@ -68,15 +68,23 @@ flowchart LR
 
 Everything private is git-ignored and resolved from `data/`, the project root,
 or `/etc/secrets` (Render Secret Files) — the in-app banner tells you exactly
-which sources are live vs sample.
+which sources are live vs sample. Drop the files the brokers actually give you
+on the **Settings page** (phone-friendly) or convert them locally:
 
-1. **Trading 212** — create a **read-only** API key (Settings → API, no ordering
-   scope), put it in `.env` (`cp .env.sample .env`).
-2. **DeGiro** — export your full account statement CSV to `data/degiro_account.csv`.
-3. **Trade Republic** — transcribe trades/dividends from the statement PDF into
-   `data/trades_trade_republic.json` / `income_trade_republic.json` (formats in
-   the `.sample` files).
-4. Optional: `NEWSAPI_KEY` in `.env` blends NewsAPI into the Daily Brief.
+| Broker | What to export | Local command |
+|---|---|---|
+| **DeGiro** | Activity → Account statement, all dates → **PDF** (or CSV) | `python -m backend.importers.degiro_pdf "Account.pdf" data/degiro_account.csv` |
+| **Trade Republic** | App → Profile → Activity → **Export** (transaction CSV) | `python -m backend.importers.traderepublic_csv "Transaction export.csv"` |
+| **Trading 212** | **read-only API key** in `.env` (`cp .env.sample .env`) — or, without a key, History → **Activity statement** PDF | `python -m backend.importers.trading212_pdf "Activity-Statement.pdf"` |
+
+Every importer validates what it read: DeGiro fills against their booked
+amounts, Trade Republic against the running cash balance, Trading 212 against
+the statement's own totals (realised return, dividends, interest, deposits,
+open positions). Trading 212's PDFs hide their digits behind fonts with no
+text mapping; `backend/importers/text_layer.py` decodes them deterministically
+from the glyph drawings (no OCR needed).
+
+Optional: `NEWSAPI_KEY` in `.env` blends NewsAPI into the Daily Brief.
 
 ## ☁️ Deploy
 
@@ -94,7 +102,7 @@ Free 24/7 hosting on Render with the repo public and your data private
 
 ## 🛠 Stack
 
-FastAPI · vanilla JS + Chart.js (no build step) · SQLite · yfinance · RSS/stdlib.
+FastAPI · vanilla JS + Chart.js (no build step) · SQLite · yfinance · pdfplumber · RSS/stdlib.
 
 ## License
 

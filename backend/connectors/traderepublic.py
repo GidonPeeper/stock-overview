@@ -1,9 +1,11 @@
 """Trade Republic connector — derived from transcribed statement trades.
 
-Trade Republic has no API, so trades are transcribed from the account statement
-PDF into `data/trades_trade_republic.json` (full history). We derive both
-current holdings and closed positions from them. TR books cash in EUR, so trade
-amounts are exact EUR; live prices come from the US listings (USD).
+Trade Republic has no API; `data/trades_trade_republic.json` (full history) is
+generated from the app's "Transaction export" CSV by
+`backend/importers/traderepublic_csv.py` (or transcribed by hand). We derive
+both current holdings and closed positions from it. TR books cash in EUR, so
+trade amounts are exact EUR; live prices come from each instrument's listing
+(USD for US stocks, EUR for Xetra/Euronext-listed ETFs and ASML).
 """
 
 from __future__ import annotations
@@ -12,6 +14,7 @@ import json
 from pathlib import Path
 
 from .base import Holding
+from ..instruments import price_currency, ticker_for
 from ..positions import Trade, compute_positions
 
 from ..datafiles import resolve as _resolve_data
@@ -37,7 +40,7 @@ def get_trades() -> list[Trade]:
             quantity=float(t["quantity"]),
             amount=float(t["amount_eur"]),   # exact EUR
             currency="EUR",
-            ticker=t.get("ticker", ""),
+            ticker=t.get("ticker") or ticker_for(t["isin"]),
         )
         for t in raw
     ]
@@ -56,7 +59,7 @@ def get_holdings() -> list[Holding]:
                 isin=p.key,
                 quantity=round(p.quantity, 6),
                 buy_price=round(p.avg_cost, 4),  # EUR cost per share
-                currency="USD",                  # US listings price in USD
+                currency=price_currency(p.ticker),  # USD for US listings, EUR for Xetra/Euronext
                 buy_currency="EUR",
             )
         )

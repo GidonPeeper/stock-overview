@@ -1,0 +1,81 @@
+{
+ "_note": "SAMPLE demo data. Generate yours with: python -m backend.importers.trading212_pdf <Activity-Statement.pdf>  (or upload the PDF on the Settings page). Only used when no T212 API key is set.",
+ "overview": {
+  "period": [
+   "2024-01-01",
+   "2024-12-31"
+  ],
+  "deposits": 3000.0,
+  "realised_return": 120.5,
+  "dividends": 4.2,
+  "interest": 31.0,
+  "account_value": 3400.0
+ },
+ "positions": [
+  {
+   "symbol": "AAPL",
+   "isin": "US0378331005",
+   "name": "Apple Inc",
+   "ticker": "AAPL",
+   "quantity": 5.0,
+   "avg_price": 180.0,
+   "price": 212.4,
+   "currency": "USD",
+   "value": 1062.0,
+   "fx_rate": 1.08,
+   "return_eur": 140.0,
+   "value_eur": 983.3
+  }
+ ],
+ "trades": [
+  {
+   "date": "2024-02-01 14:30",
+   "symbol": "AAPL",
+   "isin": "US0378331005",
+   "name": "Apple Inc",
+   "ticker": "AAPL",
+   "side": "BUY",
+   "quantity": 5.0,
+   "price": 180.0,
+   "price_currency": "USD",
+   "value": 900.0,
+   "fx_rate": 1.085,
+   "fx_fee_eur": 1.25,
+   "return_eur": null,
+   "settled_currency": "EUR",
+   "amount_eur": 843.3
+  }
+ ],
+ "dividends": [
+  {
+   "date": "2024-08-15",
+   "symbol": "AAPL",
+   "isin": "US0378331005",
+   "name": "Apple Inc",
+   "amount_eur": 1.2
+  }
+ ],
+ "transactions": [
+  {
+   "date": "2024-01-15",
+   "time": "10:00:00",
+   "type": "Bank transfer",
+   "amount": 3000.0,
+   "currency": "EUR",
+   "amount_eur": 3000.0,
+   "kind": "deposit"
+  },
+  {
+   "date": "2024-01-16",
+   "time": "00:10:00",
+   "type": "Interest on cash",
+   "amount": 0.31,
+   "currency": "EUR",
+   "amount_eur": 0.31,
+   "kind": "interest"
+  }
+ ],
+ "cash": {
+  "total_eur": 1200.0
+ }
+}

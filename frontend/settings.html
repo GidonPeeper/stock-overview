@@ -70,33 +70,43 @@
     </div>
 
     <div class="card">
-      <h2>DeGiro — account statement (CSV)</h2>
-      <div class="sub" style="margin-bottom:8px">DeGiro → Activity → Account statement → export CSV, all dates since account opening.</div>
-      <div class="up"><input type="file" id="f-degiro" accept=".csv" />
+      <h2>DeGiro — account statement (PDF or CSV)</h2>
+      <div class="sub" style="margin-bottom:8px">DeGiro → Activity → Account statement → all dates since account
+        opening → download as <b>PDF</b> or export as CSV. Either file works; the PDF is converted here and every
+        trade is checked against its booked amount.</div>
+      <div class="up"><input type="file" id="f-degiro" accept=".pdf,.csv" />
         <button onclick="up('degiro')">Upload</button></div>
       <div class="msg" id="m-degiro"></div>
     </div>
 
     <div class="card">
-      <h2>Trade Republic — trades (JSON)</h2>
-      <div class="sub" style="margin-bottom:8px">Transcribed from your TR statement PDF — format in <code>trades_trade_republic.sample.json</code>.</div>
-      <div class="up"><input type="file" id="f-trade_republic" accept=".json" />
+      <h2>Trade Republic — transaction export (CSV)</h2>
+      <div class="sub" style="margin-bottom:8px">Trade Republic app → Profile → Activity → <b>Export</b> (CSV).
+        One file covers everything: trades, dividends and interest are all read from it (a hand-made
+        <code>trades_trade_republic.json</code> is still accepted).</div>
+      <div class="up"><input type="file" id="f-trade_republic" accept=".csv,.json" />
         <button onclick="up('trade_republic')">Upload</button></div>
       <div class="msg" id="m-trade_republic"></div>
     </div>
 
     <div class="card">
-      <h2>Trade Republic — dividends &amp; interest (JSON)</h2>
-      <div class="sub" style="margin-bottom:8px">Format in <code>income_trade_republic.sample.json</code>.</div>
+      <h2>Trade Republic — dividends &amp; interest (JSON, optional)</h2>
+      <div class="sub" style="margin-bottom:8px">Filled automatically from the transaction export above; only
+        needed for hand-transcribed data — format in <code>income_trade_republic.sample.json</code>.</div>
       <div class="up"><input type="file" id="f-tr_income" accept=".json" />
         <button onclick="up('tr_income')">Upload</button></div>
       <div class="msg" id="m-tr_income"></div>
     </div>
 
     <div class="card">
-      <h2>Trading 212</h2>
-      <div class="sub" style="margin:0">Connected via read-only API key — set
-        <code>T212_API_KEY</code> and <code>T212_API_SECRET</code> as environment variables on the host.</div>
+      <h2>Trading 212 — activity statement (PDF)</h2>
+      <div class="sub" style="margin-bottom:8px">Live via the read-only API when <code>T212_API_KEY</code> and
+        <code>T212_API_SECRET</code> are set on the host. Without a key, upload the statement instead:
+        Trading 212 → Menu → History → <b>Export / Activity statement</b> (PDF, Invest account, full period).
+        Positions, trades, dividends and interest are read from it and cross-checked against its own totals.</div>
+      <div class="up"><input type="file" id="f-t212_statement" accept=".pdf,.json" />
+        <button onclick="up('t212_statement')">Upload</button></div>
+      <div class="msg" id="m-t212_statement"></div>
     </div>
 
     <div class="card" id="cash">
@@ -162,12 +172,13 @@
 
   <script>
     const NAMES={degiro:"DeGiro statement",trade_republic:"Trade Republic trades",
-                 tr_income:"TR dividends & interest",trading212:"Trading 212 API"};
+                 tr_income:"TR dividends & interest",trading212:"Trading 212"};
     function renderStatus(s){
       document.getElementById("status").innerHTML=Object.entries(NAMES).map(([k,label])=>{
         const v=s[k]; if(!v) return "";
+        const tag = !v.real ? 'SAMPLE' : (k==='trading212' ? (v.live ? 'LIVE · API' : 'STATEMENT') : 'LIVE');
         return `<div class="row"><span>${label}<br><span style="font-size:11px;color:var(--faint)">${v.expected}</span></span>
-          <span class="pill ${v.real?'live':'sample'}">${v.real?'LIVE':'SAMPLE'}</span></div>`;
+          <span class="pill ${v.real?'live':'sample'}">${tag}</span></div>`;
       }).join("");
       const seen=s._files_seen||{};
       document.getElementById("files").innerHTML=Object.keys(seen).length
@@ -283,7 +294,14 @@
       msg.textContent="Uploading…"; msg.className="msg";
       const fd=new FormData(); fd.append("file", inp.files[0]);
       const r=await fetch("/api/upload/"+kind,{method:"POST",body:fd});
-      if(r.ok){ msg.textContent=savedMsg().replace("Saved","Uploaded — live now."); msg.className="msg ok"; renderStatus(await r.json()); }
+      if(r.ok){
+        const st=await r.json(), rep=st._report||{};
+        let extra="";
+        if(rep.fills!==undefined) extra=` · ${rep.fills} fills, ${rep.orders} orders${rep.fill_amount_errors&&rep.fill_amount_errors.length?` · ⚠ ${rep.fill_amount_errors.length} amount mismatches`:""}`;
+        if(rep.trades!==undefined&&rep.cash_balance_eur!==undefined) extra=` · ${rep.trades} trades, ${rep.dividends} dividends · cash €${rep.cash_balance_eur}`;
+        if(rep.all_checks_ok!==undefined) extra=rep.all_checks_ok?` · all ${Object.keys(rep.checks).length} statement checks passed`:` · ⚠ some statement checks failed: ${Object.entries(rep.checks).filter(([k,v])=>!v.ok).map(([k])=>k).join(", ")}`;
+        msg.textContent=savedMsg().replace("Saved","Uploaded — live now.")+extra; msg.className="msg ok"; renderStatus(st);
+      }
       else { const e=await r.json().catch(()=>({detail:"Upload failed"})); msg.textContent="✗ "+(e.detail||"Upload failed"); msg.className="msg err"; }
     }
   </script>

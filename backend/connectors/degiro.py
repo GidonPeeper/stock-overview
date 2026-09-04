@@ -20,6 +20,7 @@ from pathlib import Path
 
 from .base import Holding
 from ..fx import to_eur
+from ..instruments import TICKERS, price_currency
 from ..positions import Trade, compute_positions
 
 from ..datafiles import resolve as _resolve_data
@@ -31,23 +32,20 @@ def _csv_file() -> Path:
     """Real statement wherever it's mounted (data/, root, /etc/secrets), else sample."""
     return _resolve_data("degiro_account.csv")[0]
 
-# ISIN -> yfinance ticker for currently-held names. "" => no live price.
-# US listings price in USD; ".DE" in EUR. Extend as holdings change.
-TICKER = {
-    "US62914V1061": "NIO", "US67066G1040": "NVDA", "US02079K3059": "GOOGL",
-    "US46222L1089": "IONQ", "IE00BZCQB185": "QDV5.DE", "US09075V1026": "BNTX",
-    "NL0011585146": "RACE", "US0378331005": "AAPL", "US30231G1022": "XOM",
-    "US36315X1019": "LKFT",  # Lakefront Biotherapeutics (ex-Galapagos, renamed 2026)
-    "US30303M1027": "META",
-}
+# ISIN -> yfinance ticker (shared table in backend/instruments.py). "" => no live price.
+TICKER = TICKERS
 
 _TRADE_RE = re.compile(r"(Koop|Verkoop)\s+([\d.,]+)\s+@\s+([\d.,]+)\s+(\w+)")
 # Corporate actions that change share count but aren't plain trades:
 #   "DELISTING: Verkoop N @ 0"      -> shares removed (often worthless)
 #   "SPLIT AANPASSING: N NAME @ P"  -> reverse/forward split (old ISIN out, new in)
 #   "PRODUCTWIJZIGING : Koop/Verkoop N @ P" -> ISIN/product change
+#   "WIJZIGING ISIN: Verkoop N @ P" + "WIJZIGING ISIN: Koop N @ P" -> pure ISIN
+#     change (e.g. Exxon's 2026 holding-company reorg): the position is re-keyed
+#     to the new ISIN with its cost basis intact — nothing was sold.
 _SPLIT_RE = re.compile(r"SPLIT AANPASSING:\s+([\d.,]+)\s")
-_CORP_PREFIXES = ("DELISTING", "SPLIT AANPASSING", "PRODUCTWIJZIGING")
+_CORP_PREFIXES = ("DELISTING", "SPLIT AANPASSING", "PRODUCTWIJZIGING", "WIJZIGING ISIN")
+_ISIN_CHANGE = "WIJZIGING ISIN"
 
 
 def _num(s: str) -> float:
@@ -56,11 +54,7 @@ def _num(s: str) -> float:
 
 
 def _price_currency(ticker: str) -> str:
-    if ticker.endswith((".DE", ".F", ".AS", ".PA", ".MI")):
-        return "EUR"
-    if ticker.endswith(".L"):
-        return "GBP"
-    return "USD"
+    return price_currency(ticker)
 
 
 def get_trades() -> list[Trade]:
@@ -107,6 +101,17 @@ def get_trades() -> list[Trade]:
             ticker=TICKER.get(isin, ""),
         ))
 
+    # ISIN changes: pair the "Verkoop" (old ISIN) with the "Koop" (new ISIN) row
+    # booked at the same moment and remember old -> new (name from the new row).
+    renames: dict[str, tuple[str, str]] = {}
+    changes = [r for r in corporate if r[5].startswith(_ISIN_CHANGE)]
+    for out in (r for r in changes if "Verkoop" in r[5]):
+        new = next((r for r in changes if "Koop" in r[5] and r[0] == out[0] and r[1] == out[1]
+                    and r[4] != out[4]), None)
+        if new is not None:
+            renames[out[4]] = (new[4], new[3].title())
+    corporate = [r for r in corporate if not r[5].startswith(_ISIN_CHANGE)]
+
     for r in corporate:
         desc, ccy, change = r[5], r[7], _num(r[8])
         m = _TRADE_RE.search(desc)
@@ -126,6 +131,12 @@ def get_trades() -> list[Trade]:
             ticker=TICKER.get(r[4], ""),
         ))
 
+    for t in trades:  # follow ISIN changes (possibly chained) to the current ISIN
+        seen = set()
+        while t.key in renames and t.key not in seen:
+            seen.add(t.key)
+            t.key, t.name = renames[t.key]
+            t.ticker = TICKER.get(t.key, t.ticker)
     return trades
 
 
