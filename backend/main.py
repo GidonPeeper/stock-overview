@@ -42,7 +42,9 @@ from .prices import fetch_quotes
 from . import (analytics, cash, datafiles, finances, income, insights, market,
                periods, realized, reports, sectors, store, watch)
 
-DEMO_MODE = not (os.getenv("T212_API_KEY") and os.getenv("T212_API_SECRET"))
+# Demo mode = no real data source at all (no broker key, no imported statement):
+# only then do sample holdings and a synthetic trendline make sense.
+DEMO_MODE = not any(v.get("real") for k, v in datafiles.status().items() if not k.startswith("_"))
 FRONTEND_DIR = Path(__file__).resolve().parents[1] / "frontend"
 
 app = FastAPI(title="Stock Overview")
@@ -383,28 +385,63 @@ def cash_delete(name: str) -> dict:
 
 @app.post("/api/upload/{kind}")
 async def upload_statement(kind: str, file: UploadFile = File(...)) -> dict:
-    """Upload a broker statement from the browser/phone — takes effect
-    immediately. Light validation so a wrong file fails loudly, not silently."""
+    """Upload a broker export from the browser/phone — takes effect immediately.
+    Accepts the files brokers actually hand out and converts them server-side:
+      degiro          account statement PDF, or the CSV export
+      trade_republic  the app's "Transaction export" CSV (fills trades AND
+                      dividends/interest), or the trades JSON
+      tr_income       dividends/interest JSON (only needed for hand-transcribed data)
+      t212_statement  Trading 212 activity-statement PDF, or its converted JSON
+    Light validation so a wrong file fails loudly, not silently."""
+    from .importers import degiro_pdf, traderepublic_csv, trading212_pdf
+    import json as _json
+
     content = await file.read()
-    if len(content) > 10_000_000:
+    if len(content) > 25_000_000:
         raise HTTPException(413, "File too large")
-    text = content.decode("utf-8", errors="replace")
-    if kind == "degiro":
-        if "Koop" not in text and "Verkoop" not in text:
-            raise HTTPException(400, "That doesn't look like a DeGiro account statement CSV "
-                                     "(no Koop/Verkoop rows found). Export: Activity → Account statement, all dates.")
-    elif kind in ("trade_republic", "tr_income"):
-        import json as _json
-        try:
-            payload = _json.loads(text)
-        except ValueError:
-            raise HTTPException(400, "Not valid JSON — see the .sample file for the format.")
-        need = "trades" if kind == "trade_republic" else "income"
-        if need not in payload:
-            raise HTTPException(400, f'JSON must contain a "{need}" list — see the .sample file.')
-    else:
-        raise HTTPException(404, "Unknown upload kind")
-    datafiles.save_upload(kind, content)
+    is_pdf = content[:5] == b"%PDF-"
+    text = "" if is_pdf else content.decode("utf-8-sig", errors="replace")
+    report: dict = {}
+    try:
+        if kind == "degiro":
+            if is_pdf:
+                csv_text, report = degiro_pdf.convert(content)
+                if not report.get("fills"):
+                    raise HTTPException(400, "That PDF has no Koop/Verkoop rows — is it the DeGiro account statement?")
+                content = csv_text.encode("utf-8")
+            elif "Koop" not in text and "Verkoop" not in text:
+                raise HTTPException(400, "That doesn't look like a DeGiro account statement "
+                                         "(no Koop/Verkoop rows). Export: Activity → Account statement (PDF or CSV), all dates.")
+            datafiles.save_upload("degiro", content)
+        elif kind == "trade_republic":
+            if traderepublic_csv.looks_like(text):
+                trades, income_, report = traderepublic_csv.convert(text)
+                datafiles.save_file("trades_trade_republic.json", _json.dumps(trades, indent=1).encode())
+                datafiles.save_file("income_trade_republic.json", _json.dumps(income_, indent=1).encode())
+            else:
+                payload = _loads_or_400(text)
+                if "trades" not in payload:
+                    raise HTTPException(400, 'Expected the Trade Republic transaction-export CSV, or a JSON with a "trades" list.')
+                datafiles.save_upload("trade_republic", content)
+        elif kind == "tr_income":
+            if "income" not in _loads_or_400(text):
+                raise HTTPException(400, 'JSON must contain an "income" list — see the .sample file.')
+            datafiles.save_upload("tr_income", content)
+        elif kind == "t212_statement":
+            if is_pdf:
+                st, report = trading212_pdf.convert(content)
+                if not st["trades"] and not st["positions"]:
+                    raise HTTPException(400, "No trades or positions found — is this the Trading 212 activity statement (Invest account)?")
+                content = _json.dumps(st, indent=1, ensure_ascii=False).encode()
+            elif not {"positions", "trades"} & set(_loads_or_400(text)):
+                raise HTTPException(400, 'Expected the Trading 212 activity-statement PDF or its converted JSON.')
+            datafiles.save_upload("t212_statement", content)
+        else:
+            raise HTTPException(404, "Unknown upload kind")
+    except HTTPException:
+        raise
+    except ValueError as e:
+        raise HTTPException(400, str(e))
     # the trendline was built from the old data — rebuild it from the new
     global _backfill_started
     try:
@@ -414,7 +451,18 @@ async def upload_statement(kind: str, file: UploadFile = File(...)) -> dict:
     with _backfill_lock:
         _backfill_started = False
     github_sync.push_vault_async()
-    return datafiles.status()
+    out = datafiles.status()
+    out["_report"] = report
+    return out
+
+
+def _loads_or_400(text: str) -> dict:
+    import json as _json
+    try:
+        payload = _json.loads(text)
+    except ValueError:
+        raise HTTPException(400, "Not valid JSON — see the .sample file for the format.")
+    return payload if isinstance(payload, dict) else {}
 
 
 @app.get("/api/analytics")

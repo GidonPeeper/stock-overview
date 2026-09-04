@@ -49,7 +49,8 @@ def resolve(name: str) -> tuple[Path, bool]:
 
 EXPECTED = [("degiro", "degiro_account.csv"),
             ("trade_republic", "trades_trade_republic.json"),
-            ("tr_income", "income_trade_republic.json")]
+            ("tr_income", "income_trade_republic.json"),
+            ("t212_statement", "trading212_statement.json")]
 
 
 def status() -> dict:
@@ -60,9 +61,13 @@ def status() -> dict:
     for key, fname in EXPECTED:
         path, real = resolve(fname)
         out[key] = {"real": real, "path": str(path), "expected": fname}
+    live = bool(os.getenv("T212_API_KEY") and os.getenv("T212_API_SECRET"))
     out["trading212"] = {
-        "real": bool(os.getenv("T212_API_KEY") and os.getenv("T212_API_SECRET")),
-        "path": "env:T212_API_KEY/SECRET", "expected": "T212_API_KEY + T212_API_SECRET",
+        # live API, or the imported activity statement as the offline source
+        "real": live or out["t212_statement"]["real"],
+        "live": live,
+        "path": "env:T212_API_KEY/SECRET" if live else out["t212_statement"]["path"],
+        "expected": "T212_API_KEY + T212_API_SECRET, or trading212_statement.json",
     }
     seen: dict[str, list[str]] = {}
     for d in _SEARCH_DIRS:
@@ -87,6 +92,10 @@ def save_upload(kind: str, content: bytes) -> Path:
     fname = dict(EXPECTED).get(kind)
     if not fname:
         raise ValueError(f"unknown upload kind: {kind}")
+    return save_file(fname, content)
+
+
+def save_file(fname: str, content: bytes) -> Path:
     DATA_DIR.mkdir(exist_ok=True)
     dest = DATA_DIR / fname
     dest.write_bytes(content)

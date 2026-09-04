@@ -1,7 +1,8 @@
 """Dividends and interest received — income, distinct from trading P/L.
 
 Kept separate from realized P/L so "profit" stays unambiguous. Sources:
-  * Trading 212 — dividends API (interest, if any, would show in transactions)
+  * Trading 212 — dividends API; or the imported activity statement (which also
+    carries the daily interest on cash)
   * DeGiro       — dividend / tax / interest rows in the statement CSV
   * Trade Republic — transcribed from the statement PDF (`data/income_*.json`)
 """
@@ -26,7 +27,8 @@ def _num(s: str) -> float:
 def _trading212() -> dict:
     items = trading212.get_dividends()
     dividends = sum(float(x.get("amountInEuro") or x.get("amount") or 0) for x in items)
-    return {"dividends": round(dividends, 2), "interest": 0.0}
+    interest = sum(float(x["amount_eur"]) for x in trading212.get_interest())
+    return {"dividends": round(dividends, 2), "interest": round(interest, 2)}
 
 
 def _degiro() -> dict:
@@ -88,10 +90,12 @@ def by_year() -> dict[str, float]:
         for r in json.loads(f.read_text()).get("income", []):
             add(str(r.get("date", ""))[:4], float(r.get("amount_eur", 0)))
 
-    # Trading 212: dividends API (paidOn timestamps)
+    # Trading 212: dividends API (paidOn timestamps) + statement interest
     for x in trading212.get_dividends():
         add(str(x.get("paidOn", ""))[:4],
             float(x.get("amountInEuro") or x.get("amount") or 0))
+    for x in trading212.get_interest():
+        add(str(x.get("date", ""))[:4], float(x["amount_eur"]))
 
     return years
 

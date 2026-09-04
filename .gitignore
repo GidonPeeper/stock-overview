@@ -12,6 +12,7 @@ config.toml
 data/degiro_account.csv
 data/trades_trade_republic.json
 data/income_trade_republic.json
+data/trading212_statement.json
 data/cash_accounts.json
 data/watchlist.json
 data/finances.json

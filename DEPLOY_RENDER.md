@@ -36,12 +36,13 @@ After updating a statement locally, rebuild and push it:
 ```
 
 ## 3b. Alternative: Secret Files
-Still on the service's **Environment** tab → **Secret Files** → add three files
+Still on the service's **Environment** tab → **Secret Files** → add the files
 (paste the contents of your local files), named exactly:
 
 - `degiro_account.csv`
 - `trades_trade_republic.json`
 - `income_trade_republic.json`
+- `trading212_statement.json` (only without a Trading 212 API key)
 
 Render mounts Secret Files at the service root and `/etc/secrets/` — the app
 checks both automatically (plus `data/`), so a plain filename is all you need.
@@ -55,8 +56,11 @@ sources are live vs sample, so you can see at a glance what's missing.
    and unlock with **Face ID**.
 
 ## Updating your data later
-When you buy/sell, update the three Secret Files in Render (and push any code
-changes). Trading 212 stays live automatically.
+Easiest: open the app's **Settings** page on your phone and upload the fresh
+exports — the DeGiro statement PDF, the Trade Republic transaction CSV, and
+(without an API key) the Trading 212 activity-statement PDF. They are converted
+and validated on the server and, with `GITHUB_TOKEN` set, re-encrypted into the
+vault automatically. Trading 212 stays live automatically when the API key is set.
 
 ## Notes
 - Do **not** IP-restrict the Trading 212 key (Render's outbound IP changes).

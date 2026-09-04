@@ -22,9 +22,15 @@ from pathlib import Path
 import requests
 
 from .base import Holding
+from ..datafiles import resolve as _resolve_data
+from ..instruments import price_currency, ticker_for
 from ..positions import Trade
 
 BASE_URL = "https://live.trading212.com/api/v0"
+
+# Offline fallback: the Activity-statement PDF imported by
+# backend/importers/trading212_pdf.py. Used whenever the API key pair is absent.
+STATEMENT_FILE = "trading212_statement.json"
 
 # Trading 212 symbols whose market-data ticker differs from the yfinance one
 # (legacy FB for Meta; the Xetra SPDR Russell 2000 ETF).
@@ -102,11 +108,57 @@ def _instrument_meta() -> dict[str, dict]:
     return {row["ticker"]: row for row in data}
 
 
+def _statement() -> dict | None:
+    """Parsed activity statement, if the user imported one (None otherwise)."""
+    path, real = _resolve_data(STATEMENT_FILE)
+    if not real or not path.exists():
+        return None
+    try:
+        return json.loads(path.read_text())
+    except ValueError:
+        return None
+
+
+def has_statement() -> bool:
+    return _statement() is not None
+
+
+def is_live() -> bool:
+    return _auth() is not None
+
+
+def _statement_holdings(st: dict) -> list[Holding]:
+    """Open positions straight from the statement's own table: quantity and the
+    exact EUR cost (value − return, i.e. incl. FX at purchase); the live price
+    is fetched by the price layer."""
+    out = []
+    for p in st.get("positions", []):
+        qty = float(p["quantity"])
+        cost_eur = float(p["value_eur"]) - float(p.get("return_eur") or 0.0)
+        ticker = p.get("ticker") or ticker_for(p["isin"]) or p["symbol"]
+        out.append(Holding(
+            broker="Trading212", ticker=_ALIAS.get(ticker, ticker), name=p.get("name") or p["symbol"],
+            isin=p["isin"], quantity=qty, buy_price=round(cost_eur / qty, 4) if qty else 0.0,
+            currency=price_currency(_ALIAS.get(ticker, ticker)), buy_currency="EUR",
+        ))
+    return out
+
+
+def _statement_trades(st: dict) -> list[Trade]:
+    return [
+        Trade(when=t["date"], key=t["isin"], name=t.get("name") or t["symbol"],
+              side=t["side"], quantity=float(t["quantity"]), amount=float(t["amount_eur"]),
+              currency="EUR", ticker=t.get("ticker") or ticker_for(t["isin"]))
+        for t in st.get("trades", [])
+    ]
+
+
 @_ttl_cache(seconds=30)
 def get_holdings() -> list[Holding]:
     auth = _auth()
     if not auth:
-        return _sample_holdings()
+        st = _statement()
+        return _statement_holdings(st) if st else _sample_holdings()
 
     meta = _instrument_meta()
     holdings: list[Holding] = []
@@ -140,7 +192,8 @@ def get_trades() -> list[Trade]:
     Used to compute realized P/L and closed positions."""
     auth = _auth()
     if not auth:
-        return []
+        st = _statement()
+        return _statement_trades(st) if st else []
 
     trades: list[Trade] = []
     path = "/equity/history/orders?limit=50"
@@ -180,11 +233,27 @@ def get_dividends() -> list[dict]:
     """Dividend payments (EUR amounts) from the history API."""
     auth = _auth()
     if not auth:
-        return []
+        st = _statement()
+        if not st:
+            return []
+        # same shape as the API items (amountInEuro / paidOn) so income.py is agnostic
+        return [{"ticker": d.get("symbol"), "isin": d["isin"], "paidOn": d["date"],
+                 "amountInEuro": d["amount_eur"], "amount": d["amount_eur"]}
+                for d in st.get("dividends", [])]
     try:
         return _get("/history/dividends", auth).get("items", [])
     except requests.RequestException:
         return []
+
+
+def get_interest() -> list[dict]:
+    """Interest on cash. The API has no endpoint for it; from the statement when
+    present: [{date, amount_eur}]."""
+    st = _statement()
+    if not st:
+        return []
+    return [{"date": t["date"], "amount_eur": t["amount_eur"]}
+            for t in st.get("transactions", []) if t.get("kind") == "interest"]
 
 
 def _parse_ticker(raw: str) -> tuple[str, str]:
