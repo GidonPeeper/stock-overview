@@ -13,9 +13,9 @@ import io
 import time
 from collections import defaultdict
 
-from .connectors import degiro, traderepublic, trading212
 from .fx import to_eur
-from . import analytics, income
+from .prices import quote_scale
+from . import analytics, income, sources
 
 _cache: dict[str, tuple[object, float]] = {}
 
@@ -149,6 +149,7 @@ def income_projection(holdings: list[dict]) -> dict:
                 if div is None or len(div) == 0:
                     continue
                 last12 = float(div[div.index >= div.index.max() - __import__("pandas").Timedelta(days=365)].sum())
+                last12 *= quote_scale(t)  # pence -> pounds for London shares
                 if last12 <= 0:
                     continue
                 annual_eur = to_eur(last12 * h["quantity"], h["currency"])
@@ -164,7 +165,7 @@ def income_projection(holdings: list[dict]) -> dict:
         return {"holdings": rows, "projected_annual_eur": round(total_annual, 2),
                 "projected_monthly_eur": round(total_annual / 12, 2),
                 "method": "Trailing 12-month dividends per share × shares held, "
-                          "converted to EUR at today's rate. A projection, not a promise."}
+                          "converted at today's rate. A projection, not a promise."}
     key = "incomeproj:" + ",".join(sorted(h.get("ticker", "") for h in holdings))
     return _cached(key, 12 * 3600, build) or {"holdings": [], "projected_annual_eur": 0}
 
@@ -174,13 +175,8 @@ def annual_report() -> dict:
     """Realized P/L and dividend income per calendar year."""
     from .positions import Position
 
-    sources = {
-        "Trading212": trading212.get_trades,
-        "DeGiro": degiro.get_trades,
-        "Trade Republic": traderepublic.get_trades,
-    }
     realized_by_year: dict[str, float] = defaultdict(float)
-    for get in sources.values():
+    for _, get in sources.trade_sources().values():
         try:
             trades = sorted(get(), key=lambda t: t.when)
         except Exception:
@@ -216,36 +212,35 @@ HINDSIGHT_METHOD = (
     "For every position you exited, the shares you sold are revalued at "
     "today's price: (quantity sold × price now) − what you sold them for. "
     "Positive = selling early cost you money; negative = the exit saved you "
-    "money. FX at today's rate; delisted names count as €0 now."
+    "money. FX at today's rate; delisted names count as zero now."
 )
 
 
 def hindsight() -> dict:
     from .backfill import HIST_TICKER
-    from .positions import compute_positions
+    from .instruments import price_currency
     from .prices import fetch_quotes
 
-    trades = (trading212.get_trades() + degiro.get_trades()
-              + traderepublic.get_trades())
+    trades = sources.all_trades()
     # per instrument: total qty sold + proceeds (EUR)
     sold: dict[str, dict] = {}
     for t in sorted(trades, key=lambda x: x.when):
         if t.side != "SELL":
             continue
-        s = sold.setdefault(t.key, {"name": t.name, "qty": 0.0, "proceeds": 0.0})
+        s = sold.setdefault(t.key, {"name": t.name, "qty": 0.0, "proceeds": 0.0, "ticker": ""})
         s["name"] = t.name
+        s["ticker"] = s["ticker"] or t.ticker
         s["qty"] += t.quantity
         s["proceeds"] += to_eur(t.amount, t.currency)
 
-    tickers = {isin: HIST_TICKER.get(isin, "") for isin in sold}
+    tickers = {isin: HIST_TICKER.get(isin, s["ticker"]) for isin, s in sold.items()}
     quotes = fetch_quotes([tk for tk in tickers.values() if tk])
 
     rows = []
     for isin, s in sold.items():
         tk = tickers.get(isin, "")
         if tk and tk in quotes:
-            ccy = "EUR" if tk.endswith((".AS", ".DE", ".PA", ".MI", ".F")) else \
-                  ("GBP" if tk.endswith(".L") else "USD")
+            ccy = price_currency(tk)  # quotes are already in pounds, not pence
             value_now = to_eur(quotes[tk]["price"] * s["qty"], ccy)
         elif tk == "":
             value_now = 0.0  # delisted / worthless now
@@ -300,8 +295,8 @@ def projection() -> dict:
     return {"start_value": round(start), "monthly_contribution": contrib,
             "scenarios": out,
             "method": "Compounds today's value monthly at 3/6/9% annually, "
-                      f"adding your median monthly contribution (€{contrib:,.0f}, "
-                      "from the last 24 months). A projection, not a promise."}
+                      "adding your median monthly contribution (from the last "
+                      "24 months). A projection, not a promise."}
 
 
 # ------------------------------------------------------------------ export

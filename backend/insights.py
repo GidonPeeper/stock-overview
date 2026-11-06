@@ -198,8 +198,16 @@ def rising_stars() -> dict:
 
 
 # ---------------------------------------------------------------- daily brief
-def daily_brief(portfolio: dict, analytics_data: dict) -> dict:
-    """A generated 'newsletter' combining your portfolio with market context."""
+def daily_brief(portfolio: dict, analytics_data: dict, ccy: str = "EUR") -> dict:
+    """A generated 'newsletter' combining your portfolio with market context.
+    Amounts are written in `ccy` (EUR, GBP or USD)."""
+    from .fx import from_eur
+
+    sym = {"EUR": "€", "GBP": "£", "USD": "$"}.get(ccy, "€")
+
+    def m(v: float) -> str:
+        return f"{sym}{abs(from_eur(v, ccy)):,.0f}"
+
     t = portfolio["totals"]
     holdings = portfolio["holdings"]
     movers = [h for h in holdings if h.get("daily_eur") is not None]
@@ -211,7 +219,7 @@ def daily_brief(portfolio: dict, analytics_data: dict) -> dict:
         word = "up" if d >= 0 else "down"
         paras.append(
             f"Your portfolio is {word} {abs(t['daily_pct']):.2f}% today "
-            f"({'+' if d >= 0 else '−'}€{abs(d):,.0f}), at €{t['value']:,.0f}.")
+            f"({'+' if d >= 0 else '−'}{m(d)}), at {m(t['value'])}.")
         if movers:
             best, worst = movers[0], movers[-1]
             if best["daily_eur"] > 0:
@@ -220,8 +228,8 @@ def daily_brief(portfolio: dict, analytics_data: dict) -> dict:
             if worst["daily_eur"] < 0:
                 paras.append(f"Biggest drag: {worst['name']} ({worst['daily_pct']:.1f}%).")
     paras.append(
-        f"All-time total return stands at €{t['total_return']:,.0f} "
-        f"(€{t['all_time']:,.0f} capital gains + €{t['income']:,.0f} dividends & interest).")
+        f"All-time total return stands at {'−' if t['total_return'] < 0 else ''}{m(t['total_return'])} "
+        f"({'−' if t['all_time'] < 0 else ''}{m(t['all_time'])} capital gains + {m(t['income'])} dividends & interest).")
     beta = analytics_data.get("beta")
     vol = analytics_data.get("volatility_pct")
     if beta is not None and vol is not None:

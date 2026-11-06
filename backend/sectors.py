@@ -46,7 +46,10 @@ def get_sectors(tickers: list[str]) -> dict[str, str]:
                     continue
                 try:
                     info = yf.Ticker(t).get_info()
-                    cache[t] = info.get("sector") or "Other"
+                    if info.get("quoteType") in ("ETF", "MUTUALFUND"):
+                        cache[t] = "ETF / Fund"
+                    else:
+                        cache[t] = info.get("sector") or "Other"
                 except Exception:
                     cache[t] = "Other"
         except Exception:

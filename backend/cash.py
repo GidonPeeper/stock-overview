@@ -2,7 +2,8 @@
 
 Personal bank APIs are gated behind PSD2 licensing (Rabobank/Revolut only talk
 to licensed AISPs), so balances live in a small local store you edit in-app in
-seconds — no file exports. Accounts carry a type (cash / savings / retirement /
+seconds — no file exports. Cash sitting in a live Trading 212 account is
+added automatically (read-only). Accounts carry a type (cash / savings / retirement /
 other) so 401(k)-style pension pots sit beside bank balances in the net-worth
 view. An aggregator (e.g. Enable Banking) can automate this later.
 """
@@ -34,7 +35,8 @@ def load() -> dict:
         data = json.loads(path.read_text())
     except ValueError:
         return {"accounts": [], "sample": not real}
-    accounts = data.get("accounts", [])
+    accounts = [a for a in data.get("accounts", []) if not a.get("auto")]
+    accounts += _broker_cash()
     total = interest = 0.0
     by_type: dict[str, float] = {}
     for a in accounts:
@@ -51,11 +53,29 @@ def load() -> dict:
             "sample": not real, "updated": data.get("updated")}
 
 
+def _broker_cash() -> list[dict]:
+    """Uninvested cash in live Trading 212 accounts, read from the API. Shown
+    as read-only accounts (`auto`) and never written to the file."""
+    try:
+        from .connectors import trading212
+
+        rows = trading212.get_cash()
+    except Exception:
+        return []
+    return [{"name": f"{r['account']} cash", "institution": "Trading 212",
+             "balance": r["balance"], "currency": r["currency"], "type": "cash",
+             "rate": 0.0, "auto": True} for r in rows if r["balance"]]
+
+
+def _manual(accounts: list[dict]) -> list[dict]:
+    return [a for a in accounts if not a.get("auto")]
+
+
 def upsert(name: str, institution: str, balance: float, currency: str,
            type_: str = "cash", rate: float = 0.0) -> dict:
     data = load()
     # first real edit starts clean — never carry demo accounts into the real file
-    accounts = [] if data.get("sample") else data["accounts"]
+    accounts = [] if data.get("sample") else _manual(data["accounts"])
     for a in accounts:
         a.pop("balance_eur", None)
         a.pop("interest_eur_yr", None)
@@ -78,7 +98,7 @@ def upsert(name: str, institution: str, balance: float, currency: str,
 def delete(name: str) -> dict:
     data = load()
     accounts = [] if data.get("sample") else [
-        a for a in data["accounts"]
+        a for a in _manual(data["accounts"])
         if a["name"].strip().lower() != name.strip().lower()]
     for a in accounts:
         a.pop("balance_eur", None)
