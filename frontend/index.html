@@ -166,6 +166,7 @@
     <header>
       <div><h1>Stock Overview</h1><div id="live" class="live"></div></div>
       <div style="display:flex;gap:8px">
+        <button class="iconbtn" id="ccybtn" onclick="toggleCcy()" title="Show amounts in pounds / euros">€</button>
         <button class="iconbtn" id="themebtn" onclick="toggleTheme()" title="Light / dark">☀</button>
         <a class="iconbtn" href="/settings" title="Data sources" style="text-decoration:none">⚙</a>
         <button class="iconbtn" onclick="loadAll(true)" title="Refresh">↻</button>
@@ -285,7 +286,7 @@
             <span id="contrib-label" class="num" style="font-weight:650"></span>
           </div>
           <input id="contrib-slider" type="range" min="0" max="8000" step="100" style="width:100%"
-            oninput="setContrib(+this.value)" />
+            oninput="setContrib(toBase(+this.value))" />
         </div>
         <div style="display:flex;gap:8px;align-items:center;margin-top:12px;flex-wrap:wrap">
           <span class="muted" style="font-size:13px">Goal:</span>
@@ -346,6 +347,11 @@
         <div id="income-proj" class="skeleton">Loading…</div>
       </div>
       <div class="card">
+        <h2>UK tax year <span id="uktax-year"></span> <span class="chip" style="padding:1px 8px;font-size:11px" onclick="document.getElementById('uktax-method').hidden=!document.getElementById('uktax-method').hidden">method</span></h2>
+        <div id="uktax-method" hidden style="font-size:12.5px;color:var(--muted);background:var(--panel2);border-radius:10px;padding:10px 12px;margin-bottom:10px"></div>
+        <div id="uktax" class="skeleton">Loading…</div>
+      </div>
+      <div class="card">
         <h2>Annual report — realized P/L &amp; dividends per year</h2>
         <div id="annual" class="skeleton">Loading…</div>
       </div>
@@ -387,9 +393,21 @@
   </div>
 
   <script>
-    const eur=n=>"€"+Number(n).toLocaleString("en-IE",{minimumFractionDigits:2,maximumFractionDigits:2});
-    const eur0=n=>"€"+Number(n).toLocaleString("en-IE",{maximumFractionDigits:0});
-    const signed=n=>(n>=0?"+":"")+eur(n);
+    /* ---- money: the API sends EUR; shown in the currency picked with the £/€ button ---- */
+    const SYM={EUR:"€",GBP:"£",USD:"$"};
+    let FX={default:"EUR",per_eur:{EUR:1}};
+    let CUR=(()=>{ try{ return localStorage.getItem("ccy"); }catch(e){ return null; } })();
+    function setFX(fx){ if(!fx||!fx.per_eur) return; FX=fx; if(!CUR||!(CUR in FX.per_eur)) CUR=FX.default||"EUR"; renderCcyBtn(); renderTradeCost(); }
+    const rate=()=>FX.per_eur[CUR]??1;          // display units per 1 EUR
+    const cv=n=>Number(n)*rate();                // EUR -> display currency
+    const toBase=n=>Number(n)/rate();            // display currency -> EUR
+    const fmt=(v,d)=>(v<0?"−":"")+(SYM[CUR]||"€")+Math.abs(v).toLocaleString("en-GB",{minimumFractionDigits:d,maximumFractionDigits:d});
+    const money=n=>fmt(cv(n),2);                 // EUR amount, 2 decimals
+    const money0=n=>fmt(cv(n),0);                // EUR amount, rounded
+    const shown0=v=>fmt(Number(v),0);            // already in display currency (charts)
+    const axisK=v=>(v<0?"−":"")+(SYM[CUR]||"€")+(Math.abs(v)/1000).toFixed(0)+"k";
+    const signed=n=>(n>=0?"+":"")+money(n);
+    const gbp0=n=>(n<0?"−":"")+"£"+Math.abs(Number(n)).toLocaleString("en-GB",{maximumFractionDigits:0});
     const pct=n=>(n>=0?"+":"")+Number(n).toFixed(2)+"%";
     const cls=n=>n>=0?"pos":"neg"; const arrow=n=>n>=0?"▲":"▼";
     /* ---- theme ---- */
@@ -414,6 +432,22 @@
       if(PROJ) renderProjection();
     }
     applyThemeUI();
+    function renderCcyBtn(){ const b=document.getElementById("ccybtn"); if(b) b.textContent=SYM[CUR]||"€"; }
+    function toggleCcy(){
+      const order=["GBP","EUR"]; CUR=order[(order.indexOf(CUR)+1)%order.length];
+      try{ localStorage.setItem("ccy",CUR); }catch(e){}
+      renderCcyBtn(); rerenderMoney();
+    }
+    function rerenderMoney(){
+      if(!PORT) return;
+      renderHero(); renderProfit(); renderMovers(); renderOpen(); renderClosed(); renderAllocation(); renderChart(); renderPeriods();
+      if(CASH){ renderMoney(); renderCashOpt(); }
+      if(FIN) renderFixed();
+      if(PROJ) renderProjection();
+      renderTradeCost();
+      if(insightsLoaded){ insightsLoaded=false; loadInsights(); }
+      if(anaLoaded){ anaLoaded=false; loadAnalytics(); }
+    }
     let PORT,PROFIT,HISTORY=[],CLOSED,SPARKS={},CASH=null,PROJ=null,sel="total_return",chartMode="profit",sortBy="value";
     let chart,sc,bc,dchart,detailTicker=null,detailRange="1mo",BENCH=null,benchmarkOn=false;
     async function fetchJSON(url){ const r=await fetch(url); if(!r.ok) throw new Error(url+" "+r.status); return r.json(); }
@@ -479,7 +513,7 @@
     function loadInsights(){
       if(insightsLoaded) return; insightsLoaded=true;
       loadReports();
-      fetchJSON("/api/brief").then(b=>{
+      fetchJSON("/api/brief?ccy="+CUR).then(b=>{
         document.getElementById("brief-date").textContent=b.date;
         document.getElementById("brief-body").className="";
         document.getElementById("brief-body").innerHTML=
@@ -531,27 +565,27 @@
       const loans=FIN?FIN.loans:[];
       el.innerHTML=`
         <div style="display:flex;align-items:baseline;gap:10px;margin-bottom:4px">
-          <span class="num" style="font-size:27px;font-weight:750;letter-spacing:-.02em">${eur0(net)}</span>
-          <span class="muted" style="font-size:12.5px">net worth${debt?` = ${eur0(assets)} assets − ${eur0(debt)} debt`:""}${CASH.sample?' · demo accounts':''}</span>
+          <span class="num" style="font-size:27px;font-weight:750;letter-spacing:-.02em">${money0(net)}</span>
+          <span class="muted" style="font-size:12.5px">net worth${debt?` = ${money0(assets)} assets − ${money0(debt)} debt`:""}${CASH.sample?' · demo accounts':''}</span>
         </div>
         <div style="display:flex;height:10px;border-radius:6px;overflow:hidden;margin:10px 0 12px">${
-          groups.map(g=>`<div title="${TYPE_META[g.type].label} ${eur0(g.total)}" style="width:${Math.max(assets?g.total/assets*100:0,1.5)}%;background:${TYPE_META[g.type].color}"></div>`).join("")}
+          groups.map(g=>`<div title="${TYPE_META[g.type].label} ${money0(g.total)}" style="width:${Math.max(assets?g.total/assets*100:0,1.5)}%;background:${TYPE_META[g.type].color}"></div>`).join("")}
         </div>`+
         groups.map(g=>{
           const m=TYPE_META[g.type];
           return `<div style="display:flex;justify-content:space-between;margin:12px 0 2px;font-size:11.5px;text-transform:uppercase;letter-spacing:.05em">
               <span style="color:${m.color};font-weight:650">● ${m.label}</span>
-              <span class="muted num">${eur0(g.total)} · ${assets?(g.total/assets*100).toFixed(1):0}%</span></div>`+
+              <span class="muted num">${money0(g.total)} · ${assets?(g.total/assets*100).toFixed(1):0}%</span></div>`+
             g.rows.map(r=>`<div class="closed-row" style="padding:7px 0"><span>${r.label}
                 <span style="font-size:11px;color:var(--faint)">${r.sub||""}</span></span>
-              <span class="num" style="font-weight:600">${eur0(r.value)}</span></div>`).join("");
+              <span class="num" style="font-weight:600">${money0(r.value)}</span></div>`).join("");
         }).join("")+
         (loans.length?`<div style="display:flex;justify-content:space-between;margin:12px 0 2px;font-size:11.5px;text-transform:uppercase;letter-spacing:.05em">
             <span style="color:var(--red);font-weight:650">● Loans</span>
-            <span class="muted num">−${eur0(debt)}</span></div>`+
+            <span class="muted num">−${money0(debt)}</span></div>`+
           loans.map(l=>`<div class="closed-row" style="padding:7px 0"><span>${l.name}
-              <span style="font-size:11px;color:var(--faint)">${l.rate?l.rate+"% · ":""}${l.monthly_payment?eur0(l.monthly_payment)+"/mo":""}${l.payoff?` · paid off ${fmtYM(l.payoff)}`:""}</span></span>
-            <span class="num neg" style="font-weight:600">−${eur0(l.balance_eur)}</span></div>`).join(""):"");
+              <span style="font-size:11px;color:var(--faint)">${l.rate?l.rate+"% · ":""}${l.monthly_payment?money0(l.monthly_payment_eur??l.monthly_payment)+"/mo":""}${l.payoff?` · paid off ${fmtYM(l.payoff)}`:""}</span></span>
+            <span class="num neg" style="font-weight:600">−${money0(l.balance_eur)}</span></div>`).join(""):"");
     }
     function loadCash(){
       fetchJSON("/api/cash").then(c=>{ CASH=c; renderMoney(); renderCashOpt(); })
@@ -562,7 +596,12 @@
     // Deposit-protection map. "insured" = covered by a bank deposit-guarantee
     // scheme; Trading 212 pays via money-market funds (investor protection, not
     // a deposit guarantee) so it's flagged separately.
+    const FSCS={ok:true,label:"FSCS, £120k"};
     const PROTECT={
+      "starling":FSCS, "starling bank":FSCS, "monzo":FSCS, "chase":FSCS, "chase uk":FSCS,
+      "barclays":FSCS, "hsbc":FSCS, "lloyds":FSCS, "natwest":FSCS, "santander":FSCS, "nationwide":FSCS,
+      "ns&i":{ok:true,label:"NS&I — 100% backed by HM Treasury"},
+      "premium bonds":{ok:true,label:"NS&I — 100% backed by HM Treasury"},
       "rabobank":{ok:true,label:"Dutch DGS, €100k"},
       "bank of america":{ok:true,label:"FDIC, $250k"},
       "revolut":{ok:true,label:"EU deposit guarantee via bank, €100k"},
@@ -571,7 +610,7 @@
     };
     function renderCashOpt(){
       const el=document.getElementById("cashopt"); if(!CASH) return;
-      const rows=(CASH.accounts||[]).filter(a=>(a.type==="cash"||a.type==="savings")&&a.balance_eur>0)
+      const rows=(CASH.accounts||[]).filter(a=>(a.type==="cash"||a.type==="savings")&&a.balance_eur>0&&!a.auto)
         .map(a=>({...a, prot:PROTECT[(a.institution||"").toLowerCase()]||{ok:null,label:"check your bank's deposit guarantee"}}));
       if(!rows.length){ el.className=""; el.innerHTML='<span class="muted">Add cash accounts (with their interest rates) in Settings to get advice.</span>'; return; }
       el.className="";
@@ -583,9 +622,9 @@
         accs.forEach(a=>{
           if(best&&a.rate<best.rate-0.01){
             const g=a.balance_eur*(best.rate-a.rate)/100; totalGain+=g;
-            plans+=`<div class="closed-row" style="padding:8px 0"><span>Move <b>${eur0(a.balance_eur)}</b> from ${a.name} (${a.rate}%)
+            plans+=`<div class="closed-row" style="padding:8px 0"><span>Move <b>${money0(a.balance_eur)}</b> from ${a.name} (${a.rate}%)
                 <br><span style="font-size:11px;color:var(--faint)">→ ${best.name} at ${best.rate}% · ${best.prot.label}</span></span>
-              <span class="num pos" style="font-weight:650">+${eur(g)}/yr</span></div>`;
+              <span class="num pos" style="font-weight:650">+${money(g)}/yr</span></div>`;
           }
           if(bestIns&&a.rate<bestIns.rate-0.01) totalGainSafe+=a.balance_eur*(bestIns.rate-a.rate)/100;
         });
@@ -593,13 +632,13 @@
       el.innerHTML=`
         <div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:12px">
           <div class="stat" style="flex:1;min-width:130px"><div class="k">Cash earning now</div>
-            <div class="v num">${eur0(CASH.interest_eur_yr||0)}/yr <span class="muted" style="font-size:12px;font-weight:400">(${CASH.blended_rate_pct||0}% blended)</span></div></div>
+            <div class="v num">${money0(CASH.interest_eur_yr||0)}/yr <span class="muted" style="font-size:12px;font-weight:400">(${CASH.blended_rate_pct||0}% blended)</span></div></div>
           <div class="stat" style="flex:1;min-width:130px"><div class="k">Left on the table</div>
-            <div class="v num ${totalGain>1?'pos':''}">${totalGain>1?"+"+eur0(totalGain)+"/yr":"€0 — optimized ✓"}</div></div>
+            <div class="v num ${totalGain>1?'pos':''}">${totalGain>1?"+"+money0(totalGain)+"/yr":money0(0)+" — optimized ✓"}</div></div>
         </div>
         ${plans||'<span class="muted">Your cash is already at your best rates.</span>'}
         <div class="muted" style="font-size:11px;margin-top:10px">Highest-rate moves shown; keep an everyday buffer where you bank.
-          Trading 212 interest comes from money-market funds (very low risk but <b>not</b> a bank deposit guarantee — insured-only uplift: +${eur0(totalGainSafe)}/yr).
+          Trading 212 interest comes from money-market funds (very low risk but <b>not</b> a bank deposit guarantee — insured-only uplift: +${money0(totalGainSafe)}/yr).
           Same-currency moves only, so no FX risk is introduced. Not financial advice.</div>`;
     }
 
@@ -622,20 +661,20 @@
       const net=f.net, netCls=net>=0?"pos":"neg";
       const row=(x,sign,color)=>`<div class="closed-row" style="padding:7px 0">
           <span><span style="color:${color}">●</span> ${x.name}${x.kind==="loan"?' <span style="font-size:10px;color:var(--faint)">loan</span>':''}</span>
-          <span class="num" style="font-weight:600;color:${color}">${sign}${eur0(x.monthly_eur)}</span></div>`;
+          <span class="num" style="font-weight:600;color:${color}">${sign}${money0(x.monthly_eur)}</span></div>`;
       el.innerHTML=`
         <div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:12px">
           <div class="stat" style="flex:1;min-width:104px"><div class="k">Coming in</div>
-            <div class="v num pos">${eur0(f.income_total)}<span class="muted" style="font-size:11px;font-weight:400">/mo</span></div></div>
+            <div class="v num pos">${money0(f.income_total)}<span class="muted" style="font-size:11px;font-weight:400">/mo</span></div></div>
           <div class="stat" style="flex:1;min-width:104px"><div class="k">Going out</div>
-            <div class="v num neg">${eur0(f.outgoings_total)}<span class="muted" style="font-size:11px;font-weight:400">/mo</span></div></div>
+            <div class="v num neg">${money0(f.outgoings_total)}<span class="muted" style="font-size:11px;font-weight:400">/mo</span></div></div>
           <div class="stat" style="flex:1;min-width:104px"><div class="k">Left over</div>
-            <div class="v num ${netCls}">${net>=0?"":"−"}${eur0(Math.abs(net))}<span class="muted" style="font-size:11px;font-weight:400">/mo</span></div></div>
+            <div class="v num ${netCls}">${net>=0?"":"−"}${money0(Math.abs(net))}<span class="muted" style="font-size:11px;font-weight:400">/mo</span></div></div>
         </div>
         <div style="display:flex;height:9px;border-radius:5px;overflow:hidden;margin-bottom:4px;background:var(--panel2)">
           <div title="Committed to fixed costs" style="width:${Math.min(f.committed_pct,100)}%;background:var(--red)"></div>
           <div title="Left over" style="flex:1;background:var(--green)"></div></div>
-        <div class="muted" style="font-size:11.5px;margin-bottom:12px">${f.committed_pct}% of your fixed income is committed — ${net>=0?`<b class="pos">${eur0(net)}/mo</b> stays free`:`<b class="neg">short ${eur0(-net)}/mo</b>`}.</div>
+        <div class="muted" style="font-size:11.5px;margin-bottom:12px">${f.committed_pct}% of your fixed income is committed — ${net>=0?`<b class="pos">${money0(net)}/mo</b> stays free`:`<b class="neg">short ${money0(-net)}/mo</b>`}.</div>
         <div style="font-size:11px;text-transform:uppercase;letter-spacing:.05em;color:var(--muted);margin-bottom:2px">Coming in</div>
         ${f.income.map(x=>row(x,"+","var(--green)")).join("")||'<div class="muted" style="font-size:12px">None</div>'}
         <div style="font-size:11px;text-transform:uppercase;letter-spacing:.05em;color:var(--muted);margin:12px 0 2px">Going out</div>
@@ -795,39 +834,39 @@
       if(!PROJ||!PROJ.scenarios) return;
       const contrib = PROJ.user_contrib ?? PROJ.monthly_contribution;
       const slider=document.getElementById("contrib-slider");
-      if(document.activeElement!==slider) slider.value=contrib;
+      if(document.activeElement!==slider) slider.value=Math.round(cv(contrib));
       document.getElementById("contrib-label").textContent=
-        `${eur0(contrib)}/month${PROJ.user_contrib!=null&&PROJ.user_contrib!==PROJ.monthly_contribution?` (your actual: ${eur0(PROJ.monthly_contribution)})`:""}`;
+        `${money0(contrib)}/month${PROJ.user_contrib!=null&&PROJ.user_contrib!==PROJ.monthly_contribution?` (your actual: ${money0(PROJ.monthly_contribution)})`:""}`;
       document.getElementById("proj-sub").textContent=
-        `Starting from ${eur0(PROJ.start_value)} with your median contribution of ${eur0(PROJ.monthly_contribution)}/month. ${PROJ.method||""}`;
+        `Starting from ${money0(PROJ.start_value)} with your median contribution of ${money0(PROJ.monthly_contribution)}/month. ${PROJ.method||""}`;
       const labels=PROJ.scenarios.expected.points.map(p=>p.ym);
       const tc=chartColors();
       if(projChart) projChart.destroy();
       projChart=new Chart(document.getElementById("proj-chart"),{type:"line",
         data:{labels,datasets:Object.entries(PROJ.scenarios).map(([n,s])=>({
-          label:`${n} (${(s.annual_rate*100).toFixed(0)}%/y)`, data:s.points.map(p=>p.value),
+          label:`${n} (${(s.annual_rate*100).toFixed(0)}%/y)`, data:s.points.map(p=>cv(p.value)),
           borderColor:SCEN_STYLE[n][0], borderDash:SCEN_STYLE[n][1], borderWidth:2,
           pointRadius:0, tension:.2, fill:false }))},
         options:{maintainAspectRatio:false,interaction:{intersect:false,mode:"index"},
           plugins:{legend:{labels:{color:tc.legend,boxWidth:12,font:{size:11}}},
-            tooltip:{callbacks:{label:c=>c.dataset.label+": "+eur0(c.parsed.y)}}},
+            tooltip:{callbacks:{label:c=>c.dataset.label+": "+shown0(c.parsed.y)}}},
           scales:{x:{ticks:{color:tc.tick,maxTicksLimit:6,font:{size:11}},grid:{display:false}},
-            y:{ticks:{color:tc.tick,font:{size:11},callback:v=>"€"+(v/1000).toFixed(0)+"k"},grid:{color:tc.grid}}}}});
+            y:{ticks:{color:tc.tick,font:{size:11},callback:axisK},grid:{color:tc.grid}}}}});
       renderGoal();
     }
     function renderGoal(){
       const goal=+localStorage.getItem("goal")||0, el=document.getElementById("goal-eta");
       if(!goal||!PROJ){ el.textContent=""; return; }
-      document.getElementById("goal-input").value=goal;
+      document.getElementById("goal-input").value=Math.round(cv(goal));
       const etas=Object.entries(PROJ.scenarios).map(([n,s])=>{
         const hit=s.points.find(p=>p.value>=goal);
         return `${n}: ${hit?hit.ym:">10y"}`;
       });
-      el.innerHTML=`<span class="pos" style="font-weight:600">${eur0(goal)}</span> <span class="muted">reached — ${etas.join(" · ")}</span>`;
+      el.innerHTML=`<span class="pos" style="font-weight:600">${money0(goal)}</span> <span class="muted">reached — ${etas.join(" · ")}</span>`;
     }
     function setGoal(){
       const v=+document.getElementById("goal-input").value;
-      if(v>0){ localStorage.setItem("goal",v); renderGoal(); }
+      if(v>0){ localStorage.setItem("goal",toBase(v)); renderGoal(); }
     }
     function loadProjection(){
       fetchJSON("/api/projection").then(p=>{ PROJ=p; renderProjection(); }).catch(()=>{});
@@ -837,8 +876,8 @@
         t.innerHTML=`<span class="num ${h.total_delta_eur>0?'neg':'pos'}" style="font-size:24px;font-weight:750">${signed(h.total_delta_eur)}</span>
           <span class="muted" style="font-size:12.5px"> if you'd never sold — <span class="chip" style="padding:1px 8px;font-size:11px" onclick="alert(${JSON.stringify(h.method)})">method</span></span>`;
         const row=r=>`<div class="closed-row"><span>${r.name}<br>
-            <span style="font-size:11px;color:var(--faint)">sold for ${eur0(r.sold_for_eur)} · worth now ${eur0(r.worth_now_eur)}</span></span>
-          <span class="num ${r.delta_eur>0?'neg':'pos'}" style="font-weight:600">${r.delta_eur>0?"−":"+"}${eur0(Math.abs(r.delta_eur))}</span></div>`;
+            <span style="font-size:11px;color:var(--faint)">sold for ${money0(r.sold_for_eur)} · worth now ${money0(r.worth_now_eur)}</span></span>
+          <span class="num ${r.delta_eur>0?'neg':'pos'}" style="font-weight:600">${r.delta_eur>0?"−":"+"}${money0(Math.abs(r.delta_eur))}</span></div>`;
         el.innerHTML=(h.regrets.length?`<div class="muted" style="font-size:11.5px;text-transform:uppercase;letter-spacing:.04em;margin:4px 0">Sold too early</div>`+h.regrets.map(row).join(""):"")+
           (h.good_exits.length?`<div class="muted" style="font-size:11.5px;text-transform:uppercase;letter-spacing:.04em;margin:10px 0 4px">Well-timed exits</div>`+h.good_exits.map(row).join(""):"");
       }).catch(()=>{ document.getElementById("hindsight").textContent="Unavailable."; });
@@ -861,16 +900,16 @@
       ["us","eu","etf"].forEach(x=>document.getElementById("tc-"+x).classList.toggle("active",x===t));
       renderTradeCost(); }
     function renderTradeCost(){
-      const a=Math.max(+document.getElementById("tc-amount").value||0,0);
+      const a=toBase(Math.max(+document.getElementById("tc-amount").value||0,0));
       const rows=FEES[tcType].map(([name,fn,sub])=>({name,sub,cost:fn(a)})).sort((x,y)=>x.cost-y.cost);
       const worst=rows[rows.length-1].cost;
       document.getElementById("tradecost").innerHTML=rows.map((r,i)=>
         `<div class="closed-row"><span>${r.name}
             ${i===0?'<span class="tag" style="background:rgba(38,168,98,.15);color:var(--green);font-weight:650">cheapest</span>':""}
             <br><span style="font-size:11px;color:var(--faint)">${r.sub}</span></span>
-          <span style="text-align:right"><span class="num" style="font-weight:650">${eur(r.cost)}</span>
+          <span style="text-align:right"><span class="num" style="font-weight:650">${money(r.cost)}</span>
             <span class="muted" style="font-size:11px"> · ${a?(r.cost/a*100).toFixed(2):0}%</span>
-            ${i===0&&worst>r.cost?`<br><span class="pos" style="font-size:11px">saves ${eur(worst-r.cost)} vs priciest</span>`:""}</span></div>`).join("");
+            ${i===0&&worst>r.cost?`<br><span class="pos" style="font-size:11px">saves ${money(worst-r.cost)} vs priciest</span>`:""}</span></div>`).join("");
     }
     renderTradeCost();
 
@@ -879,21 +918,48 @@
       fetchJSON("/api/income_projection").then(ip=>{
         const el=document.getElementById("income-proj"); el.className="";
         el.innerHTML=`<div style="display:flex;gap:10px;margin-bottom:12px">
-            <div class="stat" style="flex:1"><div class="k">Projected / year</div><div class="v num pos">${eur0(ip.projected_annual_eur)}</div></div>
-            <div class="stat" style="flex:1"><div class="k">≈ per month</div><div class="v num">${eur0(ip.projected_monthly_eur||0)}</div></div></div>`+
+            <div class="stat" style="flex:1"><div class="k">Projected / year</div><div class="v num pos">${money0(ip.projected_annual_eur)}</div></div>
+            <div class="stat" style="flex:1"><div class="k">≈ per month</div><div class="v num">${money0(ip.projected_monthly_eur||0)}</div></div></div>`+
           ip.holdings.slice(0,8).map(r=>`<div class="closed-row"><span><span class="tag">${r.ticker}</span> ${r.name}
              <span style="font-size:11px;color:var(--faint)">yield ${r.yield_pct}%</span></span>
-           <span class="num pos">${eur(r.annual_eur)}/y</span></div>`).join("")+
+           <span class="num pos">${money(r.annual_eur)}/y</span></div>`).join("")+
           `<div class="muted" style="font-size:11px;margin-top:8px">${ip.method||""}</div>`;
       }).catch(()=>{ document.getElementById("income-proj").textContent="Unavailable."; });
+      fetchJSON("/api/uk_tax").then(renderUkTax).catch(()=>{ document.getElementById("uktax").textContent="Unavailable."; });
       fetchJSON("/api/annual_report").then(ar=>{
         const el=document.getElementById("annual"); el.className="";
         el.innerHTML='<div class="hhead" style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr"><span>Year</span><span style="text-align:right">Realized</span><span style="text-align:right">Dividends</span><span style="text-align:right">Total</span></div>'+
           ar.years.map(y=>`<div style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr;padding:9px 0;border-bottom:1px solid var(--border)">
             <span>${y.year}</span><span class="num ${cls(y.realized_eur)}" style="text-align:right">${signed(y.realized_eur)}</span>
-            <span class="num" style="text-align:right">${eur(y.dividends_eur)}</span>
+            <span class="num" style="text-align:right">${money(y.dividends_eur)}</span>
             <span class="num ${cls(y.total_eur)}" style="text-align:right;font-weight:600">${signed(y.total_eur)}</span></div>`).join("");
       }).catch(()=>{ document.getElementById("annual").textContent="Unavailable."; });
+    }
+
+    /* ---- UK tax year (always in pounds: HMRC works in GBP) ---- */
+    function renderUkTax(t){
+      const el=document.getElementById("uktax"); el.className="";
+      document.getElementById("uktax-year").textContent=t.tax_year;
+      document.getElementById("uktax-method").textContent=t.method;
+      const stat=(k,v,sub,c)=>`<div class="stat" style="flex:1;min-width:130px"><div class="k">${k}</div>
+        <div class="v num ${c||""}">${v}</div><div class="muted" style="font-size:11px">${sub}</div></div>`;
+      const net=t.net_gain_gbp, isa=t.isa;
+      let html=`<div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:12px">`+
+        stat("Net gains outside ISA", (net>=0?"+":"")+gbp0(net), `${gbp0(t.gains_gbp)} gains · ${gbp0(t.losses_gbp)} losses · ${t.disposals} sales`, cls(net))+
+        stat("CGT allowance left", gbp0(t.exempt_left_gbp), `of ${gbp0(t.annual_exempt_gbp)}`)+
+        stat("Dividends outside ISA", gbp0(t.dividends_gbp), `allowance ${gbp0(t.dividend_allowance_gbp)}`, t.dividends_gbp>t.dividend_allowance_gbp?"neg":"")+
+        (isa.tracked?stat("ISA allowance left", gbp0(isa.left_gbp), `${gbp0(isa.paid_in_gbp)} paid in of ${gbp0(isa.allowance_gbp)}`):"")+
+        `</div>`;
+      if(t.recent_sales.length){
+        html+=`<div class="muted" style="font-size:11.5px;text-transform:uppercase;letter-spacing:.04em;margin:4px 0">30-day rule — recent sales outside the ISA</div>`+
+          t.recent_sales.map(r=>`<div class="closed-row"><span>${r.name} <span class="tag">${r.account}</span>
+              <br><span style="font-size:11px;color:var(--faint)">sold ${r.sold_on} · ${r.rebought
+                ?'<b class="neg">bought back outside an ISA within 30 days — HMRC matches the sale to that buy</b>'
+                :`buying it back outside an ISA before <b>${r.rebuy_from}</b> would undo this ${r.gain_gbp<0?"loss":"gain"} for tax; buying in the ISA is fine`}</span></span>
+            <span class="num ${cls(r.gain_gbp)}">${(r.gain_gbp>=0?"+":"")+gbp0(r.gain_gbp)}</span></div>`).join("");
+      }
+      html+=`<div class="muted" style="font-size:11px;margin-top:8px">${t.from} – ${t.to} · ${t.accounts.filter(a=>a.isa).map(a=>a.name).join(", ")||"no ISA account connected"}${t.accounts.some(a=>a.isa)?" left out (tax-free)":""}.</div>`;
+      el.innerHTML=html;
     }
 
     /* ---- data status banner ---- */
@@ -913,7 +979,7 @@
       const [k,l,getter,desc]=VIEWS.find(v=>v[0]===sel);
       const nEl=document.getElementById("p-num"),dEl=document.getElementById("p-desc"); let val,extra="";
       if(getter){ val=getter(PORT);
-        if(k==="dividends"){ const t=PORT.totals; extra=` · ${eur(t.dividends)} dividends + ${eur(t.interest)} interest`; }
+        if(k==="dividends"){ const t=PORT.totals; extra=` · ${money(t.dividends)} dividends + ${money(t.interest)} interest`; }
         if(k==="today"&&(val===null||val===undefined)){ nEl.textContent="n/a"; nEl.className="n num muted"; dEl.textContent=desc; return; }
       } else { if(!PROFIT){ nEl.textContent="…"; nEl.className="n num skeleton"; dEl.textContent=desc+" · loading"; return; }
         val=PROFIT.periods[k]; if(val===null){ nEl.textContent="n/a"; nEl.className="n num muted"; dEl.textContent=desc+" · no price history"; return; }
@@ -929,10 +995,10 @@
         const t0=performance.now(), dur=700;
         (function tick(now){
           const p=Math.min((now-t0)/dur,1), ease=1-Math.pow(1-p,3);
-          vEl.textContent=eur(target*ease);
+          vEl.textContent=money(target*ease);
           if(p<1) requestAnimationFrame(tick);
         })(t0);
-      } else vEl.textContent=eur(target);
+      } else vEl.textContent=money(target);
       const d=PORT.totals.daily,dp=PORT.totals.daily_pct,el=document.getElementById("v-today");
       if(d===null||d===undefined){ el.innerHTML=""; return; }
       el.className="today "+cls(d); el.innerHTML=`${arrow(d)} ${signed(d)} <span class="chip">${pct(dp)} today</span>`;
@@ -955,7 +1021,7 @@
       return new Chart(document.getElementById(id),{type:"doughnut",
         data:{labels,datasets:[{data,borderColor:tc.ring,borderWidth:2,backgroundColor:labels.map((_,i)=>PALETTE[i%PALETTE.length])}]},
         options:{cutout:"62%",plugins:{legend:{position:"right",labels:{color:tc.legend,boxWidth:11,padding:7,font:{size:11}}},
-          tooltip:{callbacks:{label:c=>`${c.label}: ${eur0(c.parsed)} (${(c.parsed/tot*100).toFixed(1)}%)`}}}}});
+          tooltip:{callbacks:{label:c=>`${c.label}: ${money0(c.parsed)} (${(c.parsed/tot*100).toFixed(1)}%)`}}}}});
     }
     function renderAllocation(){ sc=doughnut("sector-chart",PORT.by_sector,"sector",sc); bc=doughnut("broker-chart",PORT.by_broker,"broker",bc); }
     function renderTicker(idx){
@@ -975,7 +1041,7 @@
         return `<div class="hrow" onclick="openDetail('${r.isin||r.ticker}')">
           <div class="cell c-name"><div class="nm">${r.name}</div><div class="tags">${r.brokers.map(b=>`<span class="tag">${b}</span>`).join("")}</div></div>
           <div class="cell c-spark">${sparkSVG(SPARKS[r.ticker])}</div>
-          <div class="cell c-value"><span class="lbl">Value</span><span class="big num">${eur0(r.value_eur)}</span></div>
+          <div class="cell c-value"><span class="lbl">Value</span><span class="big num">${money0(r.value_eur)}</span></div>
           <div class="cell c-today num"><span class="lbl">Today</span>${de}</div>
           <div class="cell c-overall num"><span class="lbl">Overall</span><span class="${cls(r.profit_eur)}">${signed(r.profit_eur)}</span><span class="sub ${cls(r.profit_pct)}">${pct(r.profit_pct)}</span></div>
           <div class="cell c-price num"><span class="lbl">Price</span>${r.priced_live?r.price+" "+r.currency:'<span class="muted">—</span>'}</div>
@@ -999,7 +1065,7 @@
       const r=PORT.holdings.find(h=>(h.isin||h.ticker)===id); if(!r) return;
       document.getElementById("d-name").textContent=r.name;
       document.getElementById("d-tags").innerHTML=r.brokers.map(b=>`<span class="tag">${b}</span>`).join("");
-      document.getElementById("d-val").textContent=eur(r.value_eur);
+      document.getElementById("d-val").textContent=money(r.value_eur);
       const dt=document.getElementById("d-today");
       dt.className=r.daily_eur!==null?cls(r.daily_eur):"muted";
       dt.innerHTML=r.daily_eur===null?"":`${arrow(r.daily_eur)} ${signed(r.daily_eur)} <span class="muted">${pct(r.daily_pct)} today</span>`;
@@ -1049,23 +1115,23 @@
       document.getElementById("chart-title").textContent=(m==="profit"?"Profit":"Value")+" since inception"; renderChart(); }
     function renderChart(){
       const h=HISTORY; if(!h.length) return; const profit=chartMode==="profit";
-      const labels=h.map(d=>d.day),vals=h.map(d=>profit?d.total_profit:d.total_value);
+      const labels=h.map(d=>d.day),vals=h.map(d=>cv(profit?d.total_profit:d.total_value));
       const up=vals[vals.length-1]>=0,color=profit?(up?"#26a862":"#f0616d"):"#4c8dff",ctx=document.getElementById("chart");
       if(chart) chart.destroy();
       const g=ctx.getContext("2d").createLinearGradient(0,0,0,300); g.addColorStop(0,color+"55"); g.addColorStop(1,color+"05");
       const datasets=[{label:"Portfolio",data:vals,borderColor:color,backgroundColor:g,fill:true,tension:.25,pointRadius:0,borderWidth:2.5}];
       const showBench = !profit && benchmarkOn && BENCH;
       if(showBench){
-        datasets.push({label:"S&P 500 (same money invested)",data:labels.map(d=>BENCH[d]??null),
+        datasets.push({label:"S&P 500 (same money invested)",data:labels.map(d=>BENCH[d]==null?null:cv(BENCH[d])),
           borderColor:"#e3b341",borderDash:[5,4],borderWidth:1.8,pointRadius:0,fill:false,tension:.2,spanGaps:true});
       }
       const tc=chartColors();
       chart=new Chart(ctx,{type:"line",data:{labels,datasets},
         options:{maintainAspectRatio:false,interaction:{intersect:false,mode:"index"},
           plugins:{legend:{display:showBench,labels:{color:tc.tick,boxWidth:12,font:{size:11}}},
-          tooltip:{callbacks:{title:i=>i[0].label,label:c=>c.dataset.label+" "+eur0(c.parsed.y)}}},
+          tooltip:{callbacks:{title:i=>i[0].label,label:c=>c.dataset.label+" "+shown0(c.parsed.y)}}},
           scales:{x:{ticks:{color:tc.tick,maxTicksLimit:6,font:{size:11}},grid:{display:false}},
-            y:{ticks:{color:tc.tick,font:{size:11},callback:v=>"€"+(v/1000).toFixed(0)+"k"},grid:{color:tc.grid}}}}});
+            y:{ticks:{color:tc.tick,font:{size:11},callback:axisK},grid:{color:tc.grid}}}}});
     }
     function toggleBench(){
       benchmarkOn=!benchmarkOn;
@@ -1090,7 +1156,7 @@
       retry=retry||0; renderChips();
       try{
         const [p,c,h]=await Promise.all([fetchJSON("/api/portfolio"),fetchJSON("/api/closed"),fetchJSON("/api/history")]);
-        PORT=p; CLOSED=c; HISTORY=h;
+        PORT=p; CLOSED=c; HISTORY=h; setFX(p.fx);
         renderHero(); renderProfit(); renderMovers(); renderOpen(); renderClosed(); renderAllocation(); renderChart(); renderPeriods(); setUpdated();
       }catch(e){
         document.getElementById("p-desc").textContent="Loading… the server may be waking up (free hosting).";
@@ -1110,7 +1176,7 @@
     }
     async function refreshLive(){
       if(document.hidden||!PORT) return;
-      try{ const p=await fetchJSON("/api/portfolio"); PORT=p; renderHero(); renderProfit(); renderMovers(); renderOpen(); setUpdated(); }catch(e){}
+      try{ const p=await fetchJSON("/api/portfolio"); PORT=p; setFX(p.fx); renderHero(); renderProfit(); renderMovers(); renderOpen(); setUpdated(); }catch(e){}
     }
     loadAll();
     setInterval(refreshLive,30000);

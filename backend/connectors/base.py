@@ -13,7 +13,7 @@ from dataclasses import dataclass
 
 @dataclass
 class Holding:
-    broker: str            # "Trading212", "DeGiro", "Trade Republic"
+    broker: str            # account label: "T212 ISA", "DeGiro", "Trade Republic"
     ticker: str            # market-data ticker, e.g. "ASML.AS", "AAPL"
     name: str
     quantity: float
@@ -26,6 +26,9 @@ class Holding:
     # ppl+fxPpl). When set, it's used verbatim instead of value-minus-cost, which
     # avoids losing the FX-at-purchase component.
     broker_profit_eur: float | None = None
+    # Tax wrapper of the account: "ISA" for a UK Stocks & Shares ISA, "" for a
+    # normal (taxable) account.
+    wrapper: str = ""
 
     def cost_currency(self) -> str:
         return self.buy_currency or self.currency

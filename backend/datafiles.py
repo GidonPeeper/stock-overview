@@ -61,13 +61,18 @@ def status() -> dict:
     for key, fname in EXPECTED:
         path, real = resolve(fname)
         out[key] = {"real": real, "path": str(path), "expected": fname}
-    live = bool(os.getenv("T212_API_KEY") and os.getenv("T212_API_SECRET"))
+    from .connectors.trading212 import accounts  # lazy: avoids an import cycle
+
+    labels = [a.label for a in accounts()]
+    live = bool(labels)
     out["trading212"] = {
-        # live API, or the imported activity statement as the offline source
+        # live API (one or more accounts), or the imported activity statement
         "real": live or out["t212_statement"]["real"],
         "live": live,
-        "path": "env:T212_API_KEY/SECRET" if live else out["t212_statement"]["path"],
-        "expected": "T212_API_KEY + T212_API_SECRET, or trading212_statement.json",
+        "accounts": labels,
+        "path": "API: " + ", ".join(labels) if live else out["t212_statement"]["path"],
+        "expected": "T212_API_KEY + T212_API_SECRET (or T212_<NAME>_API_KEY/SECRET per account), "
+                    "or trading212_statement.json",
     }
     seen: dict[str, list[str]] = {}
     for d in _SEARCH_DIRS:

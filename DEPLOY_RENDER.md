@@ -18,7 +18,10 @@ gh repo create stock-overview --public --source=. --push
 1. Sign up at https://render.com (GitHub login is easiest).
 2. **New → Blueprint**, pick the repo — Render reads `render.yaml`.
 3. Set the environment variables (Environment tab):
-   - `T212_API_KEY`, `T212_API_SECRET` — your read-only Trading 212 key/secret
+   - `T212_INVEST_API_KEY` + `T212_INVEST_API_SECRET`, `T212_ISA_API_KEY` + `T212_ISA_API_SECRET`
+     — one read-only key pair per Trading 212 account (generate each one while that
+     account is selected in the app). A single account can use plain `T212_API_KEY` + `T212_API_SECRET`.
+   - `DISPLAY_CURRENCY` — `GBP` or `EUR`, the currency the dashboard opens in
    - `DASHBOARD_USER`, `DASHBOARD_PASSWORD` — your phone login
    - `DASHBOARD_SECRET` — any long random string (keeps you logged in)
 

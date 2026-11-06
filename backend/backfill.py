@@ -17,10 +17,10 @@ import os
 from collections import defaultdict
 from datetime import date
 
-from .connectors import degiro, traderepublic, trading212
 from .instruments import TICKERS, price_currency
 from .positions import compute_positions
-from . import store
+from .prices import quote_scale
+from . import sources, store
 
 # ISIN -> market-data ticker for every instrument ever traded (incl. closed);
 # shared table in backend/instruments.py. "" => no usable price history.
@@ -32,7 +32,7 @@ def _ticker_currency(t: str) -> str:
 
 
 def _all_trades():
-    return degiro.get_trades() + traderepublic.get_trades() + trading212.get_trades()
+    return sources.all_trades_eur()
 
 
 def _month_ends(first_iso: str) -> list[str]:
@@ -74,13 +74,20 @@ def run() -> dict:
         return {"months": 0}
     first = min(t.when for t in trades)[:10]
 
-    tickers = [HIST_TICKER.get(t.key, "") for t in trades]
-    tickers = [t for t in tickers if t]
+    # ISIN table first; otherwise the ticker the broker gave (Trading 212 trades
+    # carry one), so newly bought instruments still get a price history.
+    ticker_of = {}
+    for t in trades:
+        ticker_of[t.key] = HIST_TICKER.get(t.key, ticker_of.get(t.key) or t.ticker)
+    tickers = [tk for tk in ticker_of.values() if tk]
+    scale = {tk: quote_scale(tk) for tk in set(tickers)}  # pence -> pounds
     fx_tickers = ["EURUSD=X", "EURGBP=X"]
     prices = _fetch_monthly(list(set(tickers)) + fx_tickers, start=first[:7] + "-01")
 
     def fx(currency: str, ym: str) -> float:
         if currency == "EUR":
+            return 1.0
+        if currency not in ("USD", "GBP"):
             return 1.0
         pair = "EURUSD=X" if currency == "USD" else "EURGBP=X"
         # nearest available month at or before ym
@@ -106,12 +113,12 @@ def run() -> dict:
             if p.quantity <= 1e-6:
                 continue
             cost += p.cost  # EUR cost basis already
-            tk = HIST_TICKER.get(isin, "")
+            tk = ticker_of.get(isin, "")
             px = price(tk, ym) if tk else None
             if px is None:
                 continue
             priced_cost += p.cost
-            value += px * p.quantity * fx(_ticker_currency(tk), ym)
+            value += px * scale.get(tk, 1.0) * p.quantity * fx(_ticker_currency(tk), ym)
         if value <= 0:
             continue
         last_coverage = priced_cost / cost if cost else 0

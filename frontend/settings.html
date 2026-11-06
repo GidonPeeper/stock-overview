@@ -99,9 +99,13 @@
     </div>
 
     <div class="card">
-      <h2>Trading 212 — activity statement (PDF)</h2>
-      <div class="sub" style="margin-bottom:8px">Live via the read-only API when <code>T212_API_KEY</code> and
-        <code>T212_API_SECRET</code> are set on the host. Without a key, upload the statement instead:
+      <h2>Trading 212 — API accounts or activity statement (PDF)</h2>
+      <div class="sub" style="margin-bottom:8px">Live via the read-only API. Each Trading 212 account (Invest, Stocks ISA)
+        has its own key pair: set <code>T212_INVEST_API_KEY</code> + <code>T212_INVEST_API_SECRET</code> and
+        <code>T212_ISA_API_KEY</code> + <code>T212_ISA_API_SECRET</code> on the host (or one plain
+        <code>T212_API_KEY</code> + <code>T212_API_SECRET</code>). Accounts with "ISA" in the name are treated as tax-free.</div>
+      <div id="t212-accounts"></div>
+      <div class="sub" style="margin:8px 0">Without a key, upload the statement instead (EU account, EUR):
         Trading 212 → Menu → History → <b>Export / Activity statement</b> (PDF, Invest account, full period).
         Positions, trades, dividends and interest are read from it and cross-checked against its own totals.</div>
       <div class="up"><input type="file" id="f-t212_statement" accept=".pdf,.json" />
@@ -117,10 +121,10 @@
       <div id="cash-list"><span style="color:var(--faint)">Loading…</span></div>
       <div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:14px;align-items:center">
         <input id="c-name" placeholder="Account name" style="flex:2;min-width:110px" class="ipt" />
-        <input id="c-inst" placeholder="Institution (e.g. Rabobank)" style="flex:2;min-width:110px" class="ipt" />
+        <input id="c-inst" placeholder="Institution (e.g. Starling)" style="flex:2;min-width:110px" class="ipt" />
         <input id="c-bal" placeholder="Balance" type="number" step="0.01" style="flex:1;min-width:80px" class="ipt" />
         <input id="c-rate" placeholder="Interest %" type="number" step="0.01" style="width:92px" class="ipt" />
-        <select id="c-cur" class="ipt" style="width:74px"><option>EUR</option><option>USD</option><option>GBP</option></select>
+        <select id="c-cur" class="ipt ccy-default" style="width:74px"><option>GBP</option><option>EUR</option><option>USD</option></select>
         <select id="c-type" class="ipt" style="width:150px">
           <option value="cash">Cash</option>
           <option value="savings">Savings</option>
@@ -142,9 +146,10 @@
       <div id="fin-loans"><span style="color:var(--faint)">Loading…</span></div>
       <div style="display:flex;gap:6px;flex-wrap:wrap;margin:8px 0 14px">
         <input id="l-name" placeholder="Loan name" class="ipt" style="flex:2;min-width:110px" />
-        <input id="l-bal" placeholder="Balance €" type="number" step="0.01" class="ipt" style="flex:1;min-width:85px" />
+        <input id="l-bal" placeholder="Balance" type="number" step="0.01" class="ipt" style="flex:1;min-width:85px" />
         <input id="l-rate" placeholder="Rate %" type="number" step="0.01" class="ipt" style="width:80px" />
-        <input id="l-pay" placeholder="€/month" type="number" step="0.01" class="ipt" style="width:90px" />
+        <input id="l-pay" placeholder="Per month" type="number" step="0.01" class="ipt" style="width:90px" />
+        <select id="l-cur" class="ipt ccy-default" style="width:74px"><option>GBP</option><option>EUR</option><option>USD</option></select>
         <button class="btn" onclick="addFin('loans')">Add</button>
       </div>
 
@@ -152,7 +157,8 @@
       <div id="fin-income"><span style="color:var(--faint)">Loading…</span></div>
       <div style="display:flex;gap:6px;flex-wrap:wrap;margin:8px 0 14px">
         <input id="i-name" placeholder="Source (e.g. Salary)" class="ipt" style="flex:2;min-width:130px" />
-        <input id="i-amt" placeholder="€/month" type="number" step="0.01" class="ipt" style="width:100px" />
+        <input id="i-amt" placeholder="Per month" type="number" step="0.01" class="ipt" style="width:100px" />
+        <select id="i-cur" class="ipt ccy-default" style="width:74px"><option>GBP</option><option>EUR</option><option>USD</option></select>
         <select id="i-fixed" class="ipt" style="width:112px"><option value="1">Fixed</option><option value="0">Variable</option></select>
         <button class="btn" onclick="addFin('income')">Add</button>
       </div>
@@ -161,7 +167,8 @@
       <div id="fin-expenses"><span style="color:var(--faint)">Loading…</span></div>
       <div style="display:flex;gap:6px;flex-wrap:wrap;margin:8px 0 4px">
         <input id="e-name" placeholder="Payment (e.g. Rent)" class="ipt" style="flex:2;min-width:130px" />
-        <input id="e-amt" placeholder="€/month" type="number" step="0.01" class="ipt" style="width:100px" />
+        <input id="e-amt" placeholder="Per month" type="number" step="0.01" class="ipt" style="width:100px" />
+        <select id="e-cur" class="ipt ccy-default" style="width:74px"><option>GBP</option><option>EUR</option><option>USD</option></select>
         <select id="e-fixed" class="ipt" style="width:112px"><option value="1">Fixed</option><option value="0">Variable</option></select>
         <button class="btn" onclick="addFin('expenses')">Add</button>
       </div>
@@ -171,6 +178,13 @@
   </div>
 
   <script>
+    const SYM={EUR:"€",GBP:"£",USD:"$"};
+    let CUR=(()=>{ try{ return localStorage.getItem("ccy"); }catch(e){ return null; } })(), PER_EUR={EUR:1};
+    const money0=n=>{ const v=Number(n||0)*(PER_EUR[CUR]??1); return (v<0?"−":"")+(SYM[CUR]||"€")+Math.abs(v).toLocaleString("en-GB",{maximumFractionDigits:0}); };
+    const own0=(n,c)=>(SYM[c]||(c+" "))+Number(n||0).toLocaleString("en-GB",{maximumFractionDigits:0});
+    const fxReady=fetch("/api/fx").then(r=>r.json()).then(fx=>{ PER_EUR=fx.per_eur||PER_EUR;
+      if(!CUR||!(CUR in PER_EUR)) CUR=fx.default||"EUR";
+      document.querySelectorAll(".ccy-default").forEach(sel=>sel.value=CUR); }).catch(()=>{ CUR="EUR"; });
     const NAMES={degiro:"DeGiro statement",trade_republic:"Trade Republic trades",
                  tr_income:"TR dividends & interest",trading212:"Trading 212"};
     function renderStatus(s){
@@ -180,6 +194,10 @@
         return `<div class="row"><span>${label}<br><span style="font-size:11px;color:var(--faint)">${v.expected}</span></span>
           <span class="pill ${v.real?'live':'sample'}">${tag}</span></div>`;
       }).join("");
+      const accts=s._t212_accounts||[];
+      document.getElementById("t212-accounts").innerHTML=accts.map(a=>`<div class="row"><span>${a.label}
+          <br><span style="font-size:11px;color:var(--faint)">${a.ok?`${a.currency} account · ${a.positions} positions`:(a.error||"error")}${a.isa?" · ISA (tax-free)":""}</span></span>
+          <span class="pill ${a.ok?'live':'sample'}">${a.ok?'LIVE · API':'ERROR'}</span></div>`).join("");
       const seen=s._files_seen||{};
       document.getElementById("files").innerHTML=Object.keys(seen).length
         ? "Files the server can see: "+Object.entries(seen).map(([d,fs])=>`<br><code>${d}</code>: ${fs.join(", ")}`).join("")
@@ -200,7 +218,10 @@
       const el=document.getElementById("cash-list");
       if(!c.accounts.length){ el.innerHTML='<span style="color:var(--faint)">No accounts yet — add your first below.</span>'; return; }
       el.innerHTML=(c.sample?'<div class="msg" style="color:#e3b341;margin-bottom:6px">Demo accounts shown — add a real one to replace them.</div>':'')+
-        c.accounts.map(a=>`<div class="row"><span>${a.name}
+        c.accounts.map(a=>a.auto?`<div class="row"><span>${a.name}
+            <span class="pill" style="background:var(--panel2);color:var(--muted);margin-left:4px">from API</span><br>
+            <span style="font-size:11px;color:var(--faint)">${a.institution} · ${a.currency} · updates automatically</span></span>
+          <b>${own0(a.balance,a.currency)}</b></div>`:`<div class="row"><span>${a.name}
             <span class="pill" style="background:var(--panel2);color:var(--muted);margin-left:4px">${TYPE_LABEL[a.type]||"Cash"}</span><br>
             <span style="font-size:11px;color:var(--faint)">${a.institution||"—"} · ${a.currency}${a.rate?` · ${a.rate}% interest`:""}</span></span>
           <span style="display:flex;gap:6px;align-items:center">
@@ -208,9 +229,9 @@
             <button class="btn" style="padding:7px 11px" onclick="saveAccount('${a.name.replace(/'/g,"\\'")}','${(a.institution||"").replace(/'/g,"\\'")}','${a.currency}','${a.type||"cash"}',${a.rate||0})">Save</button>
             <button class="del" title="Remove" onclick="delAccount('${a.name.replace(/'/g,"\\'")}')">✕</button>
           </span></div>`).join("")+
-        `<div class="row"><span style="font-weight:650">Total (all accounts)</span><span style="font-weight:650">€${(c.total_eur||0).toLocaleString("en-IE",{maximumFractionDigits:0})}</span></div>`;
+        `<div class="row"><span style="font-weight:650">Total (all accounts)</span><span style="font-weight:650">${money0(c.total_eur)}</span></div>`;
     }
-    function loadCash(){ fetch("/api/cash").then(r=>r.json()).then(renderCash); }
+    function loadCash(){ fxReady.then(()=>fetch("/api/cash")).then(r=>r.json()).then(renderCash); }
     async function postCash(fd, okMsg){
       const msg=document.getElementById("m-cash");
       const r=await fetch("/api/cash",{method:"POST",body:fd});
@@ -242,21 +263,20 @@
     /* ---- loans / income / payments ---- */
     const E=s=>String(s).replace(/'/g,"\\'");
     function renderFin(f){
-      const eur0=n=>"€"+Number(n||0).toLocaleString("en-IE",{maximumFractionDigits:0});
       const demo=f.sample?'<div class="msg" style="color:#e3b341">Demo entries — add your own to replace them.</div>':"";
       document.getElementById("fin-loans").innerHTML=demo+(f.loans.map(l=>
-        `<div class="row"><span>${l.name}<br><span style="font-size:11px;color:var(--faint)">${l.rate||0}% · ${eur0(l.monthly_payment)}/mo${l.payoff?` · paid off ${l.payoff}`:""}</span></span>
-         <span style="display:flex;gap:8px;align-items:center"><b>${eur0(l.balance_eur)}</b>
+        `<div class="row"><span>${l.name}<br><span style="font-size:11px;color:var(--faint)">${l.rate||0}% · ${own0(l.monthly_payment,l.currency||"EUR")}/mo${l.payoff?` · paid off ${l.payoff}`:""}</span></span>
+         <span style="display:flex;gap:8px;align-items:center"><b>${own0(l.balance,l.currency||"EUR")}</b>
          <button class="del" onclick="delFin('loans','${E(l.name)}')">✕</button></span></div>`).join("")||'<span style="color:var(--faint)">None</span>');
-      const li=(x,k)=>`<div class="row"><span>${x.name}${x.fixed===false?' <span class="pill" style="background:var(--panel2);color:var(--muted)">variable</span>':''}</span><span style="display:flex;gap:8px;align-items:center"><b>${eur0(x.monthly_eur)}/mo</b>
+      const li=(x,k)=>`<div class="row"><span>${x.name}${x.fixed===false?' <span class="pill" style="background:var(--panel2);color:var(--muted)">variable</span>':''}</span><span style="display:flex;gap:8px;align-items:center"><b>${own0(x.amount,x.currency)}/mo</b>
          <button class="del" onclick="delFin('${k}','${E(x.name)}')">✕</button></span></div>`;
       document.getElementById("fin-income").innerHTML=f.income.map(x=>li(x,"income")).join("")||'<span style="color:var(--faint)">None</span>';
       document.getElementById("fin-expenses").innerHTML=f.expenses.map(x=>li(x,"expenses")).join("")||'<span style="color:var(--faint)">None</span>';
       const t=f.totals;
       document.getElementById("fin-totals").innerHTML=
-        `Debt <b>${eur0(t.debt_eur)}</b> · income <b>${eur0(t.monthly_income)}/mo</b> · payments <b>${eur0(t.monthly_payments)}/mo</b> · free cash flow <b style="color:${t.free_cashflow>=0?'var(--green)':'var(--red)'}">${eur0(t.free_cashflow)}/mo</b>`;
+        `Debt <b>${money0(t.debt_eur)}</b> · income <b>${money0(t.monthly_income)}/mo</b> · payments <b>${money0(t.monthly_payments)}/mo</b> · free cash flow <b style="color:${t.free_cashflow>=0?'var(--green)':'var(--red)'}">${money0(t.free_cashflow)}/mo</b>`;
     }
-    function loadFin(){ fetch("/api/finances").then(r=>r.json()).then(renderFin); }
+    function loadFin(){ fxReady.then(()=>fetch("/api/finances")).then(r=>r.json()).then(renderFin); }
     async function postFin(kind, fd, ok){
       const msg=document.getElementById("m-fin");
       const r=await fetch("/api/finances/"+kind,{method:"POST",body:fd});
@@ -271,6 +291,7 @@
         fd.append("name",n); fd.append("balance",b);
         fd.append("rate",document.getElementById("l-rate").value||0);
         fd.append("monthly_payment",document.getElementById("l-pay").value||0);
+        fd.append("currency",document.getElementById("l-cur").value);
         ["l-name","l-bal","l-rate","l-pay"].forEach(id=>document.getElementById(id).value="");
       }else{
         const p=kind==="income"?"i":"e";
@@ -278,6 +299,7 @@
         if(!n||!a){ const m=document.getElementById("m-fin"); m.textContent="Name and amount required."; m.className="msg err"; return; }
         fd.append("name",n); fd.append("monthly_eur",a);
         fd.append("fixed",document.getElementById(p+"-fixed").value);
+        fd.append("currency",document.getElementById(p+"-cur").value);
         [p+"-name",p+"-amt"].forEach(id=>document.getElementById(id).value="");
       }
       postFin(kind, fd, savedMsg());

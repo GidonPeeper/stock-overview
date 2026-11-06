@@ -9,8 +9,9 @@ import time
 
 # Major indices shown in the CNBC-style ticker strip.
 _INDEX_SYMBOLS = [
-    ("S&P 500", "^GSPC"), ("Nasdaq", "^IXIC"), ("Dow", "^DJI"),
-    ("AEX", "^AEX"), ("DAX", "^GDAXI"), ("EUR/USD", "EURUSD=X"),
+    ("S&P 500", "^GSPC"), ("Nasdaq", "^IXIC"), ("FTSE 100", "^FTSE"),
+    ("FTSE 250", "^FTMC"), ("AEX", "^AEX"), ("DAX", "^GDAXI"),
+    ("GBP/USD", "GBPUSD=X"), ("GBP/EUR", "GBPEUR=X"), ("EUR/USD", "EURUSD=X"),
 ]
 
 _idx_cache: tuple[list[dict], float] | None = None

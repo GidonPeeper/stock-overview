@@ -11,10 +11,23 @@ services:
     envVars:
       - key: PYTHON_VERSION
         value: "3.12.2"
+      - key: DISPLAY_CURRENCY
+        value: GBP
       # Set these in the Render dashboard (Environment) — not stored in git.
-      - key: T212_API_KEY
+      # One read-only key pair per Trading 212 account; leave unused ones empty.
+      - key: T212_INVEST_API_KEY
+        sync: false
+      - key: T212_INVEST_API_SECRET
+        sync: false
+      - key: T212_ISA_API_KEY
+        sync: false
+      - key: T212_ISA_API_SECRET
+        sync: false
+      - key: T212_API_KEY            # older single-account setup
         sync: false
       - key: T212_API_SECRET
+        sync: false
+      - key: UK_RESIDENT_FROM        # optional, YYYY-MM-DD
         sync: false
       - key: DASHBOARD_USER
         sync: false

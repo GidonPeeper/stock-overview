@@ -6,9 +6,10 @@
 ![PWA](https://img.shields.io/badge/PWA-installable-5A0FC8)
 
 A self-hosted, mobile-first dashboard that **unifies your stock portfolio across
-multiple brokers** — Trading 212, DeGiro and Trade Republic — into one live app:
-merged positions, exact profit accounting, quant analytics, a daily market
-brief, and a transparent small-cap screener.
+multiple brokers** — Trading 212 (Invest and Stocks ISA), DeGiro and Trade
+Republic — into one live app: merged positions, exact profit accounting, a UK
+tax-year view, quant analytics, a daily market brief, and a transparent
+small-cap screener. Shows amounts in pounds or euros.
 
 **Read-only by design: it can never place a trade or move money.**
 
@@ -25,7 +26,9 @@ python3 -m venv .venv && .venv/bin/pip install -r requirements.txt
 
 | | |
 |---|---|
-| 🔀 **Merged holdings** | The same company held at several brokers becomes one position (matched by ISIN) |
+| 🔀 **Merged holdings** | The same company held at several brokers or accounts becomes one position (matched by ISIN) |
+| 🇬🇧 **UK tax year** | Gains and dividends outside your ISA since 6 April, CGT and dividend allowance left, ISA allowance used, and a 30-day ("bed and breakfast") reminder after each sale |
+| 💷 **£ / €** | One tap switches every amount between pounds and euros; London prices quoted in pence are handled |
 | 💶 **Exact P/L accounting** | Real per-trade FX + fees from broker statements; handles splits, delistings, ISIN changes; reconciles with each broker's own figures |
 | 📊 **Live market layer** | Index ticker strip, per-holding sparklines, today's movers, tap-through detail sheet with 1D/1W/1M/1Y chart + news |
 | 🧠 **Daily Brief** | A generated newsletter: your portfolio's day, risk check, and headlines interleaved from CNBC, MarketWatch & Yahoo Finance |
@@ -42,7 +45,7 @@ python3 -m venv .venv && .venv/bin/pip install -r requirements.txt
 ```mermaid
 flowchart LR
     subgraph Brokers["Data sources"]
-        T212["Trading 212<br/>read-only API · or activity-statement PDF"]
+        T212["Trading 212<br/>read-only API per account (ISA, Invest) · or activity-statement PDF"]
         DG["DeGiro<br/>account-statement PDF / CSV"]
         TR["Trade Republic<br/>transaction-export CSV"]
         YF["yfinance<br/>quotes · history · news · screeners"]
@@ -75,7 +78,7 @@ on the **Settings page** (phone-friendly) or convert them locally:
 |---|---|---|
 | **DeGiro** | Activity → Account statement, all dates → **PDF** (or CSV) | `python -m backend.importers.degiro_pdf "Account.pdf" data/degiro_account.csv` |
 | **Trade Republic** | App → Profile → Activity → **Export** (transaction CSV) | `python -m backend.importers.traderepublic_csv "Transaction export.csv"` |
-| **Trading 212** | **read-only API key** in `.env` (`cp .env.sample .env`) — or, without a key, History → **Activity statement** PDF | `python -m backend.importers.trading212_pdf "Activity-Statement.pdf"` |
+| **Trading 212** | one **read-only API key pair per account** in `.env` (`cp .env.sample .env`): `T212_ISA_API_KEY/SECRET`, `T212_INVEST_API_KEY/SECRET` — or, without a key, History → **Activity statement** PDF (EU account) | `python -m backend.importers.trading212_pdf "Activity-Statement.pdf"` |
 
 Every importer validates what it read: DeGiro fills against their booked
 amounts, Trade Republic against the running cash balance, Trading 212 against
@@ -84,7 +87,20 @@ open positions). Trading 212's PDFs hide their digits behind fonts with no
 text mapping; `backend/importers/text_layer.py` decodes them deterministically
 from the glyph drawings (no OCR needed).
 
-Optional: `NEWSAPI_KEY` in `.env` blends NewsAPI into the Daily Brief.
+Accounts whose name contains "ISA" are treated as tax-free. Uninvested cash in
+each Trading 212 account is added to your net worth automatically.
+
+Optional settings in `.env`: `DISPLAY_CURRENCY` (`GBP`/`EUR`), `UK_RESIDENT_FROM`
+(the day you became UK resident, for a split tax year), and `NEWSAPI_KEY` to
+blend NewsAPI into the Daily Brief.
+
+## ✅ Tests
+
+```bash
+.venv/bin/python -m unittest discover -s tests -t .
+```
+
+The tests use canned Trading 212 responses, so they need no keys or network.
 
 ## ☁️ Deploy
 

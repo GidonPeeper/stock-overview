@@ -1,8 +1,8 @@
 """Dividends and interest received — income, distinct from trading P/L.
 
 Kept separate from realized P/L so "profit" stays unambiguous. Sources:
-  * Trading 212 — dividends API; or the imported activity statement (which also
-    carries the daily interest on cash)
+  * Trading 212 — dividends + interest from the API, per account; or the
+    imported activity statement (which also carries the daily interest on cash)
   * DeGiro       — dividend / tax / interest rows in the statement CSV
   * Trade Republic — transcribed from the statement PDF (`data/income_*.json`)
 """
@@ -24,11 +24,16 @@ def _num(s: str) -> float:
     return float(s.replace(".", "").replace(",", ".")) if s else 0.0
 
 
-def _trading212() -> dict:
-    items = trading212.get_dividends()
-    dividends = sum(float(x.get("amountInEuro") or x.get("amount") or 0) for x in items)
-    interest = sum(float(x["amount_eur"]) for x in trading212.get_interest())
-    return {"dividends": round(dividends, 2), "interest": round(interest, 2)}
+def _trading212() -> dict[str, dict]:
+    """{account label: {dividends, interest}} — one entry per Trading 212 account."""
+    out: dict[str, dict] = {label: {"dividends": 0.0, "interest": 0.0}
+                            for label in trading212.trade_sources()}
+    for x in trading212.get_dividends():
+        out.setdefault(x["account"], {"dividends": 0.0, "interest": 0.0})["dividends"] += x["amount_eur"]
+    for x in trading212.get_interest():
+        out.setdefault(x["account"], {"dividends": 0.0, "interest": 0.0})["interest"] += x["amount_eur"]
+    return {k: {"dividends": round(v["dividends"], 2), "interest": round(v["interest"], 2)}
+            for k, v in out.items()}
 
 
 def _degiro() -> dict:
@@ -90,11 +95,8 @@ def by_year() -> dict[str, float]:
         for r in json.loads(f.read_text()).get("income", []):
             add(str(r.get("date", ""))[:4], float(r.get("amount_eur", 0)))
 
-    # Trading 212: dividends API (paidOn timestamps) + statement interest
-    for x in trading212.get_dividends():
-        add(str(x.get("paidOn", ""))[:4],
-            float(x.get("amountInEuro") or x.get("amount") or 0))
-    for x in trading212.get_interest():
+    # Trading 212: dividends + interest, every account
+    for x in trading212.get_dividends() + trading212.get_interest():
         add(str(x.get("date", ""))[:4], float(x["amount_eur"]))
 
     return years
@@ -102,7 +104,7 @@ def by_year() -> dict[str, float]:
 
 def summary() -> dict:
     by_broker = {
-        "Trading212": _trading212(),
+        **_trading212(),
         "DeGiro": _degiro(),
         "Trade Republic": _trade_republic(),
     }

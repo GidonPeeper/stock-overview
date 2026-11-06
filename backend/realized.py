@@ -4,7 +4,7 @@ Realized P/L is profit already locked in by selling — distinct from the
 unrealized P/L on holdings you still own. We compute it from each broker's full
 trade history:
 
-  * Trading 212 — order history API (exact EUR per fill)
+  * Trading 212 — order history API per account (exact amount per fill)
   * DeGiro       — account statement CSV (trade currency -> EUR via static FX)
   * Trade Republic — transcribed statement trades (exact EUR)
 
@@ -15,29 +15,8 @@ are summed into the broker total but listed separately.
 
 from __future__ import annotations
 
-from .connectors import degiro, traderepublic, trading212
-from .fx import to_eur
-from .positions import Trade, compute_positions
-
-_SOURCES = {
-    "Trading212": trading212.get_trades,
-    "DeGiro": degiro.get_trades,
-    "Trade Republic": traderepublic.get_trades,
-}
-
-
-def _in_eur(trades: list[Trade]) -> list[Trade]:
-    """Convert each trade's cash amount to EUR up front, so realized P/L is
-    computed in EUR throughout (correct even if a position was traded in more
-    than one currency). T212/TR are already EUR (no-op)."""
-    return [
-        Trade(
-            when=t.when, key=t.key, name=t.name, side=t.side,
-            quantity=t.quantity, amount=to_eur(t.amount, t.currency),
-            currency="EUR", ticker=t.ticker,
-        )
-        for t in trades
-    ]
+from . import sources
+from .positions import compute_positions
 
 
 def summary() -> dict:
@@ -45,9 +24,9 @@ def summary() -> dict:
     by_broker: dict[str, float] = {}
     closed_total = trims_total = 0.0
 
-    for broker, get_trades in _SOURCES.items():
+    for broker, (_, get_trades) in sources.trade_sources().items():
         try:
-            positions = compute_positions(_in_eur(get_trades()))
+            positions = compute_positions(sources.in_eur(get_trades()))
         except Exception:
             positions = {}
         broker_total = 0.0

@@ -44,13 +44,24 @@ def _save(data: dict) -> None:
 def load(liquid_assets_eur: float | None = None) -> dict:
     data, sample = _load_raw()
 
+    # Income/expense rows store `amount` + `currency`; older rows only have
+    # `monthly_eur` (entered in euros). Either way `monthly_eur` is the EUR value.
+    for x in data["income"] + data["expenses"]:
+        if "amount" in x:
+            x["currency"] = x.get("currency") or "EUR"
+            x["monthly_eur"] = round(to_eur(float(x["amount"] or 0), x["currency"]), 2)
+        else:
+            x["currency"] = "EUR"
+            x["amount"] = float(x.get("monthly_eur", 0) or 0)
+
     total_debt = 0.0
     for loan in data["loans"]:
-        loan["balance_eur"] = round(to_eur(float(loan.get("balance", 0)),
-                                           loan.get("currency", "EUR")), 2)
+        ccy = loan.get("currency", "EUR")
+        loan["balance_eur"] = round(to_eur(float(loan.get("balance", 0)), ccy), 2)
+        loan["monthly_payment_eur"] = round(to_eur(float(loan.get("monthly_payment", 0)), ccy), 2)
         total_debt += loan["balance_eur"]
         # payoff estimate: months = balance / payment (with simple interest drag)
-        pay = float(loan.get("monthly_payment", 0))
+        pay = loan["monthly_payment_eur"]
         rate_m = float(loan.get("rate", 0)) / 100 / 12
         if pay > 0 and pay > loan["balance_eur"] * rate_m:
             bal, months = loan["balance_eur"], 0
@@ -63,7 +74,7 @@ def load(liquid_assets_eur: float | None = None) -> dict:
             loan["payoff_months"] = months
 
     monthly_income = round(sum(float(i.get("monthly_eur", 0)) for i in data["income"]), 2)
-    loan_payments = sum(float(l.get("monthly_payment", 0)) for l in data["loans"])
+    loan_payments = sum(l["monthly_payment_eur"] for l in data["loans"])
     other_payments = sum(float(e.get("monthly_eur", 0)) for e in data["expenses"])
     monthly_payments = round(loan_payments + other_payments, 2)
     free_cashflow = round(monthly_income - monthly_payments, 2)
@@ -94,9 +105,8 @@ def _fixed_flow(data: dict) -> dict:
     outgoings = [{"name": e["name"], "monthly_eur": round(float(e.get("monthly_eur", 0)), 2),
                   "kind": "expense"}
                  for e in data["expenses"] if keep(e)]
-    outgoings += [{"name": l["name"], "monthly_eur": round(float(l.get("monthly_payment", 0)), 2),
-                   "kind": "loan"}
-                  for l in data["loans"] if float(l.get("monthly_payment", 0)) > 0]
+    outgoings += [{"name": l["name"], "monthly_eur": l["monthly_payment_eur"], "kind": "loan"}
+                  for l in data["loans"] if l["monthly_payment_eur"] > 0]
 
     in_total = round(sum(i["monthly_eur"] for i in income), 2)
     out_total = round(sum(o["monthly_eur"] for o in outgoings), 2)
@@ -146,6 +156,8 @@ def upsert(kind: str, name: str, fields: dict) -> dict:
     existing = next((x for x in items if x.get("name", "").strip().lower() == key), None)
     row = {"name": name.strip(), **fields}
     if existing:
+        if "amount" in row:
+            existing.pop("monthly_eur", None)  # superseded by amount + currency
         existing.update(row)
     else:
         items.append(row)

@@ -36,11 +36,11 @@ from . import github_sync, vault
 github_sync.pull_vault()       # fetch freshest cloud vault first (no-op without token)
 _VAULT_STATE = vault.unlock()  # hydrate private data files before anything reads them
 
-from .connectors import degiro, traderepublic, trading212
-from .fx import BASE_CURRENCY, to_eur
+from .connectors import trading212
+from .fx import BASE_CURRENCY, display_rates, to_eur
 from .prices import fetch_quotes
 from . import (analytics, cash, datafiles, finances, income, insights, market,
-               periods, realized, reports, sectors, store, watch)
+               periods, realized, reports, sectors, sources, store, uktax, watch)
 
 # Demo mode = no real data source at all (no broker key, no imported statement):
 # only then do sample holdings and a synthetic trendline make sense.
@@ -135,11 +135,7 @@ def _ensure_backfill() -> None:
 
 def _open_holdings_rows() -> tuple[list[dict], float, float, dict]:
     """Returns (rows, total_value_eur, total_cost_eur, value_by_broker)."""
-    holdings = (
-        trading212.get_holdings()
-        + degiro.get_holdings()
-        + traderepublic.get_holdings()
-    )
+    holdings = sources.holdings()
 
     # Live quotes (price + previous close) for every holding — the previous
     # close drives the per-holding "today" change.
@@ -185,6 +181,7 @@ def _open_holdings_rows() -> tuple[list[dict], float, float, dict]:
                 "profit_pct": round((profit_eur / cost_eur * 100) if cost_eur else 0, 2),
                 "daily_eur": round(daily_eur, 2) if daily_eur is not None else None,
                 "priced_live": h.ticker in quotes or (h.price is not None and h.price > 0),
+                "wrapper": h.wrapper,
             }
         )
 
@@ -264,6 +261,7 @@ def portfolio() -> dict:
 
     return {
         "base_currency": BASE_CURRENCY,
+        "fx": display_rates(),
         "demo_mode": DEMO_MODE,
         "totals": {
             "value": round(total_value, 2),
@@ -326,9 +324,7 @@ def indices() -> list[dict]:
 @app.get("/api/sparklines")
 def sparklines() -> dict[str, list[float]]:
     """~1 month of daily closes per held ticker, for the row mini-charts."""
-    tickers = [h.ticker for h in (
-        trading212.get_holdings() + degiro.get_holdings() + traderepublic.get_holdings()
-    ) if h.ticker]
+    tickers = [h.ticker for h in sources.holdings() if h.ticker]
     return market.sparklines(tickers)
 
 
@@ -348,6 +344,7 @@ def ticker_history(ticker: str, range: str = "1mo") -> list[float]:
 def datastatus() -> dict:
     """Which data sources are live vs sample — shown as a banner in the UI."""
     out = datafiles.status()
+    out["_t212_accounts"] = trading212.status()
     out["_vault"] = _VAULT_STATE
     out["_sync"] = {**github_sync.last_result,
                     "token": bool(os.getenv("GITHUB_TOKEN"))}
@@ -475,11 +472,25 @@ def analytics_endpoint() -> dict:
 
 
 @app.get("/api/brief")
-def brief() -> dict:
+def brief(ccy: str = "EUR") -> dict:
     """The Daily Brief: generated portfolio summary + renowned-source headlines."""
     port = portfolio()
     ana = analytics.summary(port["holdings"])
-    return insights.daily_brief(port, ana)
+    return insights.daily_brief(port, ana, ccy.upper())
+
+
+@app.get("/api/fx")
+def fx_rates() -> dict:
+    """EUR -> GBP/USD rates for the browser's currency switch (amounts are
+    computed in EUR and shown in the currency the viewer picks)."""
+    return display_rates()
+
+
+@app.get("/api/uk_tax")
+def uk_tax() -> dict:
+    """UK tax year so far: realised gains/losses and dividends outside ISAs,
+    ISA allowance used, and the 30-day rule for recent sales."""
+    return uktax.summary()
 
 
 @app.get("/api/headlines")
@@ -559,9 +570,10 @@ def finances_upsert(kind: str, name: str = Form(...), balance: float = Form(0),
         raise HTTPException(404, "Unknown kind")
     if not name.strip():
         raise HTTPException(400, "Name is required")
+    # `monthly_eur` is the form field's historical name; the amount is in `currency`.
     fields = {"balance": balance, "rate": rate, "monthly_payment": monthly_payment,
               "currency": currency.upper()} if kind == "loans" else {
-              "monthly_eur": monthly_eur, "fixed": fixed}
+              "amount": monthly_eur, "currency": currency.upper(), "fixed": fixed}
     out = finances.upsert(kind, name, fields)
     github_sync.push_vault_async()
     return out
@@ -643,7 +655,7 @@ def benchmark() -> dict[str, float]:
         earlier = [m for m in months if m <= ym]
         return sp[earlier[-1]] if earlier else None
 
-    trades = (trading212.get_trades() + degiro.get_trades() + traderepublic.get_trades())
+    trades = sources.all_trades_eur()
     events = sorted((t.when[:7], (1 if t.side == "BUY" else -1) * t.amount) for t in trades)
 
     out: dict[str, float] = {}

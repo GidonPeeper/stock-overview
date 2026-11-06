@@ -73,3 +73,26 @@ def compute_positions(trades: list[Trade]) -> dict[str, Position]:
             p.quantity -= t.quantity
             p.sells += 1
     return positions
+
+
+def realized_events(trades: list[Trade]) -> list[dict]:
+    """One entry per sell: the P/L it locked in against the running average
+    cost, with its date. Same method as compute_positions, kept per event so
+    gains can be grouped by (tax) year. Expects one currency per call."""
+    pools: dict[str, list[float]] = {}  # key -> [quantity, cost]
+    out: list[dict] = []
+    for t in sorted(trades, key=lambda x: x.when):
+        q, c = pools.setdefault(t.key, [0.0, 0.0])
+        if t.side == "BUY":
+            pools[t.key] = [q + t.quantity, c + t.amount]
+            continue
+        if q <= 1e-9:
+            pools[t.key] = [q - t.quantity, c]
+            continue
+        sold = min(t.quantity, q)
+        avg = c / q
+        out.append({"when": t.when, "key": t.key, "name": t.name,
+                    "quantity": sold, "proceeds": t.amount,
+                    "realized": t.amount - avg * sold, "currency": t.currency})
+        pools[t.key] = [q - t.quantity, c - avg * sold]
+    return out

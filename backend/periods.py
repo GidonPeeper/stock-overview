@@ -13,6 +13,7 @@ coverage gaps, so nothing is silently fabricated.
 from __future__ import annotations
 
 from .fx import to_eur
+from .prices import quote_scale
 
 # Trading-day offsets from the latest close.
 _WINDOWS = {"today": 1, "week": 5, "month": 21, "year": 251}
@@ -53,6 +54,8 @@ def compute(holdings: list[dict]) -> dict:
         if len(col):
             series[tickers[0]] = list(col.values)
 
+    scale = {t: quote_scale(t) for t in series}  # pence -> pounds for London shares
+
     def value_at(offset: int) -> tuple[float, float]:
         """Total EUR value `offset` trading days back, and the EUR value covered
         today for the same set of tickers (so deltas compare like with like)."""
@@ -62,7 +65,7 @@ def compute(holdings: list[dict]) -> dict:
             closes = series.get(t)
             if not closes or len(closes) <= offset:
                 continue
-            qty = h["quantity"]
+            qty = h["quantity"] * scale.get(t, 1.0)
             then += to_eur(closes[-1 - offset] * qty, h["currency"])
             now += to_eur(closes[-1] * qty, h["currency"])
         return then, now
