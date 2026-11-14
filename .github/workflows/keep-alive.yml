@@ -1,0 +1,37 @@
+# Keep the free Render service awake, so the dashboard never has to wait the
+# ~1 minute Render needs to wake a sleeping free service.
+#
+# OFF by default. To switch it on (repo Settings -> Secrets and variables ->
+# Actions):
+#   1. Secrets   -> New repository secret   KEEPALIVE_URL = https://<your-service>.onrender.com/healthz
+#   2. Variables -> New repository variable KEEPALIVE     = on
+# To switch it off again, delete the variable (or set it to anything else).
+#
+# /healthz needs no login and returns no data. The URL is a secret so it is
+# masked in the (public) Actions logs. One free service running all month uses
+# about 744 of Render's 750 free instance hours per workspace, so this only
+# fits if it is your only free service. GitHub may start scheduled runs late;
+# if the service still falls asleep now and then, use an external monitor
+# instead (see DEPLOY_RENDER.md).
+name: keep-alive
+
+on:
+  schedule:
+    - cron: "*/10 * * * *"
+  workflow_dispatch:
+
+permissions: {}
+
+jobs:
+  ping:
+    if: ${{ vars.KEEPALIVE == 'on' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    steps:
+      - name: Ping /healthz
+        env:
+          URL: ${{ secrets.KEEPALIVE_URL }}
+        run: |
+          if [ -z "$URL" ]; then echo "KEEPALIVE_URL secret is not set"; exit 1; fi
+          curl -fsS --retry 3 --retry-delay 20 --max-time 90 -o /dev/null \
+            -w "HTTP %{http_code} in %{time_total}s\n" "$URL"

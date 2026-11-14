@@ -1,13 +1,17 @@
 """Sector lookup for holdings, for the allocation pie chart.
 
 Resolves each market-data ticker to a GICS-style sector via yfinance, cached on
-disk (sectors are static, so this is fetched once per ticker). ETFs/funds and
-unknown tickers get sensible fallback buckets so every holding lands somewhere.
+disk and in memory (sectors are static, so this is fetched once per ticker;
+new tickers are looked up in parallel). ETFs/funds and unknown tickers get
+sensible fallback buckets so every holding lands somewhere.
 """
 
 from __future__ import annotations
 
 import json
+import threading
+import time
+from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 
 CACHE_FILE = Path(__file__).resolve().parents[1] / "data" / "sectors.json"
@@ -15,14 +19,23 @@ CACHE_FILE = Path(__file__).resolve().parents[1] / "data" / "sectors.json"
 # Tickers that are funds/ETFs (no single sector).
 _FUNDS = {"ZPRR.DE", "ZPRRd", "QDV5.DE"}
 
+_lock = threading.Lock()          # one lookup at a time; waiters reuse its result
+_memory: dict[str, str] | None = None
+_failed: dict[str, float] = {}    # ticker -> when a lookup last failed (not saved)
+_RETRY = 600                      # seconds before a failed lookup is tried again
+_WORKERS = 4                      # Yahoo's info endpoint is the touchiest about bursts
+
 
 def _load_cache() -> dict[str, str]:
-    if CACHE_FILE.exists():
-        try:
-            return json.loads(CACHE_FILE.read_text())
-        except ValueError:
-            pass
-    return {}
+    global _memory
+    if _memory is None:
+        _memory = {}
+        if CACHE_FILE.exists():
+            try:
+                _memory = json.loads(CACHE_FILE.read_text())
+            except ValueError:
+                pass
+    return _memory
 
 
 def _save_cache(cache: dict[str, str]) -> None:
@@ -32,29 +45,47 @@ def _save_cache(cache: dict[str, str]) -> None:
         pass
 
 
+def _lookup(yf, t: str) -> str | None:
+    """The sector, or None when Yahoo did not answer (try again later)."""
+    if t in _FUNDS:
+        return "ETF / Fund"
+    try:
+        info = yf.Ticker(t).get_info()
+    except Exception:
+        return None
+    if info.get("quoteType") in ("ETF", "MUTUALFUND"):
+        return "ETF / Fund"
+    return info.get("sector") or "Other"
+
+
 def get_sectors(tickers: list[str]) -> dict[str, str]:
+    wanted = {t for t in tickers if t}
     cache = _load_cache()
-    missing = [t for t in set(tickers) if t and t not in cache]
 
-    if missing:
-        try:
-            import yfinance as yf
+    def todo() -> list[str]:
+        now = time.time()
+        return sorted(t for t in wanted - cache.keys() if now - _failed.get(t, -1e18) >= _RETRY)
 
-            for t in missing:
-                if t in _FUNDS:
-                    cache[t] = "ETF / Fund"
-                    continue
+    if todo():
+        with _lock:
+            cache = _load_cache()
+            missing = todo()
+            if missing:
                 try:
-                    info = yf.Ticker(t).get_info()
-                    if info.get("quoteType") in ("ETF", "MUTUALFUND"):
-                        cache[t] = "ETF / Fund"
-                    else:
-                        cache[t] = info.get("sector") or "Other"
-                except Exception:
-                    cache[t] = "Other"
-        except Exception:
-            for t in missing:
-                cache.setdefault(t, "Other")
-        _save_cache(cache)
+                    import yfinance as yf
 
-    return {t: cache.get(t, "Other") for t in set(tickers) if t}
+                    with ThreadPoolExecutor(max_workers=min(_WORKERS, len(missing))) as pool:
+                        found = dict(zip(missing, pool.map(lambda t: _lookup(yf, t), missing)))
+                except Exception:
+                    found = {t: None for t in missing}
+                now = time.time()
+                for t, sector in found.items():
+                    if sector is None:
+                        _failed[t] = now  # shown as "Other" for now, not saved
+                    else:
+                        cache[t] = sector
+                        _failed.pop(t, None)
+                if any(s is not None for s in found.values()):
+                    _save_cache(cache)
+
+    return {t: cache.get(t, "Other") for t in wanted}

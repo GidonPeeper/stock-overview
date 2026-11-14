@@ -21,7 +21,7 @@ from __future__ import annotations
 import os
 from datetime import date, datetime, timedelta
 
-from . import sources
+from . import cache, sources
 from .connectors import trading212
 from .fx import from_eur
 from .positions import realized_events
@@ -57,6 +57,9 @@ def _gbp(amount_eur: float) -> float:
     return round(from_eur(amount_eur, "GBP"), 2)
 
 
+# Cached (backend/cache.py): recomputed after uploads/edits, otherwise
+# fresh for 5 min and then refreshed in the background.
+@cache.cached(ttl=300, stale=3600, copy=True)
 def summary(today: date | None = None) -> dict:
     today = today or date.today()
     start, end, label = tax_year(today)

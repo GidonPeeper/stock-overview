@@ -12,6 +12,7 @@ coverage gaps, so nothing is silently fabricated.
 
 from __future__ import annotations
 
+from . import cache
 from .fx import to_eur
 from .prices import quote_scale
 
@@ -32,27 +33,12 @@ def compute(holdings: list[dict]) -> dict:
         return _empty(holdings)
 
     try:
-        import yfinance as yf
-
-        hist = yf.download(
-            tickers, period="1y", interval="1d",
-            progress=False, auto_adjust=True,
-        )["Close"]
+        # A year of daily closes per ticker set: fresh for 5 minutes, then
+        # served while a background download refreshes it.
+        series = cache.get("periods.closes:" + ",".join(tickers),
+                           lambda: _closes(tickers), ttl=300, stale=24 * 3600, data=False)
     except Exception:
         return _empty(holdings)
-
-    # Normalize to a {ticker: [closes...]} structure, newest last.
-    series: dict[str, list[float]] = {}
-    if hasattr(hist, "columns"):
-        for t in tickers:
-            if t in hist.columns:
-                col = hist[t].dropna()
-                if len(col):
-                    series[t] = list(col.values)
-    else:  # single ticker -> Series
-        col = hist.dropna()
-        if len(col):
-            series[tickers[0]] = list(col.values)
 
     scale = {t: quote_scale(t) for t in series}  # pence -> pounds for London shares
 
@@ -90,6 +76,31 @@ def compute(holdings: list[dict]) -> dict:
         "coverage_pct": round(100 * covered_value / total_value, 1) if total_value else 0,
         "excluded": missing,
     }
+
+
+def _closes(tickers: list[str]) -> dict[str, list[float]]:
+    """{ticker: [daily closes over the last year]}, newest last. Raises when
+    nothing came back, so the cache keeps its last good download."""
+    import yfinance as yf
+
+    hist = yf.download(
+        tickers, period="1y", interval="1d",
+        progress=False, auto_adjust=True,
+    )["Close"]
+    series: dict[str, list[float]] = {}
+    if hasattr(hist, "columns"):
+        for t in tickers:
+            if t in hist.columns:
+                col = hist[t].dropna()
+                if len(col):
+                    series[t] = list(col.values)
+    else:  # single ticker -> Series
+        col = hist.dropna()
+        if len(col):
+            series[tickers[0]] = list(col.values)
+    if not series:
+        raise ValueError("no price history returned")
+    return series
 
 
 def _empty(holdings: list[dict]) -> dict:

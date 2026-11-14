@@ -13,6 +13,7 @@ import csv
 import json
 from pathlib import Path
 
+from . import cache
 from .connectors import trading212
 from .datafiles import resolve as _resolve_data
 from .fx import FX_TO_EUR, to_eur
@@ -102,6 +103,9 @@ def by_year() -> dict[str, float]:
     return years
 
 
+# Cached (backend/cache.py): recomputed after uploads/edits, otherwise
+# fresh for 5 min and then refreshed in the background.
+@cache.cached(ttl=300, stale=3600, copy=True)
 def summary() -> dict:
     by_broker = {
         **_trading212(),

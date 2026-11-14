@@ -106,3 +106,17 @@ def delete(name: str) -> dict:
     (DATA_DIR / _FILE).write_text(json.dumps(
         {"accounts": accounts, "updated": time.strftime("%Y-%m-%d %H:%M")}, indent=2))
     return load()
+
+
+# ------------------------------------------------------------------ caching
+# Live balances (Trading 212 cash, and any other broker or bank API added to
+# `_broker_cash`) are fresh for 60 s, then served while one background refresh
+# runs (backend/cache.py), so the money card never waits on a slow API. Any
+# write under /api/ recomputes them. `load()` gets its own copy to edit.
+from . import cache as _cache
+
+_uncached_broker_cash = _broker_cash
+
+
+def _broker_cash() -> list[dict]:  # noqa: F811 - cached wrapper of the function above
+    return _cache.get("cash.broker_cash", _uncached_broker_cash, ttl=60, stale=900, copy=True)

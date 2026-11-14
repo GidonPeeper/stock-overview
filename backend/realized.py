@@ -15,10 +15,13 @@ are summed into the broker total but listed separately.
 
 from __future__ import annotations
 
-from . import sources
+from . import cache, sources
 from .positions import compute_positions
 
 
+# Cached (backend/cache.py): recomputed after uploads/edits, otherwise
+# fresh for 5 min and then refreshed in the background.
+@cache.cached(ttl=300, stale=3600, copy=True)
 def summary() -> dict:
     closed: list[dict] = []
     by_broker: dict[str, float] = {}
