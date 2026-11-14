@@ -51,3 +51,34 @@ def in_eur(trades: list[Trade]) -> list[Trade]:
 
 def all_trades_eur() -> list[Trade]:
     return in_eur(all_trades())
+
+
+# ------------------------------------------------------------------ caching
+# Everything above is wrapped here, so a connector added to `holdings()` or
+# `trade_sources()` is cached with no extra code (see backend/cache.py):
+#   holdings     fresh 30 s, then served while a background refresh runs (10 min)
+#   trade lists  per account, fresh 5 min, then served while refreshing (1 h)
+# Any upload or edit (a write under /api/, or a changed data file) makes them
+# recompute before they are served again. A failing broker keeps its last
+# good result. Trade lists are shared: treat them as read-only.
+import functools as _functools
+
+from . import cache as _cache
+
+_uncached_holdings = holdings
+_uncached_trade_sources = trade_sources
+
+
+@_functools.wraps(_uncached_holdings)
+def holdings() -> list[Holding]:  # noqa: F811 - cached wrapper of the function above
+    return _cache.get("sources.holdings", _uncached_holdings, ttl=30, stale=600, copy=True)
+
+
+def _cached_trades(label: str, get_trades: Callable[[], list[Trade]]) -> list[Trade]:
+    return list(_cache.get(f"sources.trades:{label}", get_trades, ttl=300, stale=3600))
+
+
+@_functools.wraps(_uncached_trade_sources)
+def trade_sources() -> dict[str, tuple[bool, Callable[[], list[Trade]]]]:  # noqa: F811
+    return {label: (is_isa, _functools.partial(_cached_trades, label, get))
+            for label, (is_isa, get) in _uncached_trade_sources().items()}

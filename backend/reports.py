@@ -10,28 +10,28 @@ from __future__ import annotations
 
 import csv
 import io
-import time
 from collections import defaultdict
+from concurrent.futures import ThreadPoolExecutor
 
 from .fx import to_eur
 from .prices import quote_scale
-from . import analytics, income, sources
+from . import analytics, cache, income, sources
 
-_cache: dict[str, tuple[object, float]] = {}
+DATA = True  # derived from your holdings: an upload recomputes it
 
 
-def _cached(key: str, ttl: int, fn):
-    now = time.time()
-    hit = _cache.get(key)
-    if hit and now - hit[1] < ttl:
-        return hit[0]
-    try:
+def _cached(key: str, ttl: int, fn, data: bool = DATA):
+    """Fresh for `ttl`, then served while one background refresh runs; a failed
+    refresh keeps the last value (backend/cache.py). None if never computed."""
+    def build():
         val = fn()
+        if val is None:
+            raise ValueError("no value")
+        return val
+    try:
+        return cache.get(f"{__name__}.{key}", build, ttl=ttl, stale=4 * ttl, data=data)
     except Exception:
-        val = hit[0] if hit else None
-    if val is not None:
-        _cache[key] = (val, now)
-    return val
+        return None
 
 
 # ------------------------------------------------------------- health score
@@ -128,7 +128,7 @@ def correlation(tickers: list[str]) -> dict:
             "method": "Pearson correlation of daily returns over the last year "
                       "(price data via Yahoo Finance).",
         }
-    return _cached("corr:" + ",".join(tickers), 6 * 3600, build) or \
+    return _cached("corr:" + ",".join(tickers), 6 * 3600, build, data=False) or \
         {"tickers": [], "matrix": [], "method": ""}
 
 
@@ -137,6 +137,16 @@ def income_projection(holdings: list[dict]) -> dict:
     def build():
         import yfinance as yf
 
+        def dividends(t: str):
+            try:
+                return yf.Ticker(t).dividends
+            except Exception:
+                return None
+
+        tickers = sorted({h["ticker"] for h in holdings if h.get("ticker")})
+        with ThreadPoolExecutor(max_workers=8) as pool:  # one Yahoo call per ticker, in parallel
+            divs = dict(zip(tickers, pool.map(dividends, tickers)))
+
         rows = []
         total_annual = 0.0
         for h in holdings:
@@ -144,8 +154,7 @@ def income_projection(holdings: list[dict]) -> dict:
             if not t:
                 continue
             try:
-                tk = yf.Ticker(t)
-                div = tk.dividends
+                div = divs.get(t)
                 if div is None or len(div) == 0:
                     continue
                 last12 = float(div[div.index >= div.index.max() - __import__("pandas").Timedelta(days=365)].sum())
@@ -171,6 +180,7 @@ def income_projection(holdings: list[dict]) -> dict:
 
 
 # ------------------------------------------------------------ annual report
+@cache.cached(ttl=300, stale=3600, copy=True)
 def annual_report() -> dict:
     """Realized P/L and dividend income per calendar year."""
     from .positions import Position

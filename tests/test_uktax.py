@@ -4,7 +4,7 @@ import unittest
 from datetime import date
 from unittest import mock
 
-from backend import fx, sources, uktax
+from backend import cache, fx, sources, uktax
 from backend.connectors import trading212
 from backend.positions import Trade
 
@@ -32,6 +32,8 @@ class TaxYearTest(unittest.TestCase):
 
 class SummaryTest(unittest.TestCase):
     def setUp(self):
+        cache.clear()  # summaries are cached process-wide
+        self.addCleanup(cache.clear)
         patches = [
             mock.patch.object(fx, "_live_rates", return_value=RATES),
             mock.patch.object(sources, "trade_sources", return_value={

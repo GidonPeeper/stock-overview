@@ -14,11 +14,13 @@ from __future__ import annotations
 
 import os
 import threading
+from contextlib import asynccontextmanager
 from datetime import date
 from pathlib import Path
 
 from fastapi import FastAPI, File, Form, HTTPException, Request, UploadFile
 from fastapi.staticfiles import StaticFiles
+from starlette.middleware.gzip import GZipMiddleware
 from starlette.middleware.sessions import SessionMiddleware
 from starlette.responses import FileResponse, RedirectResponse, Response
 
@@ -38,8 +40,8 @@ _VAULT_STATE = vault.unlock()  # hydrate private data files before anything read
 
 from .connectors import trading212
 from .fx import BASE_CURRENCY, display_rates, to_eur
-from .prices import fetch_quotes
-from . import (analytics, cash, datafiles, finances, income, insights, market,
+from .prices import fetch_quotes, quotes_status
+from . import (analytics, cache, cash, datafiles, finances, income, insights, market,
                periods, realized, reports, sectors, sources, store, uktax, watch)
 
 # Demo mode = no real data source at all (no broker key, no imported statement):
@@ -47,7 +49,31 @@ from . import (analytics, cash, datafiles, finances, income, insights, market,
 DEMO_MODE = not any(v.get("real") for k, v in datafiles.status().items() if not k.startswith("_"))
 FRONTEND_DIR = Path(__file__).resolve().parents[1] / "frontend"
 
-app = FastAPI(title="Stock Overview")
+# Set once the warm-up has computed the main dashboard; the trendline backfill
+# (heavy) waits for it so it doesn't compete with the first page load.
+_WARM_FIRST = threading.Event()
+
+
+def _warm_tasks() -> list:
+    """What the background warmer computes at start-up and keeps fresh while
+    someone uses the app (backend/cache.py), most important first: what the
+    first screen asks for, plus cheap file-based reports. The Performance and
+    Insights tabs' Yahoo-heavy extras are left to their first visit, so a
+    start-up does not fire a burst of requests at Yahoo."""
+    return [portfolio, profit, sparklines, indices, closed, health, cash_get,
+            finances_get, analytics_endpoint, uk_tax, annual_report]
+
+
+@asynccontextmanager
+async def _lifespan(_app):
+    if os.getenv("WARMUP", "1") != "0":
+        cache.start_warmer(_warm_tasks, first=_WARM_FIRST)
+    else:
+        _WARM_FIRST.set()
+    yield
+
+
+app = FastAPI(title="Stock Overview", lifespan=_lifespan)
 
 # Login gate with a session cookie + a login page (works nicely as a phone web
 # app: iOS saves the password to Keychain and unlocks it with Face ID). Disabled
@@ -58,10 +84,12 @@ _DASH_USER = os.getenv("DASHBOARD_USER", "admin")
 _DASH_PASS = os.getenv("DASHBOARD_PASSWORD")
 _DASH_SECRET = os.getenv("DASHBOARD_SECRET") or secrets.token_urlsafe(32)
 
-# Reachable without logging in: the login page and the PWA assets.
+# Reachable without logging in: the login page, the PWA assets and the
+# data-free health check used by keep-alive pings.
 _PUBLIC = {
     "/login", "/manifest.webmanifest", "/favicon.ico",
     "/icon-180.png", "/icon-192.png", "/icon-512.png",
+    "/healthz", "/sw.js",
 }
 
 
@@ -82,6 +110,30 @@ app.add_middleware(
     SessionMiddleware, secret_key=_DASH_SECRET,
     max_age=7 * 24 * 3600, same_site="lax",
 )
+
+
+@app.middleware("http")
+async def _cache_hooks(request: Request, call_next):
+    """Cache bookkeeping for every request (backend/cache.py):
+    * any successful write under /api/ (upload, cash, finances, watchlist, and
+      whatever endpoint is added later) marks data-derived caches out of date;
+    * API reads count as activity, which keeps the background warmer going;
+    * the header lets the service worker tell this app's page apart from a
+      host's "waking up" page."""
+    response = await call_next(request)
+    cache.after_request(request.method, request.url.path, response.status_code)
+    response.headers["X-Stock-Overview"] = "1"
+    return response
+
+
+# Outermost: compress JSON and HTML (index.html ~83 KB -> ~20 KB).
+app.add_middleware(GZipMiddleware, minimum_size=1024, compresslevel=6)
+
+
+@app.api_route("/healthz", methods=["GET", "HEAD"], include_in_schema=False)
+async def healthz():
+    """Cheap liveness check for keep-alive pings: no auth, no data, no work."""
+    return {"ok": True}
 
 
 @app.get("/login", include_in_schema=False)
@@ -124,6 +176,7 @@ def _ensure_backfill() -> None:
             return  # already backfilled
 
     def task():
+        _WARM_FIRST.wait(timeout=60)  # let the first page load go first
         try:
             from . import backfill
             backfill.run()
@@ -133,8 +186,12 @@ def _ensure_backfill() -> None:
     threading.Thread(target=task, daemon=True).start()
 
 
+@cache.cached(ttl=10, copy=True)
 def _open_holdings_rows() -> tuple[list[dict], float, float, dict]:
-    """Returns (rows, total_value_eur, total_cost_eur, value_by_broker)."""
+    """Returns (rows, total_value_eur, total_cost_eur, value_by_broker).
+    Shared by most endpoints, so it is memoised for 10 s (a page load computes
+    it once) and recomputed at once after any upload or edit. Callers get
+    their own copy and may modify it."""
     holdings = sources.holdings()
 
     # Live quotes (price + previous close) for every holding — the previous
@@ -263,6 +320,9 @@ def portfolio() -> dict:
         "base_currency": BASE_CURRENCY,
         "fx": display_rates(),
         "demo_mode": DEMO_MODE,
+        # {as_of, refreshing}: quotes older than a minute are shown while a
+        # background refresh runs; the UI then says "updating…" and re-polls.
+        "quotes": quotes_status([r["ticker"] for r in rows]),
         "totals": {
             "value": round(total_value, 2),
             "cost": round(total_cost, 2),
