@@ -1,0 +1,196 @@
+{
+  "_about": [
+    "Swap ideas for tax-loss harvesting: buy one of these after selling at a loss, so you stay invested while the loss counts.",
+    "funds: groups of ETFs with (nearly) the same exposure. A member is matched by its ISIN, ticker or 'also' tickers.",
+    "  UK residents get UCITS members (market UK): first a fund on the same index from another provider, then a different index.",
+    "  US residents get US-listed members (market US) on a different index only, since two funds on one index may be 'substantially identical'.",
+    "stocks: single shares matched by ISIN or ticker, with a close peer and a sector ETF (key into sector_etfs, else their 'sector').",
+    "sector_etfs: keyed by Yahoo sector name (what sectors.get_sectors() returns); also the fallback for shares not listed here.",
+    "Every ticker resolves on Yahoo Finance (checked 2026-11-14). Not advice: a swap tracks differently from what you sold."
+  ],
+  "funds": [
+    {
+      "exposure": "Global shares",
+      "members": [
+        {"ticker": "VWRL.L", "isin": "IE00B3RBWM25", "also": ["VWRL.AS"], "name": "Vanguard FTSE All-World UCITS ETF (Dist)", "provider": "Vanguard", "index": "FTSE All-World"},
+        {"ticker": "VWRP.L", "isin": "IE00BK5BQT80", "also": ["VWCE.DE"], "name": "Vanguard FTSE All-World UCITS ETF (Acc)", "provider": "Vanguard", "index": "FTSE All-World"},
+        {"ticker": "FWRG.L", "isin": "IE000716YHJ7", "name": "Invesco FTSE All-World UCITS ETF (Acc)", "provider": "Invesco", "index": "FTSE All-World"},
+        {"ticker": "SSAC.L", "isin": "IE00B6R52259", "also": ["ISAC.L"], "name": "iShares MSCI ACWI UCITS ETF (Acc)", "provider": "iShares", "index": "MSCI ACWI"},
+        {"ticker": "ACWI.L", "isin": "IE00B44Z5B48", "also": ["SPYY.DE"], "name": "SPDR MSCI ACWI UCITS ETF", "provider": "SPDR", "index": "MSCI ACWI"},
+        {"ticker": "VT", "market": "US", "name": "Vanguard Total World Stock ETF", "provider": "Vanguard", "index": "FTSE Global All Cap"},
+        {"ticker": "ACWI", "market": "US", "name": "iShares MSCI ACWI ETF", "provider": "iShares", "index": "MSCI ACWI"}
+      ]
+    },
+    {
+      "exposure": "Developed-world shares",
+      "members": [
+        {"ticker": "SWDA.L", "isin": "IE00B4L5Y983", "also": ["IWDA.L", "IWDA.AS", "EUNL.DE"], "name": "iShares Core MSCI World UCITS ETF (Acc)", "provider": "iShares", "index": "MSCI World"},
+        {"ticker": "XDWD.L", "isin": "IE00BJ0KDQ92", "also": ["XDWD.DE"], "name": "Xtrackers MSCI World UCITS ETF 1C", "provider": "Xtrackers", "index": "MSCI World"},
+        {"ticker": "HMWO.L", "isin": "IE00B4X9L533", "name": "HSBC MSCI World UCITS ETF", "provider": "HSBC", "index": "MSCI World"},
+        {"ticker": "VHVG.L", "isin": "IE00BK5BQV03", "name": "Vanguard FTSE Developed World UCITS ETF (Acc)", "provider": "Vanguard", "index": "FTSE Developed"},
+        {"ticker": "VEVE.L", "isin": "IE00BKX55T58", "name": "Vanguard FTSE Developed World UCITS ETF (Dist)", "provider": "Vanguard", "index": "FTSE Developed"},
+        {"ticker": "URTH", "market": "US", "name": "iShares MSCI World ETF", "provider": "iShares", "index": "MSCI World"}
+      ]
+    },
+    {
+      "exposure": "US large caps (S&P 500)",
+      "members": [
+        {"ticker": "VUSA.L", "isin": "IE00B3XXRP09", "name": "Vanguard S&P 500 UCITS ETF (Dist)", "provider": "Vanguard", "index": "S&P 500"},
+        {"ticker": "VUAG.L", "isin": "IE00BFMXXD54", "name": "Vanguard S&P 500 UCITS ETF (Acc)", "provider": "Vanguard", "index": "S&P 500"},
+        {"ticker": "CSP1.L", "isin": "IE00B5BMR087", "also": ["CSPX.L", "SXR8.DE"], "name": "iShares Core S&P 500 UCITS ETF (Acc)", "provider": "iShares", "index": "S&P 500"},
+        {"ticker": "IUSA.L", "isin": "IE0031442068", "name": "iShares Core S&P 500 UCITS ETF (Dist)", "provider": "iShares", "index": "S&P 500"},
+        {"ticker": "SPXP.L", "isin": "IE00B3YCGJ38", "name": "Invesco S&P 500 UCITS ETF", "provider": "Invesco", "index": "S&P 500"},
+        {"ticker": "SPY5.L", "isin": "IE00B6YX5C33", "name": "SPDR S&P 500 UCITS ETF", "provider": "SPDR", "index": "S&P 500"},
+        {"ticker": "CSUS.L", "isin": "IE00B52SFT06", "also": ["SXR4.DE"], "name": "iShares MSCI USA UCITS ETF (Acc)", "provider": "iShares", "index": "MSCI USA"},
+        {"ticker": "VNRT.L", "isin": "IE00BKX55R35", "name": "Vanguard FTSE North America UCITS ETF", "provider": "Vanguard", "index": "FTSE North America", "note": "Different index (FTSE North America: the US plus a little Canada); tracks very closely but not exactly."},
+        {"ticker": "VOO", "isin": "US9229083632", "market": "US", "name": "Vanguard S&P 500 ETF", "provider": "Vanguard", "index": "S&P 500"},
+        {"ticker": "IVV", "isin": "US4642872000", "market": "US", "name": "iShares Core S&P 500 ETF", "provider": "iShares", "index": "S&P 500"},
+        {"ticker": "SPY", "isin": "US78462F1030", "market": "US", "name": "SPDR S&P 500 ETF Trust", "provider": "SPDR", "index": "S&P 500"},
+        {"ticker": "VTI", "market": "US", "name": "Vanguard Total Stock Market ETF", "provider": "Vanguard", "index": "CRSP US Total Market", "note": "Different index (the whole US market, small caps included); tracks the S&P 500 closely but not exactly."},
+        {"ticker": "SCHX", "market": "US", "name": "Schwab U.S. Large-Cap ETF", "provider": "Schwab", "index": "Dow Jones US Large-Cap"}
+      ]
+    },
+    {
+      "exposure": "US tech (Nasdaq-100)",
+      "members": [
+        {"ticker": "EQQQ.L", "isin": "IE0032077012", "name": "Invesco EQQQ Nasdaq-100 UCITS ETF", "provider": "Invesco", "index": "Nasdaq-100"},
+        {"ticker": "CNDX.L", "isin": "IE00B53SZB19", "also": ["SXRV.DE"], "name": "iShares Nasdaq 100 UCITS ETF (Acc)", "provider": "iShares", "index": "Nasdaq-100"},
+        {"ticker": "XNAS.L", "isin": "IE00BMFKG444", "name": "Xtrackers Nasdaq 100 UCITS ETF 1C", "provider": "Xtrackers", "index": "Nasdaq-100"},
+        {"ticker": "IUIT.L", "isin": "IE00B3WJKG14", "name": "iShares S&P 500 Information Technology Sector UCITS ETF", "provider": "iShares", "index": "S&P 500 IT", "note": "Different index: US tech only, fewer companies than the Nasdaq-100; tracks differently."},
+        {"ticker": "QQQ", "isin": "US46090E1038", "market": "US", "name": "Invesco QQQ Trust", "provider": "Invesco", "index": "Nasdaq-100"},
+        {"ticker": "QQQM", "market": "US", "name": "Invesco Nasdaq 100 ETF", "provider": "Invesco", "index": "Nasdaq-100"},
+        {"ticker": "ONEQ", "market": "US", "name": "Fidelity Nasdaq Composite Index ETF", "provider": "Fidelity", "index": "Nasdaq Composite", "note": "Different index (all Nasdaq shares, not just the top 100); tracks the Nasdaq-100 closely but not exactly."},
+        {"ticker": "VGT", "market": "US", "name": "Vanguard Information Technology ETF", "provider": "Vanguard", "index": "MSCI US IMI IT 25/50", "note": "Different index: US tech only; overlaps a lot with the Nasdaq-100 but tracks differently."}
+      ]
+    },
+    {
+      "exposure": "US small caps",
+      "members": [
+        {"ticker": "ZPRR.DE", "isin": "IE00BJ38QD84", "also": ["R2US.L"], "name": "SPDR Russell 2000 US Small Cap UCITS ETF", "provider": "SPDR", "index": "Russell 2000"},
+        {"ticker": "XRS2.DE", "isin": "IE00BJZ2DD79", "name": "Xtrackers Russell 2000 UCITS ETF 1C", "provider": "Xtrackers", "index": "Russell 2000"},
+        {"ticker": "ISP6.L", "isin": "IE00B2QWCY14", "name": "iShares S&P SmallCap 600 UCITS ETF", "provider": "iShares", "index": "S&P SmallCap 600", "note": "Different small-cap index (S&P 600, which screens for profits); tracks the Russell 2000 closely but not exactly."},
+        {"ticker": "IWM", "market": "US", "name": "iShares Russell 2000 ETF", "provider": "iShares", "index": "Russell 2000"},
+        {"ticker": "VB", "market": "US", "name": "Vanguard Small-Cap ETF", "provider": "Vanguard", "index": "CRSP US Small Cap"},
+        {"ticker": "IJR", "market": "US", "name": "iShares Core S&P Small-Cap ETF", "provider": "iShares", "index": "S&P SmallCap 600"}
+      ]
+    },
+    {
+      "exposure": "Indian shares",
+      "members": [
+        {"ticker": "QDV5.DE", "isin": "IE00BZCQB185", "name": "iShares MSCI India UCITS ETF (Acc)", "provider": "iShares", "index": "MSCI India"},
+        {"ticker": "XCX5.L", "isin": "LU0514695187", "name": "Xtrackers MSCI India Swap UCITS ETF 1C", "provider": "Xtrackers", "index": "MSCI India"},
+        {"ticker": "FLXI.L", "isin": "IE00BHZRQZ17", "name": "Franklin FTSE India UCITS ETF", "provider": "Franklin", "index": "FTSE India"},
+        {"ticker": "INDA", "market": "US", "name": "iShares MSCI India ETF", "provider": "iShares", "index": "MSCI India"},
+        {"ticker": "FLIN", "market": "US", "name": "Franklin FTSE India ETF", "provider": "Franklin", "index": "FTSE India"}
+      ]
+    },
+    {
+      "exposure": "Emerging-market shares",
+      "members": [
+        {"ticker": "VFEM.L", "isin": "IE00B3VVMM84", "name": "Vanguard FTSE Emerging Markets UCITS ETF", "provider": "Vanguard", "index": "FTSE Emerging"},
+        {"ticker": "EIMI.L", "isin": "IE00BKM4GZ66", "name": "iShares Core MSCI EM IMI UCITS ETF (Acc)", "provider": "iShares", "index": "MSCI EM IMI"},
+        {"ticker": "VWO", "market": "US", "name": "Vanguard FTSE Emerging Markets ETF", "provider": "Vanguard", "index": "FTSE Emerging"},
+        {"ticker": "IEMG", "market": "US", "name": "iShares Core MSCI Emerging Markets ETF", "provider": "iShares", "index": "MSCI EM IMI"}
+      ]
+    },
+    {
+      "exposure": "Gold",
+      "members": [
+        {"ticker": "SGLN.L", "isin": "IE00B4ND3602", "also": ["IGLN.L", "PPFB.DE"], "name": "iShares Physical Gold ETC", "provider": "iShares", "index": "gold price"},
+        {"ticker": "SGLD.L", "isin": "IE00B579F325", "name": "Invesco Physical Gold ETC", "provider": "Invesco", "index": "gold price"},
+        {"ticker": "WGLD.L", "isin": "JE00BN2CJ301", "name": "WisdomTree Core Physical Gold ETC", "provider": "WisdomTree", "index": "gold price"}
+      ]
+    }
+  ],
+  "stocks": [
+    {"name": "Apple", "match": ["US0378331005", "AAPL"], "sector": "Technology",
+     "peers": [{"ticker": "MSFT", "name": "Microsoft", "reason": "Closest mega-cap tech peer; not identical — it will track differently."}]},
+    {"name": "Microsoft", "match": ["US5949181045", "MSFT"], "sector": "Technology",
+     "peers": [{"ticker": "AAPL", "name": "Apple", "reason": "Mega-cap tech peer; not identical — it will track differently."}]},
+    {"name": "Alphabet", "match": ["US02079K3059", "GOOGL", "US02079K1079", "GOOG"], "sector": "Communication Services",
+     "peers": [{"ticker": "META", "name": "Meta Platforms", "reason": "Closest peer: also lives off online advertising; not identical — it will track differently."}]},
+    {"name": "Amazon", "match": ["US0231351067", "AMZN"], "sector": "Consumer Cyclical",
+     "peers": [{"ticker": "MSFT", "name": "Microsoft", "reason": "Cloud peer (Azure vs AWS), no shopping arm; it will track differently."}]},
+    {"name": "Meta Platforms", "match": ["US30303M1027", "META"], "sector": "Communication Services",
+     "peers": [{"ticker": "GOOGL", "name": "Alphabet", "reason": "Closest peer: also lives off online advertising; not identical — it will track differently."}]},
+    {"name": "NVIDIA", "match": ["US67066G1040", "NVDA"], "sector": "Technology", "etf": "_semis",
+     "peers": [{"ticker": "AMD", "name": "AMD", "reason": "Closest peer in AI chips, much smaller; it will track differently."}]},
+    {"name": "AMD", "match": ["US0079031078", "AMD"], "sector": "Technology", "etf": "_semis",
+     "peers": [{"ticker": "NVDA", "name": "NVIDIA", "reason": "Closest peer in AI chips; not identical — it will track differently."}]},
+    {"name": "Broadcom", "match": ["US11135F1012", "AVGO"], "sector": "Technology", "etf": "_semis", "peers": []},
+    {"name": "Tesla", "match": ["US88160R1014", "TSLA"], "sector": "Consumer Cyclical", "peers": []},
+    {"name": "Netflix", "match": ["US64110L1061", "NFLX"], "sector": "Communication Services",
+     "peers": [{"ticker": "DIS", "name": "Walt Disney", "reason": "Streaming and entertainment peer, with parks too; it will track differently."}]},
+    {"name": "Adobe", "match": ["US00724F1012", "ADBE"], "sector": "Technology",
+     "peers": [{"ticker": "CRM", "name": "Salesforce", "reason": "Subscription-software peer; not identical — it will track differently."}]},
+    {"name": "Salesforce", "match": ["US79466L3024", "CRM"], "sector": "Technology",
+     "peers": [{"ticker": "NOW", "name": "ServiceNow", "reason": "Business-software peer; not identical — it will track differently."}]},
+    {"name": "Oracle", "match": ["US68389X1054", "ORCL"], "sector": "Technology",
+     "peers": [{"ticker": "SAP.DE", "name": "SAP", "reason": "Enterprise-software peer; not identical — it will track differently."}]},
+    {"name": "SAP", "match": ["DE0007164600", "SAP.DE"], "sector": "Technology",
+     "peers": [{"ticker": "ORCL", "name": "Oracle", "reason": "Enterprise-software peer; not identical — it will track differently."}]},
+    {"name": "Booking Holdings", "match": ["US09857L1089", "BKNG"], "sector": "Consumer Cyclical",
+     "peers": [{"ticker": "EXPE", "name": "Expedia", "reason": "Closest peer in online travel, smaller; it will track differently."}]},
+    {"name": "PayPal", "match": ["US70450Y1038", "PYPL"], "sector": "Financial Services", "etf": "_fintech", "peers": []},
+    {"name": "ASML", "match": ["NL0010273215", "ASML.AS", "USN070592100", "ASML"], "sector": "Technology", "etf": "_semis",
+     "peers": [{"ticker": "ASM.AS", "name": "ASM International", "reason": "Dutch chip-equipment peer that makes different machines; it will track differently."}]},
+    {"name": "Adyen", "match": ["NL0012969182", "ADYEN.AS"], "sector": "Technology", "etf": "_fintech",
+     "peers": [{"ticker": "PYPL", "name": "PayPal", "reason": "Payments peer, more consumer-focused; it will track differently."}]},
+    {"name": "Prosus", "match": ["NL0013654783", "PRX.AS"], "sector": "Consumer Cyclical", "etf": "_china_internet", "peers": []},
+    {"name": "LVMH", "match": ["FR0000121014", "MC.PA"], "sector": "Consumer Cyclical", "etf": "_luxury",
+     "peers": [{"ticker": "RMS.PA", "name": "Hermès", "reason": "Luxury peer, more upmarket; not identical — it will track differently."}]},
+    {"name": "Rightmove", "match": ["GB00BGDT3G23", "RMV.L"], "sector": "Communication Services",
+     "peers": [{"ticker": "AUTO.L", "name": "Auto Trader", "reason": "UK online-marketplace peer (cars, not homes); it will track differently."},
+               {"ticker": "G24.DE", "name": "Scout24", "reason": "Property-portal peer in Germany; same business, different market."}]}
+  ],
+  "sector_etfs": {
+    "Technology": {
+      "uk": {"ticker": "XDWT.L", "name": "Xtrackers MSCI World Information Technology UCITS ETF"},
+      "us": {"ticker": "XLK", "name": "Technology Select Sector SPDR ETF"}},
+    "Communication Services": {
+      "uk": {"ticker": "XWTS.L", "name": "Xtrackers MSCI World Communication Services UCITS ETF"},
+      "us": {"ticker": "XLC", "name": "Communication Services Select Sector SPDR ETF"}},
+    "Consumer Cyclical": {
+      "uk": {"ticker": "XDWC.L", "name": "Xtrackers MSCI World Consumer Discretionary UCITS ETF"},
+      "us": {"ticker": "XLY", "name": "Consumer Discretionary Select Sector SPDR ETF"}},
+    "Consumer Defensive": {
+      "uk": {"ticker": "XDWS.L", "name": "Xtrackers MSCI World Consumer Staples UCITS ETF"},
+      "us": {"ticker": "XLP", "name": "Consumer Staples Select Sector SPDR ETF"}},
+    "Financial Services": {
+      "uk": {"ticker": "XDWF.L", "name": "Xtrackers MSCI World Financials UCITS ETF"},
+      "us": {"ticker": "XLF", "name": "Financial Select Sector SPDR ETF"}},
+    "Healthcare": {
+      "uk": {"ticker": "XDWH.L", "name": "Xtrackers MSCI World Health Care UCITS ETF"},
+      "us": {"ticker": "XLV", "name": "Health Care Select Sector SPDR ETF"}},
+    "Industrials": {
+      "uk": {"ticker": "XDWI.L", "name": "Xtrackers MSCI World Industrials UCITS ETF"},
+      "us": {"ticker": "XLI", "name": "Industrial Select Sector SPDR ETF"}},
+    "Energy": {
+      "uk": {"ticker": "XDW0.L", "name": "Xtrackers MSCI World Energy UCITS ETF"},
+      "us": {"ticker": "XLE", "name": "Energy Select Sector SPDR ETF"}},
+    "Basic Materials": {
+      "uk": {"ticker": "XDWM.L", "name": "Xtrackers MSCI World Materials UCITS ETF"},
+      "us": {"ticker": "XLB", "name": "Materials Select Sector SPDR ETF"}},
+    "Utilities": {
+      "uk": {"ticker": "XDWU.L", "name": "Xtrackers MSCI World Utilities UCITS ETF"},
+      "us": {"ticker": "XLU", "name": "Utilities Select Sector SPDR ETF"}},
+    "Real Estate": {
+      "uk": {"ticker": "IWDP.L", "name": "iShares Developed Markets Property Yield UCITS ETF"},
+      "us": {"ticker": "XLRE", "name": "Real Estate Select Sector SPDR ETF"}},
+    "_semis": {
+      "uk": {"ticker": "SEMI.L", "name": "iShares MSCI Global Semiconductors UCITS ETF"},
+      "us": {"ticker": "SMH", "name": "VanEck Semiconductor ETF"}},
+    "_fintech": {
+      "uk": {"ticker": "FINX.L", "name": "Global X FinTech UCITS ETF"},
+      "us": {"ticker": "FINX", "name": "Global X FinTech ETF"}},
+    "_china_internet": {
+      "uk": {"ticker": "KWEB.L", "name": "KraneShares CSI China Internet UCITS ETF", "reason": "China internet ETF; Tencent, Prosus's biggest asset, is a top holding. It will track differently."},
+      "us": {"ticker": "KWEB", "name": "KraneShares CSI China Internet ETF", "reason": "China internet ETF; Tencent, Prosus's biggest asset, is a top holding. It will track differently."}},
+    "_luxury": {
+      "uk": {"ticker": "LUXU.L", "name": "Amundi S&P Global Luxury UCITS ETF", "reason": "Global luxury ETF, LVMH among its biggest holdings; it will track differently."},
+      "us": {"ticker": "XLY", "name": "Consumer Discretionary Select Sector SPDR ETF"}},
+    "_global": {
+      "uk": {"ticker": "VWRP.L", "name": "Vanguard FTSE All-World UCITS ETF (Acc)", "reason": "A global tracker keeps you invested while you wait out the 30 days; it will track differently."},
+      "us": {"ticker": "VT", "name": "Vanguard Total World Stock ETF", "reason": "A global fund keeps you invested while you wait out the 30 days; it will track differently."}}
+  }
+}

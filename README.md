@@ -28,6 +28,7 @@ python3 -m venv .venv && .venv/bin/pip install -r requirements.txt
 |---|---|
 | 🔀 **Merged holdings** | The same company held at several brokers or accounts becomes one position (matched by ISIN) |
 | 🇬🇧 **UK tax year** | Gains and dividends outside your ISA since 6 April, CGT and dividend allowance left, ISA allowance used, and a 30-day ("bed and breakfast") reminder after each sale |
+| 🌾 **Tax-loss harvesting** | Positions outside your ISA that are down enough to sell for a tax loss: tax saved this year (using this year's gains and the £3,000 allowance), the day you can buy back, and swaps that keep you invested (Bed & ISA, the same index from another provider, a close peer). UK by default; US and NL via `TAX_RESIDENCE` |
 | 💷 **£ / €** | One tap switches every amount between pounds and euros; London prices quoted in pence are handled |
 | 💶 **Exact P/L accounting** | Real per-trade FX + fees from broker statements; handles splits, delistings, ISIN changes; reconciles with each broker's own figures |
 | 📊 **Live market layer** | Index ticker strip, per-holding sparklines, today's movers, tap-through detail sheet with 1D/1W/1M/1Y chart + news |
@@ -91,7 +92,8 @@ Accounts whose name contains "ISA" are treated as tax-free. Uninvested cash in
 each Trading 212 account is added to your net worth automatically.
 
 Optional settings in `.env`: `DISPLAY_CURRENCY` (`GBP`/`EUR`), `UK_RESIDENT_FROM`
-(the day you became UK resident, for a split tax year), and `NEWSAPI_KEY` to
+(the day you became UK resident, for a split tax year), `TAX_RESIDENCE` (`UK`/`US`/`NL`)
+and `CGT_RATE` for the tax-loss harvesting card, and `NEWSAPI_KEY` to
 blend NewsAPI into the Daily Brief.
 
 ## ✅ Tests
