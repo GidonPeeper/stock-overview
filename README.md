@@ -71,8 +71,29 @@ flowchart LR
 
 Everything private is git-ignored and resolved from `data/`, the project root,
 or `/etc/secrets` (Render Secret Files) — the in-app banner tells you exactly
-which sources are live vs sample. Drop the files the brokers actually give you
-on the **Settings page** (phone-friendly) or convert them locally:
+which sources are live vs sample.
+
+**Add an account (Settings page).** Pick your broker or bank from a searchable
+list of ~50 (NL, UK, US) and the app shows the simplest way to track it, with
+numbered steps and a link to the official page:
+
+| Way | Institutions | What it tracks |
+|---|---|---|
+| Read-only key, checked live before saving | Trading 212 (Invest, ISA), Interactive Brokers (Flex token + query ID), eToro ("Read" key), Bitvavo ("View" key), Starling (personal access token), Wise (API token) | positions, trades, dividends and cash for brokers; balances for banks |
+| File from the broker | DEGIRO account statement, Trade Republic transaction export, Trading 212 activity statement — plus a **generic positions CSV** for any other broker (columns detected, you confirm) | positions (and trades/dividends where the file has them) |
+| Balance you type in | every bank, savings or pension account | balance |
+
+Keys are stored in `data/connections.json` on your server (git-ignored, and
+encrypted inside `data/vault.enc` like the other private files); they are
+never sent back to the browser. Only read-only keys are accepted: the steps
+tell you which permissions to tick. Unofficial routes that need your bank or
+broker login (pytr, DEGIRO login) are shown as information only, and
+bank-link services (e.g. Enable Banking) are listed as "coming soon". A slow
+or failing institution never blocks the dashboard: its error is shown on the
+connection. The list of institutions is data (`backend/broker_catalog.json`);
+`backend/connectors/registry.py` is the one place that links it to code.
+
+You can still drop the broker files on the Settings page or convert them locally:
 
 | Broker | What to export | Local command |
 |---|---|---|
@@ -100,7 +121,7 @@ blend NewsAPI into the Daily Brief.
 .venv/bin/python -m unittest discover -s tests -t .
 ```
 
-The tests use canned Trading 212 responses, so they need no keys or network.
+The tests use canned broker and bank responses, so they need no keys or network.
 
 ## ☁️ Deploy
 

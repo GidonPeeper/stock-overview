@@ -73,9 +73,12 @@ class Account:
     label: str
     key: str
     secret: str
+    isa: bool | None = None  # set for accounts added in-app (ISA box); else from the label
 
     @property
     def is_isa(self) -> bool:
+        if self.isa is not None:
+            return self.isa
         return "ISA" in self.label.upper().split()
 
     @property
@@ -105,6 +108,14 @@ def accounts() -> list[Account]:
             continue
         label = (os.getenv(prefix + "NAME") or "").strip() or _label(m.group(1))
         out.append(Account(label, key, secret))
+    # Accounts added in Settings ("Add an account") use the same code path.
+    try:
+        from ..connections import t212_accounts
+
+        keys = {a.key for a in out}
+        out += [a for a in t212_accounts() if a.key and a.secret and a.key not in keys]
+    except Exception:
+        pass
     return out
 
 

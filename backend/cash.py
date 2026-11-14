@@ -36,7 +36,7 @@ def load() -> dict:
     except ValueError:
         return {"accounts": [], "sample": not real}
     accounts = [a for a in data.get("accounts", []) if not a.get("auto")]
-    accounts += _broker_cash()
+    accounts += _broker_cash() + _connection_cash()
     total = interest = 0.0
     by_type: dict[str, float] = {}
     for a in accounts:
@@ -65,6 +65,17 @@ def _broker_cash() -> list[dict]:
     return [{"name": f"{r['account']} cash", "institution": "Trading 212",
              "balance": r["balance"], "currency": r["currency"], "type": "cash",
              "rate": 0.0, "auto": True} for r in rows if r["balance"]]
+
+
+def _connection_cash() -> list[dict]:
+    """Balances from accounts added in Settings (Starling, Wise, IBKR cash),
+    also read-only `auto` entries."""
+    try:
+        from . import connections
+
+        return connections.cash_entries()
+    except Exception:
+        return []
 
 
 def _manual(accounts: list[dict]) -> list[dict]:
