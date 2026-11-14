@@ -20,10 +20,12 @@ from __future__ import annotations
 
 import os
 import re
-import time
 import urllib.request
+from concurrent.futures import ThreadPoolExecutor
 import xml.etree.ElementTree as ET
 from datetime import date, datetime, timezone
+
+from . import cache
 
 _UA = {"User-Agent": "Mozilla/5.0 (StockOverview dashboard)"}
 
@@ -33,21 +35,21 @@ RSS_FEEDS = [
     ("Yahoo Finance", "https://finance.yahoo.com/news/rssindex"),
 ]
 
-_cache: dict[str, tuple[object, float]] = {}
+DATA = False  # market data only: uploads don't invalidate it
 
 
-def _cached(key: str, ttl: int, fn):
-    now = time.time()
-    hit = _cache.get(key)
-    if hit and now - hit[1] < ttl:
-        return hit[0]
-    try:
+def _cached(key: str, ttl: int, fn, data: bool = DATA):
+    """Fresh for `ttl`, then served while one background refresh runs; a failed
+    refresh keeps the last value (backend/cache.py). None if never computed."""
+    def build():
         val = fn()
+        if val is None:
+            raise ValueError("no value")
+        return val
+    try:
+        return cache.get(f"{__name__}.{key}", build, ttl=ttl, stale=4 * ttl, data=data)
     except Exception:
-        val = hit[0] if hit else None
-    if val is not None:
-        _cache[key] = (val, now)
-    return val
+        return None
 
 
 # ---------------------------------------------------------------- headlines
@@ -114,18 +116,23 @@ def headlines() -> list[dict]:
 def earnings_calendar(tickers: list[str]) -> list[dict]:
     def build():
         import yfinance as yf
-        out = []
         today = datetime.now(timezone.utc)
-        for t in sorted(set(x for x in tickers if x)):
+
+        def one(t: str) -> dict | None:
             try:
                 ed = yf.Ticker(t).get_earnings_dates(limit=8)
                 future = [i for i in ed.index if i.to_pydatetime() >= today]
                 if future:
                     nxt = min(future)
-                    out.append({"ticker": t, "date": str(nxt.date()),
-                                "days_away": (nxt.to_pydatetime() - today).days})
+                    return {"ticker": t, "date": str(nxt.date()),
+                            "days_away": (nxt.to_pydatetime() - today).days}
             except Exception:
-                continue
+                pass
+            return None
+
+        symbols = sorted(set(x for x in tickers if x))
+        with ThreadPoolExecutor(max_workers=4) as pool:  # a few at a time: this endpoint needs a crumb
+            out = [r for r in pool.map(one, symbols) if r]
         out.sort(key=lambda x: x["date"])
         return out
     return _cached("earnings:" + ",".join(sorted(set(tickers)))[:120], 6 * 3600, build) or []

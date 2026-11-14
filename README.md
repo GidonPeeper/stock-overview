@@ -107,6 +107,14 @@ The tests use canned Trading 212 responses, so they need no keys or network.
 Free 24/7 hosting on Render with the repo public and your data private
 (env vars + Secret Files): see [`DEPLOY_RENDER.md`](DEPLOY_RENDER.md).
 
+**Speed.** The page opens at once from the last numbers saved on your device
+(marked "Updating…") and refreshes in place. The server fetches quotes in
+parallel, caches slow data in memory (`backend/cache.py`: serve the last
+value while refreshing in the background, recompute at once after an upload
+or edit), warms its caches at start-up, and gzips responses. On Render's free
+plan, an optional keep-alive ping (`/healthz`) stops the service from
+sleeping — see *Speed* in [`DEPLOY_RENDER.md`](DEPLOY_RENDER.md).
+
 ## 🔒 Privacy & safety
 
 - The repo contains **code + sample data only** — statements and keys never

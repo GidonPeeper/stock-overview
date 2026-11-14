@@ -12,7 +12,9 @@ London prices are often quoted in pence ("GBX" at Trading 212, "GBp" at Yahoo).
 from __future__ import annotations
 
 import os
-import time
+from concurrent.futures import ThreadPoolExecutor
+
+from . import cache
 
 BASE_CURRENCY = "EUR"
 DISPLAY_CURRENCIES = ("EUR", "GBP", "USD")
@@ -23,31 +25,38 @@ _FALLBACK = {"EUR": 1.0, "USD": 0.88, "GBP": 1.16, "CHF": 1.05}
 # Case matters: "GBp" is pence but "GBP" is pounds.
 _PENCE = {"GBX", "GBp", "GBx"}
 
-_cache: dict[str, float] = {}
-_cache_at = 0.0
-_TTL = 3600  # 1 hour
+_cache: dict[str, float] = {}  # last good live rate per currency
+_TTL = 3600         # 1 hour fresh
+_STALE = 6 * 3600   # then served while a background refresh runs
+_PAIRS = (("USD", "EURUSD=X"), ("GBP", "EURGBP=X"), ("CHF", "EURCHF=X"))
 
 
-def _live_rates() -> dict[str, float]:
-    """EUR-per-unit rates from yfinance, cached. Falls back to static on error."""
-    global _cache, _cache_at
-    if _cache and time.time() - _cache_at < _TTL:
-        return _cache
-    rates = dict(_FALLBACK)
+def _fetch_rates() -> dict[str, float]:
+    """Live rates, fetched in parallel. A pair that fails keeps its last live
+    rate, or the static fallback if it never had one."""
+    rates = {**_FALLBACK, **_cache}
     try:
         import yfinance as yf
 
-        for ccy, pair in (("USD", "EURUSD=X"), ("GBP", "EURGBP=X"), ("CHF", "EURCHF=X")):
+        def one(pair: str) -> float | None:
             try:
-                per_eur = float(yf.Ticker(pair).fast_info["last_price"])
-                if per_eur:
-                    rates[ccy] = 1.0 / per_eur
+                return float(yf.Ticker(pair).fast_info["last_price"])
             except Exception:
-                continue
+                return None
+
+        with ThreadPoolExecutor(max_workers=len(_PAIRS)) as pool:
+            per_eur = list(pool.map(one, [pair for _, pair in _PAIRS]))
+        for (ccy, _), v in zip(_PAIRS, per_eur):
+            if v:
+                rates[ccy] = _cache[ccy] = 1.0 / v
     except Exception:
         pass
-    _cache, _cache_at = rates, time.time()
     return rates
+
+
+def _live_rates() -> dict[str, float]:
+    """EUR-per-unit rates from yfinance, cached (see backend/cache.py)."""
+    return cache.get("fx.rates", _fetch_rates, ttl=_TTL, stale=_STALE, data=False)
 
 
 # Kept for callers that want to read the table directly.
