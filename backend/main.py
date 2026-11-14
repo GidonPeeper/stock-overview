@@ -503,6 +503,16 @@ def harvest_endpoint(min_pct: float | None = None, min_loss: float | None = None
     return harvest.suggest(rows, min_pct=min_pct, min_loss=min_loss)
 
 
+@app.get("/api/savings")
+def savings() -> dict:
+    """Ways to save: money-saving tips ranked by size (ISA and CGT allowances,
+    dividend tax, fund fees, pension relief, loans vs cash). See advisors.py."""
+    from . import advisors
+
+    rows, *_ = _open_holdings_rows()
+    return advisors.collect(rows, demo=DEMO_MODE)
+
+
 @app.get("/api/headlines")
 def headlines_endpoint() -> list[dict]:
     """Interleaved market headlines from CNBC / MarketWatch / Yahoo Finance

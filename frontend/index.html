@@ -315,6 +315,10 @@
         <div id="brief-body" class="skeleton">Loading your brief…</div>
       </div>
       <div class="card">
+        <h2>Ways to save <span class="chip" style="padding:1px 8px;font-size:11px" onclick="document.querySelectorAll('.sv-how').forEach(e=>e.hidden=!e.hidden)">how this is worked out</span></h2>
+        <div id="savings" class="skeleton">Checking your numbers…</div>
+      </div>
+      <div class="card">
         <h2>Cheapest broker for your next trade</h2>
         <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:12px">
           <input id="tc-amount" type="number" value="1000" min="1" step="50"
@@ -518,6 +522,7 @@
     function loadInsights(){
       if(insightsLoaded) return; insightsLoaded=true;
       loadReports();
+      loadSavings();
       fetchJSON("/api/brief?ccy="+CUR).then(b=>{
         document.getElementById("brief-date").textContent=b.date;
         document.getElementById("brief-body").className="";
@@ -917,6 +922,41 @@
             ${i===0&&worst>r.cost?`<br><span class="pos" style="font-size:11px">saves ${money(worst-r.cost)} vs priciest</span>`:""}</span></div>`).join("");
     }
     renderTradeCost();
+
+    /* ---- ways to save (insights page): tips ranked by saving; {{n}} in text = n EUR ---- */
+    function loadSavings(){
+      fetchJSON("/api/savings").then(renderSavings)
+        .catch(()=>{ const el=document.getElementById("savings"); el.className=""; el.textContent="Unavailable."; });
+    }
+    function renderSavings(s){
+      const el=document.getElementById("savings"); el.className="";
+      const esc=t=>String(t??"").replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+      const txt=t=>esc(t).replace(/\{\{(-?[\d.]+)\}\}/g,(_,v)=>money0(+v));
+      const box="font-size:12px;color:var(--muted);background:var(--panel2);border-radius:10px;padding:8px 11px;margin-top:8px";
+      const badge=t=>!t.deadline_label?"":`<span class="tag" style="${t.urgency==="high"?"background:rgba(240,97,109,.15);color:var(--red)":
+        t.urgency==="medium"?"background:rgba(227,179,65,.15);color:#e3b341":""};white-space:nowrap">${t.deadline_label} · ${t.days_left}d</span>`;
+      const more=t=>!t.link?"":` <a href="${esc(t.link)}"${t.link.startsWith("http")?' target="_blank" rel="noopener"':""} style="color:var(--accent)">More</a>`;
+      let html="";
+      if(s.tips.length) html+=`<div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:6px">
+          <div class="stat" style="flex:1;min-width:130px"><div class="k">Could save each year</div><div class="v num pos">${money0(s.total_per_year_eur)}</div></div>
+          <div class="stat" style="flex:1;min-width:130px"><div class="k">Plus once</div><div class="v num pos">${money0(s.total_once_eur)}</div></div></div>`;
+      html+=s.tips.map(t=>`<div class="closed-row" style="display:block;padding:12px 0">
+          <div style="display:flex;justify-content:space-between;gap:10px;align-items:baseline">
+            <span style="font-weight:600">${esc(t.title)}</span>
+            <span class="num pos" style="font-weight:650;white-space:nowrap">${money0(t.saving_eur)}<span class="muted" style="font-size:11px;font-weight:400">${t.period==="year"?"/yr":" once"}</span></span></div>
+          ${badge(t)?`<div style="margin-top:3px">${badge(t)}</div>`:""}
+          <div style="font-size:13px;margin-top:5px">${txt(t.explanation)}</div>
+          ${t.items.map(i=>`<div style="font-size:12px;color:var(--muted);margin-top:3px">• ${esc(i.label)}: ${txt(i.detail)}</div>`).join("")}
+          <div style="font-size:13px;margin-top:6px"><b>What to do:</b> ${txt(t.action)}${more(t)}</div>
+          <div class="sv-how" hidden style="${box}">${txt(t.how)}<br>Uses: ${t.data_used.map(esc).join(", ")}.</div></div>`).join("");
+      if(!s.tips.length) html+='<div class="muted" style="font-size:13px">Nothing to act on right now.</div>';
+      html+=s.prompts.map(p=>`<div style="font-size:12.5px;margin-top:8px">＋ ${p.link?`<a href="${esc(p.link)}" style="color:var(--accent)">${esc(p.text)}</a>`:esc(p.text)}</div>`).join("");
+      if(s.all_clear.length) html+=`<div class="sv-how" hidden style="${box}"><b>Also checked, nothing to do:</b><br>${s.all_clear.map(txt).join("<br>")}</div>`;
+      html+=`<div class="sv-how" hidden style="${box}">${esc(s.assumptions)} UK rates for ${esc(s.tax_year)}, checked ${esc(s.rates_checked)}.</div>`;
+      if(s.note) html+=`<div class="muted" style="font-size:12px;margin-top:8px">${esc(s.note)}</div>`;
+      html+=`<div class="muted" style="font-size:11px;margin-top:10px">${esc(s.disclaimer)}</div>`;
+      el.innerHTML=html;
+    }
 
     /* ---- income projection + annual (insights page) ---- */
     function loadReports(){
