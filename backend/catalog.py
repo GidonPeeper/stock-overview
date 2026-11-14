@@ -119,7 +119,7 @@ def institution(inst: dict, aggregators: dict) -> dict:
     def rank(m: dict) -> int:
         if m["support"] not in ACTIONABLE:
             return 9
-        if m["support"] == "csv" and m.get("synthetic") and inst.get("kind") == "both":
+        if m["support"] == "csv" and inst.get("kind") in ("bank", "both"):
             return 4
         return ACTIONABLE.index(m["support"])
 
