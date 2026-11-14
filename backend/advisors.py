@@ -123,7 +123,9 @@ class Inputs:
 
 
 def residence() -> str:
-    return os.getenv("TAX_RESIDENCE", "UK").upper()
+    """Same reading as the tax-loss card (blank or unknown values mean UK)."""
+    from .harvest import residence as _shared
+    return _shared()
 
 
 # --------------------------------------------------------------- helpers
