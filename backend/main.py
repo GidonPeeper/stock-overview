@@ -493,6 +493,16 @@ def uk_tax() -> dict:
     return uktax.summary()
 
 
+@app.get("/api/harvest")
+def harvest_endpoint(min_pct: float | None = None, min_loss: float | None = None) -> dict:
+    """Tax-loss harvesting: positions outside ISAs down enough to sell for a
+    tax loss, the tax saved, the 30-day rebuy date and swaps to stay invested.
+    Thresholds default to HARVEST_MIN_LOSS_PCT / HARVEST_MIN_LOSS (10%, £250)."""
+    from . import harvest
+    rows, *_ = _open_holdings_rows()
+    return harvest.suggest(rows, min_pct=min_pct, min_loss=min_loss)
+
+
 @app.get("/api/headlines")
 def headlines_endpoint() -> list[dict]:
     """Interleaved market headlines from CNBC / MarketWatch / Yahoo Finance

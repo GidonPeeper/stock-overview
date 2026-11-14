@@ -352,6 +352,11 @@
         <div id="uktax" class="skeleton">Loading…</div>
       </div>
       <div class="card">
+        <h2>Tax-loss harvesting <span class="chip" style="padding:1px 8px;font-size:11px" onclick="document.getElementById('harvest-how').hidden=!document.getElementById('harvest-how').hidden">how it works</span></h2>
+        <div id="harvest-how" hidden style="font-size:12.5px;color:var(--muted);background:var(--panel2);border-radius:10px;padding:10px 12px;margin-bottom:10px"></div>
+        <div id="harvest" class="skeleton">Loading…</div>
+      </div>
+      <div class="card">
         <h2>Annual report — realized P/L &amp; dividends per year</h2>
         <div id="annual" class="skeleton">Loading…</div>
       </div>
@@ -962,6 +967,39 @@
       el.innerHTML=html;
     }
 
+    /* ---- tax-loss harvesting (tax amounts in the tax currency: £ in the UK) ---- */
+    let HARVEST=null;
+    function loadHarvest(){
+      fetchJSON("/api/harvest").then(h=>{ HARVEST=h; renderHarvest(); renderOpen(); })
+        .catch(()=>{ const el=document.getElementById("harvest"); el.className=""; el.textContent="Unavailable."; });
+    }
+    function harvestTag(r){
+      return HARVEST&&(HARVEST.candidates||[]).some(c=>c.isin?c.isin===r.isin:c.ticker===r.ticker)
+        ?'<span class="tag" style="background:rgba(240,97,109,.14);color:var(--red)" title="Down enough to sell for a tax loss — see Insights">harvest</span>':"";
+    }
+    function renderHarvest(){
+      const h=HARVEST, el=document.getElementById("harvest"); if(!h) return; el.className="";
+      const sym={GBP:"£",USD:"$"}[h.currency]||"";
+      const t0=n=>sym+Math.abs(Number(n)).toLocaleString("en-GB",{maximumFractionDigits:0});
+      document.getElementById("harvest-how").innerHTML=(h.how_it_works||[]).map(p=>`<p style="margin:0 0 6px">${p}</p>`).join("");
+      const foot=`<div class="muted" style="font-size:11px;margin-top:8px">${h.disclaimer||""}</div>`;
+      if(!h.applies||!h.candidates.length){ el.innerHTML=`<span class="muted">${h.message}</span>`+(h.skipped||[]).map(s=>`<div style="font-size:11px;color:var(--faint);margin-top:4px">${s.name}: ${s.reason}</div>`).join("")+foot; return; }
+      el.innerHTML=`<div style="font-size:13.5px;margin-bottom:6px">${h.headline}</div>`+
+        (h.tip?`<div class="muted" style="font-size:12.5px;margin-bottom:6px">${h.tip}</div>`:"")+
+        (h.notes||[]).map(n=>`<div class="muted" style="font-size:12px">${n}</div>`).join("")+
+        h.candidates.map(c=>`<div class="closed-row" style="display:block">
+          <div style="display:flex;justify-content:space-between;gap:10px"><span>${c.name} <span class="tag">${c.account}</span></span>
+            <span class="num neg" style="white-space:nowrap;font-weight:600">−${t0(c.loss)} <span class="sub">−${c.loss_pct}%</span></span></div>
+          <div style="font-size:12px;margin-top:2px"><span class="pos">${c.effect}</span>
+            <span class="muted">If you sell, buy the same shares back outside an ISA from <b>${c.rebuy_from}</b>.</span></div>
+          ${c.pooled_with.length?`<div style="font-size:11px;color:var(--faint)">Cost averaged with ${c.pooled_with.join(", ")} (HMRC pools them).</div>`:""}
+          ${c.warning?`<div class="neg" style="font-size:11.5px">${c.warning}</div>`:""}
+          <div style="margin-top:6px">${c.options.map(o=>`<div style="font-size:12px;padding:2px 0">
+            <span class="tag" style="${o.kind==="bed_and_isa"?"background:rgba(38,168,98,.15);color:var(--green)":""}">${o.ticker||(o.kind==="bed_and_isa"?"Bed & ISA":"idea")}</span>
+            ${o.name} <span style="color:var(--faint)">— ${o.reason}${o.corr!=null?` 1-year correlation ${o.corr}.`:""}</span></div>`).join("")}</div>
+        </div>`).join("")+foot;
+    }
+
     /* ---- data status banner ---- */
     function loadDataStatus(){
       fetchJSON("/api/datastatus").then(s=>{
@@ -1039,7 +1077,7 @@
       document.getElementById("open-rows").innerHTML=sortHoldings().map(r=>{
         const de=r.daily_eur===null?'<span class="muted">—</span>':`<span class="${cls(r.daily_eur)}">${signed(r.daily_eur)}</span><span class="sub ${cls(r.daily_pct)}">${pct(r.daily_pct)}</span>`;
         return `<div class="hrow" onclick="openDetail('${r.isin||r.ticker}')">
-          <div class="cell c-name"><div class="nm">${r.name}</div><div class="tags">${r.brokers.map(b=>`<span class="tag">${b}</span>`).join("")}</div></div>
+          <div class="cell c-name"><div class="nm">${r.name}</div><div class="tags">${r.brokers.map(b=>`<span class="tag">${b}</span>`).join("")}${harvestTag(r)}</div></div>
           <div class="cell c-spark">${sparkSVG(SPARKS[r.ticker])}</div>
           <div class="cell c-value"><span class="lbl">Value</span><span class="big num">${money0(r.value_eur)}</span></div>
           <div class="cell c-today num"><span class="lbl">Today</span>${de}</div>
@@ -1173,6 +1211,7 @@
       loadFinances();
       renderMoney();
       loadWatchlist();
+      loadHarvest();
     }
     async function refreshLive(){
       if(document.hidden||!PORT) return;
