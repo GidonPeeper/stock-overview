@@ -34,9 +34,10 @@ except ImportError:
 
 from collections import defaultdict
 
-from . import github_sync, vault
-github_sync.pull_vault()       # fetch freshest cloud vault first (no-op without token)
-_VAULT_STATE = vault.unlock()  # hydrate private data files before anything reads them
+from . import github_sync
+# fetch the cloud vault (no-op without GITHUB_TOKEN), then hydrate the private
+# data files before anything reads them
+_VAULT_STATE = github_sync.restore()
 
 from .connectors import trading212
 from .fx import BASE_CURRENCY, display_rates, to_eur
@@ -410,7 +411,7 @@ def datastatus() -> dict:
     out = datafiles.status()
     out["_t212_accounts"] = trading212.status()
     out["_vault"] = _VAULT_STATE
-    out["_sync"] = {**github_sync.last_result,
+    out["_sync"] = {**github_sync.last_result, "pending": github_sync.pending(),
                     "token": bool(os.getenv("GITHUB_TOKEN"))}
     return out
 

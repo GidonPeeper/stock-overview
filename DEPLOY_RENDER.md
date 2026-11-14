@@ -59,12 +59,31 @@ sources are live vs sample, so you can see at a glance what's missing.
 3. **Share → Add to Home Screen** → app icon. Next time, tap the password field
    and unlock with **Face ID**.
 
+## Save uploads permanently (free, do this once)
+Render wipes its disk on every restart and deploy. Without this step, every
+upload, balance and key added in the app disappears with it.
+
+1. GitHub → Settings → Developer settings → Personal access tokens →
+   **Fine-grained tokens** → Generate new token. Repository access: only this
+   repo. Permissions → Repository → **Contents: Read and write**. Pick the
+   longest expiry you are comfortable with (and renew it before it ends).
+2. Render → your service → Environment → add `GITHUB_TOKEN` = the token. Save
+   (the service restarts).
+3. In the app, Settings → Cloud persistence should say **Cloud sync ON**.
+
+From then on, every change is encrypted (with `DATA_KEY`/`DASHBOARD_SECRET`)
+and stored on the `data-sync` branch, and loaded back on every start. The
+branch keeps one commit, replaced on each save, so the repo does not grow.
+If GitHub cannot be reached at start-up, saving pauses (so older data never
+overwrites newer data) and resumes once it can.
+
 ## Updating your data later
-Easiest: open the app's **Settings** page on your phone and upload the fresh
+Open the app's **Settings** page on your phone or laptop and upload the fresh
 exports — the DeGiro statement PDF, the Trade Republic transaction CSV, and
 (without an API key) the Trading 212 activity-statement PDF. They are converted
-and validated on the server and, with `GITHUB_TOKEN` set, re-encrypted into the
-vault automatically. Trading 212 stays live automatically when the API key is set.
+and validated on the server and saved as above. Each upload replaces the
+previous one for that broker, so export all dates each time. Trading 212 stays
+live automatically when the API key is set.
 
 ## Speed: sleep, keep-alive and caching
 
@@ -77,13 +96,16 @@ out clears the saved numbers.)
 **Keep it awake (optional, free).** Render sleeps a free service after 15
 minutes without traffic. A ping every 10 minutes stops that:
 
+- *External monitor* (simplest, more punctual): a free account at
+  cron-job.org → Create cronjob → URL
+  `https://<your-service>.onrender.com/healthz` → every 10 minutes → Create.
+  UptimeRobot (free, every 5 minutes) works the same way.
 - *GitHub Actions* (included, off by default): in the repo's Settings →
   Secrets and variables → Actions, add the secret `KEEPALIVE_URL` =
   `https://<your-service>.onrender.com/healthz` and the variable
   `KEEPALIVE` = `on`. See `.github/workflows/keep-alive.yml`. GitHub sometimes
   starts scheduled runs late, so the service may still sleep now and then.
-- *External monitor* (more punctual): a free HTTP monitor such as UptimeRobot
-  or cron-job.org, every 5–10 minutes, on the same `/healthz` URL.
+  Actions do not run while the GitHub account has a billing problem.
 
 `/healthz` needs no login and returns no data. Mind the budget: Render gives
 750 free instance hours per workspace per month, and one service running all
