@@ -493,6 +493,16 @@ def uk_tax() -> dict:
     return uktax.summary()
 
 
+@app.get("/api/savings")
+def savings() -> dict:
+    """Ways to save: money-saving tips ranked by size (ISA and CGT allowances,
+    dividend tax, fund fees, pension relief, loans vs cash). See advisors.py."""
+    from . import advisors
+
+    rows, *_ = _open_holdings_rows()
+    return advisors.collect(rows, demo=DEMO_MODE)
+
+
 @app.get("/api/headlines")
 def headlines_endpoint() -> list[dict]:
     """Interleaved market headlines from CNBC / MarketWatch / Yahoo Finance

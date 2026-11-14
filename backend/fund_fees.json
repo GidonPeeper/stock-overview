@@ -1,0 +1,49 @@
+{
+  "_note": "Curated: funds that have a cheaper fund tracking the same (or a very close) index. ter_pct = ongoing charge per year. Each ISIN, TER and London ticker was checked on justETF (https://www.justetf.com/uk/etf-profile.html?isin=<ISIN>) and each yahoo ticker priced on Yahoo Finance on 2026-11-14. Fees change: re-check when you edit this file.",
+  "checked": "2026-11-14",
+  "groups": [
+    {
+      "index": "India",
+      "funds": [
+        {"isin": "IE00BZCQB185", "name": "iShares MSCI India UCITS ETF (Acc)", "ter_pct": 0.65, "tickers": ["QDV5.DE", "IIND.L", "NDIA.L"]}
+      ],
+      "cheaper": {"isin": "IE00BHZRQZ17", "name": "Franklin FTSE India UCITS ETF", "ter_pct": 0.19, "yahoo": "FRIN.L",
+                  "note": "tracks FTSE India 30/18 Capped instead of MSCI India: a close match, not identical"}
+    },
+    {
+      "index": "Nasdaq-100",
+      "funds": [
+        {"isin": "IE0032077012", "name": "Invesco EQQQ Nasdaq-100 UCITS ETF", "ter_pct": 0.30, "tickers": ["EQQQ.L", "EQQU.L"]},
+        {"isin": "IE00B53SZB19", "name": "iShares Nasdaq 100 UCITS ETF (Acc)", "ter_pct": 0.30, "tickers": ["CNX1.L", "CNDX.L", "SXRV.DE"]}
+      ],
+      "cheaper": {"isin": "IE00BMFKG444", "name": "Xtrackers Nasdaq 100 UCITS ETF 1C", "ter_pct": 0.20, "yahoo": "XNAQ.L",
+                  "note": "same index"}
+    },
+    {
+      "index": "MSCI World",
+      "funds": [
+        {"isin": "IE00B4L5Y983", "name": "iShares Core MSCI World UCITS ETF (Acc)", "ter_pct": 0.20, "tickers": ["SWDA.L", "IWDA.L", "IWDA.AS", "EUNL.DE"]},
+        {"isin": "IE00B4X9L533", "name": "HSBC MSCI World UCITS ETF", "ter_pct": 0.15, "tickers": ["HMWO.L", "HMWD.L"]}
+      ],
+      "cheaper": {"isin": "IE00BFY0GT14", "name": "SPDR MSCI World UCITS ETF (Acc)", "ter_pct": 0.12, "yahoo": "SWLD.L",
+                  "note": "same index"}
+    },
+    {
+      "index": "Global (all countries)",
+      "funds": [
+        {"isin": "IE00B6R52259", "name": "iShares MSCI ACWI UCITS ETF (Acc)", "ter_pct": 0.20, "tickers": ["SSAC.L", "ISAC.L"]}
+      ],
+      "cheaper": {"isin": "IE00BK5BQT80", "name": "Vanguard FTSE All-World UCITS ETF (Acc)", "ter_pct": 0.14, "yahoo": "VWRP.L",
+                  "note": "tracks FTSE All-World instead of MSCI ACWI: a close match, not identical"}
+    },
+    {
+      "index": "S&P 500",
+      "funds": [
+        {"isin": "IE00B5BMR087", "name": "iShares Core S&P 500 UCITS ETF (Acc)", "ter_pct": 0.07, "tickers": ["CSPX.L", "SXR8.DE"]},
+        {"isin": "IE00B3XXRP09", "name": "Vanguard S&P 500 UCITS ETF", "ter_pct": 0.07, "tickers": ["VUSA.L", "VUSD.L"]}
+      ],
+      "cheaper": {"isin": "IE00B3YCGJ38", "name": "Invesco S&P 500 UCITS ETF (Acc)", "ter_pct": 0.05, "yahoo": "SPXP.L",
+                  "note": "same index, but synthetic: it gets the index return through swaps instead of holding the shares"}
+    }
+  ]
+}
