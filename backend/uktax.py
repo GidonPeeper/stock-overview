@@ -21,7 +21,7 @@ from __future__ import annotations
 import os
 from datetime import date, datetime, timedelta
 
-from . import cache, sources
+from . import cache, connections, sources
 from .connectors import trading212
 from .fx import from_eur
 from .positions import realized_events
@@ -124,11 +124,11 @@ def summary(today: date | None = None) -> dict:
     # Dividends and interest, outside ISAs only (Trading 212 per account;
     # DeGiro/Trade Republic income is not dated per tax year here).
     div = interest = 0.0
-    for x in trading212.get_dividends():
+    for x in trading212.get_dividends() + connections.get_dividends():
         d = _day(x.get("date", ""))
         if not x.get("isa") and d and since <= d <= end:
             div += _gbp(x["amount_eur"])
-    for x in trading212.get_interest():
+    for x in trading212.get_interest() + connections.get_interest():
         d = _day(x.get("date", ""))
         if not x.get("isa") and d and since <= d <= end:
             interest += _gbp(x["amount_eur"])

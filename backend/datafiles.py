@@ -74,6 +74,11 @@ def status() -> dict:
         "expected": "T212_API_KEY + T212_API_SECRET (or T212_<NAME>_API_KEY/SECRET per account), "
                     "or trading212_statement.json",
     }
+    from .connections import load_all  # accounts added in Settings ("Add an account")
+
+    conns = [c["label"] for c in load_all()]
+    out["connections"] = {"real": bool(conns), "accounts": conns, "path": "connections.json",
+                          "expected": "accounts added in Settings → Add an account"}
     seen: dict[str, list[str]] = {}
     for d in _SEARCH_DIRS:
         if d is None or not d.is_dir():
