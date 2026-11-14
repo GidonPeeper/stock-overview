@@ -1,11 +1,15 @@
 """Extra market data for the pro dashboard: index snapshot, per-holding
 sparklines, and news headlines. All fetched from yfinance and cached in memory
 so they don't slow down the main dashboard (the frontend loads them lazily).
+Index levels, sparklines and the benchmark are served stale-while-revalidate
+(see backend/cache.py): once fetched, a request never waits on Yahoo again.
 """
 
 from __future__ import annotations
 
 import time
+
+from . import cache
 
 # Major indices shown in the CNBC-style ticker strip.
 _INDEX_SYMBOLS = [
@@ -14,7 +18,6 @@ _INDEX_SYMBOLS = [
     ("GBP/USD", "GBPUSD=X"), ("GBP/EUR", "GBPEUR=X"), ("EUR/USD", "EURUSD=X"),
 ]
 
-_idx_cache: tuple[list[dict], float] | None = None
 _IDX_TTL = 300  # 5 min
 
 _spark_cache: dict[str, tuple[list[float], float]] = {}
@@ -25,10 +28,13 @@ _NEWS_TTL = 1800
 
 
 def indices() -> list[dict]:
-    global _idx_cache
-    now = time.time()
-    if _idx_cache and now - _idx_cache[1] < _IDX_TTL:
-        return _idx_cache[0]
+    try:
+        return cache.get("market.indices", _indices, ttl=_IDX_TTL, stale=6 * 3600, data=False)
+    except Exception:
+        return []
+
+
+def _indices() -> list[dict]:
     out: list[dict] = []
     try:
         import yfinance as yf
@@ -49,14 +55,24 @@ def indices() -> list[dict]:
                 continue
     except Exception:
         pass
-    if out:
-        _idx_cache = (out, now)
+    if not out:
+        raise ValueError("no index data")  # keep the last good snapshot
     return out
 
 
 def sparklines(tickers: list[str]) -> dict[str, list[float]]:
     """~1 month of daily closes per ticker (for row sparklines), batched + cached."""
     tickers = sorted(set(t for t in tickers if t))
+    if not tickers:
+        return {}
+    try:
+        return cache.get("market.sparklines:" + ",".join(tickers), lambda: _sparklines(tickers),
+                         ttl=_SPARK_TTL, stale=24 * 3600, data=False)
+    except Exception:
+        return {}
+
+
+def _sparklines(tickers: list[str]) -> dict[str, list[float]]:
     now = time.time()
     out: dict[str, list[float]] = {}
     stale: list[str] = []
@@ -84,6 +100,8 @@ def sparklines(tickers: list[str]) -> dict[str, list[float]]:
                     continue
         except Exception:
             pass
+    if not out:
+        raise ValueError("no sparkline data")
     return out
 
 
@@ -117,16 +135,17 @@ def ticker_history(ticker: str, rng: str) -> list[float]:
     return vals
 
 
-_bench_cache: tuple[dict[str, float], float] | None = None
-
-
 def benchmark(start_iso: str, symbol: str = "^GSPC") -> dict[str, float]:
     """Monthly closes for a benchmark index since `start_iso`, keyed YYYY-MM —
     used to overlay 'what if this had tracked the S&P 500' on the value chart."""
-    global _bench_cache
-    now = time.time()
-    if _bench_cache and now - _bench_cache[1] < 3600:
-        return _bench_cache[0]
+    try:
+        return cache.get(f"market.benchmark:{symbol}:{start_iso}",
+                         lambda: _benchmark(start_iso, symbol), ttl=3600, stale=24 * 3600, data=False)
+    except Exception:
+        return {}
+
+
+def _benchmark(start_iso: str, symbol: str) -> dict[str, float]:
     out: dict[str, float] = {}
     try:
         import yfinance as yf
@@ -138,8 +157,8 @@ def benchmark(start_iso: str, symbol: str = "^GSPC") -> dict[str, float]:
             out[ts.strftime("%Y-%m")] = round(float(val), 2)
     except Exception:
         pass
-    if out:
-        _bench_cache = (out, now)
+    if not out:
+        raise ValueError("no benchmark data")
     return out
 
 

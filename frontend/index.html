@@ -10,10 +10,13 @@
   <meta name="apple-mobile-web-app-title" content="Stocks" />
   <meta name="theme-color" content="#0b0e11" />
   <link rel="apple-touch-icon" href="/icon-180.png" />
-  <script src="https://cdn.jsdelivr.net/npm/chart.js@4"></script>
+  <!-- Neither blocks the first paint: Chart.js is deferred (exact version, so
+       browsers cache it for a year) and the font swaps in when it arrives. -->
+  <script defer src="https://cdn.jsdelivr.net/npm/chart.js@4.6.1/dist/chart.umd.min.js"></script>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" media="print" onload="this.media='all'">
+  <noscript><link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet"></noscript>
   <style>
     :root{
       --bg:#0a0d10; --panel:#12171e; --panel2:#1a212b; --panel3:#222b36;
@@ -47,6 +50,9 @@
     .live{ font-size:11px; color:var(--muted); display:flex; align-items:center; gap:5px; }
     .live .dot{ width:7px; height:7px; border-radius:50%; background:var(--green); animation:pulse 2s infinite; }
     @keyframes pulse{ 0%,100%{opacity:1} 50%{opacity:.25} }
+    .live .dot.amber{ background:#e3b341; }
+    /* showing the last saved numbers while fresh ones load */
+    .is-stale #v-value, .is-stale #v-today, .is-stale #p-num{ opacity:.55; transition:opacity .3s; }
     .iconbtn{ background:var(--panel2); border:1px solid var(--border); color:var(--muted); width:36px; height:36px; border-radius:11px; cursor:pointer; font-size:15px; display:grid; place-items:center; transition:background .15s,color .15s; }
     .iconbtn:hover{ color:var(--text); } .iconbtn:active{ background:var(--panel3); }
 
@@ -169,7 +175,7 @@
         <button class="iconbtn" id="ccybtn" onclick="toggleCcy()" title="Show amounts in pounds / euros">€</button>
         <button class="iconbtn" id="themebtn" onclick="toggleTheme()" title="Light / dark">☀</button>
         <a class="iconbtn" href="/settings" title="Data sources" style="text-decoration:none">⚙</a>
-        <button class="iconbtn" onclick="loadAll(true)" title="Refresh">↻</button>
+        <button class="iconbtn" onclick="loadAll()" title="Refresh">↻</button>
       </div>
     </header>
     <div id="datastatus" hidden style="background:#3a2d12;color:#e3b341;border-radius:12px;padding:10px 14px;font-size:13px;margin-bottom:14px"></div>
@@ -450,7 +456,19 @@
     }
     let PORT,PROFIT,HISTORY=[],CLOSED,SPARKS={},CASH=null,PROJ=null,sel="total_return",chartMode="profit",sortBy="value";
     let chart,sc,bc,dchart,detailTicker=null,detailRange="1mo",BENCH=null,benchmarkOn=false;
-    async function fetchJSON(url){ const r=await fetch(url); if(!r.ok) throw new Error(url+" "+r.status); return r.json(); }
+    async function fetchJSON(url){
+      const r=await fetch(url);
+      if(r.status===401){ location.href="/login"; const e=new Error("login required"); e.auth=true; throw e; }
+      if(!r.ok) throw new Error(url+" "+r.status);
+      return r.json();   // a host's "waking up" page is not JSON: throws, so callers retry
+    }
+    /* ---- last good data, kept on this device so the next visit paints at once ---- */
+    const SNAP_KEY="so.snap.v1";
+    function loadSnap(){ try{ return JSON.parse(localStorage.getItem(SNAP_KEY)||"null"); }catch(e){ return null; } }
+    function saveSnap(){
+      if(!PORT) return;
+      try{ localStorage.setItem(SNAP_KEY,JSON.stringify({at:Date.now(),port:PORT,closed:CLOSED,history:HISTORY,profit:PROFIT})); }catch(e){}
+    }
     const PALETTE=["#4c8dff","#26a862","#e3b341","#f0616d","#a371f7","#3fb950","#db61a2","#f0883e","#58a6ff","#bc8cff","#56d364","#8b98a9"];
     const VIEWS=[
       ["total_return","Total return", p=>p.totals.total_return, "Capital gains + dividends & interest — matches your broker apps"],
@@ -472,12 +490,13 @@
       return `<svg class="spark ${cls2||''}" viewBox="0 0 ${w} ${h}" width="${w}" height="${h}" preserveAspectRatio="none"><polyline points="${pts}" fill="none" stroke="${col}" stroke-width="1.7"/></svg>`;
     }
 
-    let insightsLoaded=false, anaLoaded=false;
+    let insightsLoaded=false, anaLoaded=false, watchLoaded=false;
     function showPage(name){
       document.querySelectorAll(".page").forEach(p=>p.classList.toggle("active",p.id==="page-"+name));
       document.querySelectorAll(".tabbar button").forEach(b=>b.classList.toggle("active",b.dataset.page===name));
       if(name==="performance"){ if(HISTORY.length) renderChart(); loadAnalytics(); }
       if(name==="insights"){ loadInsights(); }
+      if(name==="holdings"&&!watchLoaded){ watchLoaded=true; loadWatchlist(); }
       window.scrollTo(0,0);
     }
 
@@ -1023,7 +1042,7 @@
         options:{cutout:"62%",plugins:{legend:{position:"right",labels:{color:tc.legend,boxWidth:11,padding:7,font:{size:11}}},
           tooltip:{callbacks:{label:c=>`${c.label}: ${money0(c.parsed)} (${(c.parsed/tot*100).toFixed(1)}%)`}}}}});
     }
-    function renderAllocation(){ sc=doughnut("sector-chart",PORT.by_sector,"sector",sc); bc=doughnut("broker-chart",PORT.by_broker,"broker",bc); }
+    function renderAllocation(){ if(!window.Chart) return; sc=doughnut("sector-chart",PORT.by_sector,"sector",sc); bc=doughnut("broker-chart",PORT.by_broker,"broker",bc); }
     function renderTicker(idx){
       document.getElementById("ticker").innerHTML=idx.map(i=>`<div class="tk">
         <div class="tn">${i.name}</div><div class="tp num">${i.price.toLocaleString("en-US")}</div>
@@ -1114,7 +1133,7 @@
       document.getElementById("m-profit").classList.toggle("active",m==="profit"); document.getElementById("m-value").classList.toggle("active",m==="value");
       document.getElementById("chart-title").textContent=(m==="profit"?"Profit":"Value")+" since inception"; renderChart(); }
     function renderChart(){
-      const h=HISTORY; if(!h.length) return; const profit=chartMode==="profit";
+      const h=HISTORY; if(!h.length||!window.Chart) return; const profit=chartMode==="profit";
       const labels=h.map(d=>d.day),vals=h.map(d=>cv(profit?d.total_profit:d.total_value));
       const up=vals[vals.length-1]>=0,color=profit?(up?"#26a862":"#f0616d"):"#4c8dff",ctx=document.getElementById("chart");
       if(chart) chart.destroy();
@@ -1150,37 +1169,78 @@
       const items=[["Today",PORT.totals.daily]]; [["Week","week"],["Month","month"],["Year","year"]].forEach(([lab,k])=>items.push([lab,p[k]===undefined?null:p[k]]));
       el.innerHTML=items.map(([k,v])=>`<div class="stat"><div class="k">${k}</div><div class="v num ${v==null?'muted':cls(v)}">${v==null?'…':signed(v)}</div></div>`).join("");
     }
-    function setUpdated(){ const el=document.getElementById("live"); if(el) el.innerHTML=`<span class="dot"></span>Live · ${new Date().toLocaleTimeString("en-GB")}`; }
+    const hhmm=t=>new Date(t).toLocaleTimeString("en-GB",{hour:"2-digit",minute:"2-digit"});
+    function setLive(html){ const el=document.getElementById("live"); if(el) el.innerHTML=html; }
+    function setUpdated(refreshing){
+      document.body.classList.remove("is-stale");
+      setLive(refreshing ? `<span class="dot amber"></span>Updating prices… · ${hhmm(Date.now())}`
+                         : `<span class="dot"></span>Live · ${new Date().toLocaleTimeString("en-GB")}`);
+    }
+    function setStale(at){   // showing the numbers saved on this device last time
+      document.body.classList.add("is-stale");
+      const d=new Date(at), today=d.toDateString()===new Date().toDateString();
+      setLive(`<span class="dot amber"></span>Updating… · showing ${today?hhmm(at):d.toLocaleDateString("en-GB",{day:"numeric",month:"short"})+" "+hhmm(at)}`);
+    }
 
-    async function loadAll(retry){
-      retry=retry||0; renderChips();
-      try{
-        const [p,c,h]=await Promise.all([fetchJSON("/api/portfolio"),fetchJSON("/api/closed"),fetchJSON("/api/history")]);
-        PORT=p; CLOSED=c; HISTORY=h; setFX(p.fx);
-        renderHero(); renderProfit(); renderMovers(); renderOpen(); renderClosed(); renderAllocation(); renderChart(); renderPeriods(); setUpdated();
-      }catch(e){
-        document.getElementById("p-desc").textContent="Loading… the server may be waking up (free hosting).";
-        if(retry<6) setTimeout(()=>loadAll(retry+1),5000);
+    // One /api/portfolio request at a time, shared by the first load and the live refresh.
+    let portReq=null, quickPolls=0;
+    function getPortfolio(){ return portReq||(portReq=fetchJSON("/api/portfolio").finally(()=>{ portReq=null; })); }
+    function applyPortfolio(p,full){
+      PORT=p; setFX(p.fx);
+      renderHero(); renderProfit(); renderMovers(); renderOpen(); renderPeriods();
+      if(full){ renderAllocation(); renderMoney(); }
+      const refreshing=!!(p.quotes&&p.quotes.refreshing);
+      setUpdated(refreshing);
+      saveSnap();
+      // prices were a little old and are being refreshed on the server: ask again shortly
+      if(refreshing&&quickPolls<5){ quickPolls++; setTimeout(refreshLive,4000); } else if(!refreshing) quickPolls=0;
+    }
+
+    let firstLoadDone=false;
+    async function loadAll(attempt){
+      attempt=attempt||0; renderChips();
+      let p;
+      try{ p=await getPortfolio(); }
+      catch(e){
+        if(e.auth) return;
+        document.getElementById("p-desc").textContent=(PORT?"Updating":"Loading")+"… the server may be waking up (free hosting).";
+        if(attempt<40) setTimeout(()=>loadAll(attempt+1),Math.min(2000+attempt*1000,6000));  // keep trying ~4 min
         return;
       }
-      PROFIT=null;
-      fetchJSON("/api/profit").then(d=>{ PROFIT=d; renderProfit(); renderPeriods(); }).catch(()=>{});
+      applyPortfolio(p,true);
+      // Not needed for the first screen, so they never hold it up.
+      fetchJSON("/api/closed").then(c=>{ CLOSED=c; renderClosed(); saveSnap(); }).catch(()=>{});
+      fetchJSON("/api/history").then(h=>{ HISTORY=h; renderChart(); saveSnap(); }).catch(()=>{});
+      fetchJSON("/api/profit").then(d=>{ PROFIT=d; renderProfit(); renderPeriods(); saveSnap(); }).catch(()=>{});
       fetchJSON("/api/indices").then(renderTicker).catch(()=>{});
       fetchJSON("/api/sparklines").then(s=>{ SPARKS=s; renderOpen(); renderMovers(); }).catch(()=>{});
       loadDataStatus();
       loadHealth();
       loadCash();
       loadFinances();
-      renderMoney();
-      loadWatchlist();
+      if(watchLoaded) loadWatchlist();
+      firstLoadDone=true;
     }
     async function refreshLive(){
-      if(document.hidden||!PORT) return;
-      try{ const p=await fetchJSON("/api/portfolio"); PORT=p; setFX(p.fx); renderHero(); renderProfit(); renderMovers(); renderOpen(); setUpdated(); }catch(e){}
+      if(document.hidden||!firstLoadDone) return;
+      try{ applyPortfolio(await getPortfolio(),false); }catch(e){}
     }
-    loadAll();
-    setInterval(refreshLive,30000);
-    document.addEventListener("visibilitychange",()=>{ if(!document.hidden) refreshLive(); });
+    function boot(){
+      renderChips();
+      const s=loadSnap();
+      if(s&&s.port){   // paint the last saved numbers at once, marked "updating…"
+        PORT=s.port; CLOSED=s.closed||null; HISTORY=s.history||[]; PROFIT=s.profit||null; setFX(PORT.fx);
+        renderHero(); renderProfit(); renderMovers(); renderOpen(); renderClosed(); renderAllocation(); renderChart(); renderPeriods();
+        setStale(s.at);
+      }
+      loadAll();
+      setInterval(refreshLive,30000);
+      document.addEventListener("visibilitychange",()=>{ if(!document.hidden) refreshLive(); });
+    }
+    // Chart.js is deferred; deferred scripts have run by DOMContentLoaded.
+    if(document.readyState==="loading") document.addEventListener("DOMContentLoaded",boot); else boot();
+    // Opens the app from cache while the server wakes up (see /sw.js).
+    if("serviceWorker" in navigator) addEventListener("load",()=>navigator.serviceWorker.register("/sw.js").catch(()=>{}));
   </script>
 </body>
 </html>

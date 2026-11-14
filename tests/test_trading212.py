@@ -9,7 +9,7 @@ from unittest import mock
 
 import requests
 
-from backend import fx
+from backend import cache, fx
 from backend.connectors import trading212 as t212
 from backend.positions import compute_positions, realized_events
 
@@ -87,6 +87,7 @@ ENV = {"T212_ISA_API_KEY": "k1", "T212_ISA_API_SECRET": "s1",
 class Base(unittest.TestCase):
     def setUp(self):
         clear_caches()
+        cache.clear()
         p = mock.patch.object(fx, "_live_rates", return_value=RATES)
         p.start()
         self.addCleanup(p.stop)

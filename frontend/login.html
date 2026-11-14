@@ -13,6 +13,8 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
   <script>document.documentElement.dataset.theme=localStorage.getItem("theme")||(matchMedia("(prefers-color-scheme: light)").matches?"light":"dark");</script>
+  <!-- signed out: forget the dashboard numbers saved on this device -->
+  <script>try{ localStorage.removeItem("so.snap.v1"); }catch(e){}</script>
   <style>
     :root { --bg:#0a0d10; --panel:#12171e; --panel2:#1a212b; --text:#eef2f6; --muted:#8b98a9; --accent:#4c8dff; }
     :root[data-theme="light"]{ --bg:#f4f6f9; --panel:#ffffff; --panel2:#eef1f5; --text:#17202b; --muted:#5b6673; --accent:#2f6fed; }
