@@ -75,10 +75,12 @@ def compute_positions(trades: list[Trade]) -> dict[str, Position]:
     return positions
 
 
-def realized_events(trades: list[Trade]) -> list[dict]:
+def realized_events(trades: list[Trade], accounts: dict[int, str] | None = None) -> list[dict]:
     """One entry per sell: the P/L it locked in against the running average
     cost, with its date. Same method as compute_positions, kept per event so
-    gains can be grouped by (tax) year. Expects one currency per call."""
+    gains can be grouped by (tax) year. Expects one currency per call.
+    `accounts` ({id(trade): account name}) lets trades from several accounts
+    share one pool and still says which account each sale came from."""
     pools: dict[str, list[float]] = {}  # key -> [quantity, cost]
     out: list[dict] = []
     for t in sorted(trades, key=lambda x: x.when):
@@ -91,8 +93,11 @@ def realized_events(trades: list[Trade]) -> list[dict]:
             continue
         sold = min(t.quantity, q)
         avg = c / q
-        out.append({"when": t.when, "key": t.key, "name": t.name,
-                    "quantity": sold, "proceeds": t.amount,
-                    "realized": t.amount - avg * sold, "currency": t.currency})
+        ev = {"when": t.when, "key": t.key, "name": t.name,
+              "quantity": sold, "proceeds": t.amount,
+              "realized": t.amount - avg * sold, "currency": t.currency}
+        if accounts is not None:
+            ev["account"] = accounts.get(id(t), "")
+        out.append(ev)
         pools[t.key] = [q - t.quantity, c - avg * sold]
     return out

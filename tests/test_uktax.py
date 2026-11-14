@@ -69,6 +69,17 @@ class SummaryTest(unittest.TestCase):
             s = uktax.summary(today=date(2026, 11, 21))
         self.assertTrue(s["recent_sales"][0]["rebought"])
 
+    def test_one_pool_across_taxable_accounts(self):
+        # HMRC pools the same share across brokers: per account this sale would
+        # be a £200 gain, pooled with the dearer DeGiro shares it is a £300 loss.
+        invest = [t("2026-05-01", "BUY", 10, 1000), t("2026-10-01", "SELL", 10, 1200)]
+        degiro = [t("2026-06-01", "BUY", 10, 2000)]
+        with mock.patch.object(sources, "trade_sources", return_value={
+                "T212 Invest": (False, lambda: invest), "DeGiro": (False, lambda: degiro)}):
+            s = uktax.summary(today=date(2026, 10, 10))
+        self.assertEqual((s["gains_gbp"], s["losses_gbp"]), (0, -300.0))
+        self.assertEqual(s["recent_sales"][0]["account"], "T212 Invest")
+
     def test_resident_from_trims_window(self):
         with mock.patch.dict("os.environ", {"UK_RESIDENT_FROM": "2026-11-06"}):
             s = uktax.summary(today=date(2026, 11, 6))

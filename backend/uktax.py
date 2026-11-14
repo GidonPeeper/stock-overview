@@ -89,29 +89,36 @@ def summary(today: date | None = None) -> dict:
             if t.side == "BUY" and d:
                 buys_by_key.setdefault(t.key, []).append(d)
 
+    # One pool per share across all taxable accounts: HMRC's section 104 pool
+    # is per person, not per broker (helpsheet HS284).
+    pooled, owner = [], {}
     for name, trades in taxable.items():
-        for ev in realized_events(sources.in_eur(trades)):
-            d = _day(ev["when"])
-            if not d:
-                continue
-            gain = _gbp(ev["realized"])
-            if since <= d <= end:
-                disposals += 1
-                if gain >= 0:
-                    gains += gain
-                else:
-                    losses += gain
-            if today - timedelta(days=BED_AND_BREAKFAST_DAYS) <= d <= today:
-                window_end = d + timedelta(days=BED_AND_BREAKFAST_DAYS)
-                # same-day buys are matched too (same-day rule)
-                rebought = [b for b in buys_by_key.get(ev["key"], []) if d <= b <= window_end]
-                recent.append({
-                    "name": ev["name"], "account": name, "sold_on": d.isoformat(),
-                    "gain_gbp": gain,
-                    # first day a repurchase in a taxable account is no longer matched
-                    "rebuy_from": (window_end + timedelta(days=1)).isoformat(),
-                    "rebought": bool(rebought),
-                })
+        for t in sources.in_eur(trades):
+            pooled.append(t)
+            owner[id(t)] = name
+    for ev in realized_events(pooled, owner):
+        name = ev["account"]
+        d = _day(ev["when"])
+        if not d:
+            continue
+        gain = _gbp(ev["realized"])
+        if since <= d <= end:
+            disposals += 1
+            if gain >= 0:
+                gains += gain
+            else:
+                losses += gain
+        if today - timedelta(days=BED_AND_BREAKFAST_DAYS) <= d <= today:
+            window_end = d + timedelta(days=BED_AND_BREAKFAST_DAYS)
+            # same-day buys are matched too (same-day rule)
+            rebought = [b for b in buys_by_key.get(ev["key"], []) if d <= b <= window_end]
+            recent.append({
+                "name": ev["name"], "account": name, "sold_on": d.isoformat(),
+                "gain_gbp": gain,
+                # first day a repurchase in a taxable account is no longer matched
+                "rebuy_from": (window_end + timedelta(days=1)).isoformat(),
+                "rebought": bool(rebought),
+            })
     recent.sort(key=lambda r: r["sold_on"], reverse=True)
 
     # Dividends and interest, outside ISAs only (Trading 212 per account;
@@ -157,8 +164,8 @@ def summary(today: date | None = None) -> dict:
         },
         "recent_sales": recent,
         "method": (
-            "Taxable accounts only (ISAs left out). Gains use each account's "
-            "average cost (section 104 pool) at today's GBP rate; same-day and "
+            "Taxable accounts only (ISAs left out). Gains use one average cost "
+            "per share across all taxable accounts (section 104 pool) at today's GBP rate; same-day and "
             "30-day matching are not applied. ISA allowance counts deposits "
             "into ISA accounts this tax year, not transfers. Facts, not a tax "
             "calculation — check your Self Assessment."

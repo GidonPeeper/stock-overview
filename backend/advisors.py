@@ -389,7 +389,9 @@ def check_cgt_allowance(c: _Ctx) -> None:
                    "gain is never taxed. The allowance doesn't carry over.")
     action = ("Before 5 April, sell the amounts below. Buy back inside your ISA straight away "
               "(this is the Bed & ISA tip), or outside it after 30 days: buying the same "
-              "share back within 30 days cancels the effect.")
+              "share back within 30 days cancels the effect. Losses sold in the same tax "
+              "year cancel these gains first, so sell losing positions (see Tax-loss "
+              "harvesting) after 5 April.")
     how = (f"{_m(use)} of gain (allowance left, or all your gains if less) × CGT "
            f"{c.rate_note('cgt')}. One-off. Gains use each broker's average cost at today's "
            "exchange rate, so HMRC's figure can differ a little.")
@@ -828,22 +830,24 @@ def _foreign_gains_gbp(since: date, end: date) -> float:
     from . import sources
     from .positions import realized_events
 
-    total = 0.0
+    # One pool per share across taxable accounts, as in uktax.summary().
+    pooled = []
     for _, (is_isa, get_trades) in sources.trade_sources().items():
         if is_isa:
             continue
         try:
-            events = realized_events(sources.in_eur(get_trades()))
+            pooled.extend(sources.in_eur(get_trades()))
         except Exception:
             continue
-        for ev in events:
-            key = (ev.get("key") or "").upper()
-            try:
-                d = date.fromisoformat(ev["when"][:10])
-            except (ValueError, TypeError):
-                continue
-            if since <= d <= end and is_valid_isin(key) and not key.startswith("GB"):
-                total += _gbp(ev["realized"])
+    total = 0.0
+    for ev in realized_events(pooled):
+        key = (ev.get("key") or "").upper()
+        try:
+            d = date.fromisoformat(ev["when"][:10])
+        except (ValueError, TypeError):
+            continue
+        if since <= d <= end and is_valid_isin(key) and not key.startswith("GB"):
+            total += _gbp(ev["realized"])
     return round(total, 2)
 
 
