@@ -68,8 +68,9 @@ def encrypt() -> list[str]:
     return sorted(bundled)
 
 
-def unlock() -> dict:
-    """Decrypt vault contents into data/ on boot. Existing real files win.
+def unlock(replace_older_than: float | None = None) -> dict:
+    """Decrypt vault contents into data/ on boot. Existing real files win,
+    unless they are older than `replace_older_than` (a timestamp).
     Never raises — a wrong key just means the app stays on sample data."""
     result = {"present": VAULT.exists(), "unlocked": [], "skipped": [], "error": None}
     if not VAULT.exists():
@@ -85,7 +86,8 @@ def unlock() -> dict:
             if name not in FILES:
                 continue
             dest = DATA_DIR / name
-            if dest.exists():
+            if dest.exists() and (replace_older_than is None
+                                  or dest.stat().st_mtime >= replace_older_than):
                 result["skipped"].append(name)   # a newer upload/local file wins
                 continue
             dest.write_bytes(f.decrypt(base64.b64decode(enc)))
