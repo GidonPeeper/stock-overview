@@ -96,11 +96,28 @@ def by_year() -> dict[str, float]:
         for r in json.loads(f.read_text()).get("income", []):
             add(str(r.get("date", ""))[:4], float(r.get("amount_eur", 0)))
 
-    # Trading 212: dividends + interest, every account
-    for x in trading212.get_dividends() + trading212.get_interest():
+    # Trading 212: dividends + interest, every account; then accounts added in Settings
+    for x in trading212.get_dividends() + trading212.get_interest() + _connections_income():
         add(str(x.get("date", ""))[:4], float(x["amount_eur"]))
 
     return years
+
+
+def _connections_income() -> list[dict]:
+    """Dividends + interest from accounts added in Settings (e.g. IBKR)."""
+    try:
+        from . import connections
+        return connections.get_dividends() + connections.get_interest()
+    except Exception:
+        return []
+
+
+def _connections_by_account() -> dict[str, dict]:
+    try:
+        from . import connections
+        return connections.income_by_account()
+    except Exception:
+        return {}
 
 
 # Cached (backend/cache.py): recomputed after uploads/edits, otherwise
@@ -111,6 +128,7 @@ def summary() -> dict:
         **_trading212(),
         "DeGiro": _degiro(),
         "Trade Republic": _trade_republic(),
+        **_connections_by_account(),
     }
     dividends = round(sum(b["dividends"] for b in by_broker.values()), 2)
     interest = round(sum(b["interest"] for b in by_broker.values()), 2)

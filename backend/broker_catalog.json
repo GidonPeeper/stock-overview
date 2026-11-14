@@ -1,0 +1,3446 @@
+{
+  "version": 1,
+  "researched_on": "2026-11-14",
+  "aggregators": [
+    {
+      "id": "gocardless",
+      "name": "GoCardless Bank Account Data (ex-Nordigen)",
+      "available_to_individuals": false,
+      "cost": "No new sign-ups since July 2025. Existing accounts keep working on their old terms.",
+      "setup_steps": [
+        "Existing accounts only: log in at bankaccountdata.gocardless.com",
+        "Create a user secret and save the secret ID and secret key",
+        "Enter the secret ID and key in the dashboard",
+        "Pick your bank and approve access in the bank's app",
+        "Reconnect every 90 days"
+      ],
+      "consent_renewal_days": 90,
+      "docs_url": "https://docs.gocardless.com/bank-account-data/overview",
+      "notes": "The official page bankaccountdata.gocardless.com/new-signups-disabled says 'New signups for Bank Account Data are currently disabled'. Actual Budget's docs date this to July 2025. Before closing it covered UK and EEA bank accounts: balances and transactions only, no investment holdings. Docs promise up to 90 days of access and up to 24 months of history. Some banks allow only 4 calls a day per account.",
+      "verified": true
+    },
+    {
+      "id": "enablebanking",
+      "name": "Enable Banking",
+      "available_to_individuals": true,
+      "cost": "Free. The Terms (updated 9 Jan 2026) allow production use only for accounts you link yourself, for the personal use of private individuals. The number of linked accounts per app may be limited.",
+      "setup_steps": [
+        "Sign in at enablebanking.com/cp (an account is created on first sign-in)",
+        "Open API applications and register a new app with environment Production",
+        "Enter an app name and an https redirect URL",
+        "Click Register; the browser downloads a private key (.pem) named after the application ID",
+        "Click 'Activate by linking accounts' and log in to each bank you want to track",
+        "Enter the application ID and upload the .pem file in the dashboard",
+        "Authorise each bank once more from the dashboard (the app signs a JWT with the key)",
+        "Re-authorise when the consent expires"
+      ],
+      "consent_renewal_days": 180,
+      "docs_url": "https://enablebanking.com/docs/api/linked-accounts/",
+      "notes": "Restricted mode can only read accounts you linked in the Control Panel. It covers EEA banks in 30 countries; the markets list does not include the UK. It reads PSD2 payment accounts only (balances and transactions), not investment holdings. Default consent has been 180 days since Oct 2025, but each bank sets its own maximum (Actual Budget's docs warn some allow 90 days or less). Many banks allow only 4 background fetches a day. The redirect must be https, so the dashboard needs an https callback URL.",
+      "verified": true
+    },
+    {
+      "id": "truelayer",
+      "name": "TrueLayer",
+      "available_to_individuals": false,
+      "cost": "Sandbox is free. Live access is only for registered businesses that pass onboarding; pricing goes through sales.",
+      "setup_steps": [
+        "Not possible for personal use: TrueLayer's help centre says live access is refused for personal or hobby projects, even ones that only connect your own accounts"
+      ],
+      "consent_renewal_days": 90,
+      "docs_url": "https://support.truelayer.com/hc/en-us/articles/51026317780881-Can-I-get-production-access-for-a-personal-project-I-built-in-Sandbox",
+      "notes": "Strong UK coverage (Starling, Monzo, Revolut, Wise, Barclays, HSBC, Lloyds, Nationwide). UK rules make the app reconfirm consent every 90 days. Covers bank and card balances and transactions only; no investments.",
+      "verified": true
+    },
+    {
+      "id": "plaid",
+      "name": "Plaid",
+      "available_to_individuals": false,
+      "cost": "Free Trial plan (since 15 Apr 2026): real data, up to 10 Items, but only for developers in the US or Canada and only for US/Canadian institutions. Everyone else needs paid Production.",
+      "setup_steps": [
+        "US/Canada developers only: sign up at dashboard.plaid.com/signup",
+        "Pass identity verification and accept the Plaid Master Services Agreement",
+        "Copy the client ID and the production secret from the dashboard",
+        "Connect each institution through Plaid Link in a browser",
+        "Exchange the public token for an access token and store it"
+      ],
+      "consent_renewal_days": null,
+      "docs_url": "https://support.plaid.com/hc/en-us/articles/39994173227159-What-is-the-Plaid-Trial-plan",
+      "notes": "Not available to a UK-based user. The Trial plan includes Investments (holdings and investment transactions), Transactions, Balance, Liabilities and almost all OAuth institutions (Bank of America, Chase, Wells Fargo, Merrill, and more). The 10-Item cap is permanent: removing an Item does not free its slot. US Items have no fixed renewal period; individual OAuth banks may expire consent.",
+      "verified": true
+    },
+    {
+      "id": "snaptrade",
+      "name": "SnapTrade",
+      "available_to_individuals": true,
+      "cost": "SnapTrade Personal is free with no card: up to 20 brokerage connections and one personal client ID and consumer key. The commercial free Build plan is separate (5 connections).",
+      "setup_steps": [
+        "Sign up for SnapTrade Personal at snaptrade.com/personal",
+        "Connect your brokerage accounts in the SnapTrade dashboard",
+        "Create your Personal client ID and consumer key in the dashboard",
+        "Enter the client ID and consumer key in the dashboard; no user registration or user secret is needed"
+      ],
+      "consent_renewal_days": null,
+      "docs_url": "https://docs.snaptrade.com/docs/personal-vs-commercial",
+      "notes": "Brokerages only. Reads balances, positions, transactions (activities) and orders. Live broker list (checked 2026-11-14) includes Trading 212, DEGIRO, BUX, eToro, AJ Bell, IBKR, Fidelity, Schwab, Vanguard US, Robinhood, E*TRADE, Webull, Public, Alpaca, Chase, Wells Fargo. DEGIRO, BUX, AJ Bell, Vanguard US, Webull and XTB use an unofficial API (SnapTrade logs in with your broker credentials), which carries a terms-of-service risk. Not covered: Trade Republic, Saxo, Hargreaves Lansdown, interactive investor, Vanguard UK, Freetrade, IG, Fidelity UK, InvestEngine, Lightyear, Bitvavo, Revolut, Merrill, SoFi. No fixed renewal period; reconnect when a broker session breaks. Sources disagree on the limit (20 personal vs 5 on the commercial free plan), and docs do not say whether 'after broker approval' brokers (Fidelity, Schwab, Chase, Wells Fargo) work on personal keys.",
+      "verified": true
+    },
+    {
+      "id": "saltedge",
+      "name": "Salt Edge",
+      "available_to_individuals": false,
+      "cost": "New clients start in Pending (fake banks only). Test status allows 100 live connections for 90 days and needs company details. Live requires legal and technical review and a paid plan; third-party sources say from about $500/month.",
+      "setup_steps": [
+        "Not practical for personal use: sign up, then provide company details, app details and callback URLs to request Test access",
+        "Test access lapses after 90 days; Live needs a compliance review and payment"
+      ],
+      "consent_renewal_days": 90,
+      "docs_url": "https://docs.saltedge.com/v6/",
+      "notes": "Built for companies; the docs define a client as a legal entity. Claims 5,000+ institutions in 50+ countries, including investment accounts, but no public coverage list was found for the institutions in scope. The 90-day consent period is assumed from PSD2 and was not confirmed in Salt Edge docs.",
+      "verified": true
+    },
+    {
+      "id": "simplefin",
+      "name": "SimpleFIN Bridge (extra, North America)",
+      "available_to_individuals": true,
+      "cost": "$1.50/month or $15/year plus tax; up to 25 institutions and 25 apps.",
+      "setup_steps": [
+        "Create a SimpleFIN Bridge account and pay",
+        "Connect your US or Canadian institutions in the Bridge",
+        "Create a setup token for the app and paste it into the dashboard",
+        "The dashboard swaps the token once for a permanent access URL"
+      ],
+      "consent_renewal_days": null,
+      "docs_url": "https://beta-bridge.simplefin.org/",
+      "notes": "Not one of the six requested; added because Actual Budget uses it for North America. Only the price and limits are confirmed. Coverage (US/Canada banks, some brokerages) and the setup-token flow are from Actual Budget docs and memory, not checked against SimpleFIN's institution search. Irrelevant for UK/NL accounts.",
+      "verified": false
+    }
+  ],
+  "institutions": [
+    {
+      "id": "degiro",
+      "name": "DEGIRO",
+      "kind": "broker",
+      "countries": [
+        "NL",
+        "UK"
+      ],
+      "recommended": "upload",
+      "methods": [
+        {
+          "type": "aggregator",
+          "provider": "snaptrade",
+          "covers": [
+            "positions",
+            "cash",
+            "transactions"
+          ],
+          "notes": "SnapTrade Personal (free) uses an UNOFFICIAL_API connector here: it logs in with your broker username, password and 2FA. Read-only. Terms-of-service and security risk.",
+          "verified": true
+        },
+        {
+          "type": "upload",
+          "file_format": "csv",
+          "report_name": "Account overview (Rekeningoverzicht)",
+          "steps": [
+            "Log in to the DEGIRO web platform",
+            "Click Inbox in the left menu (app: Inbox, bottom right)",
+            "Open Account overview (Rekeningoverzicht)",
+            "Set the Start date to your first trade and the End date to today (the default is one month)",
+            "Click Export and choose CSV"
+          ],
+          "covers": [
+            "transactions",
+            "dividends",
+            "cash"
+          ],
+          "notes": "All cash movements: buys/sells, dividends, dividend tax, fees, deposits. Also XLS/PDF. Column headers follow the platform language and amounts may use decimal commas (importer reports, not official). DEGIRO has no official API. The PDF of the same account statement works too; each trade is checked against the amount DEGIRO booked.",
+          "docs_url": "https://www.degiro.nl/helpdesk/belasting/welke-rapportagemogelijkheden-zijn-er-en-waar-kan-ik-de-rapportages-vinden",
+          "verified": true
+        },
+        {
+          "type": "upload",
+          "file_format": "csv",
+          "report_name": "Transactions (Transactieoverzicht)",
+          "steps": [
+            "Log in to the DEGIRO web platform",
+            "Click Inbox in the left menu",
+            "Open Transactions (Transactieoverzicht)",
+            "Set Start date and End date",
+            "Click Export and choose CSV"
+          ],
+          "covers": [
+            "transactions"
+          ],
+          "notes": "Buys and sells only, with fees; no dividends. Default range is one month.",
+          "docs_url": "https://www.degiro.nl/helpdesk/belasting/welke-rapportagemogelijkheden-zijn-er-en-waar-kan-ik-de-rapportages-vinden",
+          "verified": true
+        },
+        {
+          "type": "upload",
+          "file_format": "csv",
+          "report_name": "Portfolio overview (Portefeuille overzicht)",
+          "steps": [
+            "Open Portfolio on the DEGIRO web platform",
+            "Click Export on the right",
+            "Pick a date and choose CSV"
+          ],
+          "covers": [
+            "positions"
+          ],
+          "notes": "Open positions on the chosen date, valued at the last closing price. App: tap the down-arrow icon.",
+          "docs_url": "https://www.degiro.nl/helpdesk/belasting/welke-rapportagemogelijkheden-zijn-er-en-waar-kan-ik-de-rapportages-vinden",
+          "verified": true
+        },
+        {
+          "type": "unofficial",
+          "library": "degiro-connector",
+          "notes": "Reverse-engineered Python client for DEGIRO's private web API. Needs your username, password and TOTP 2FA secret stored on the server; not supported by DEGIRO, may break or breach the terms of use."
+        },
+        {
+          "type": "manual",
+          "covers": [
+            "positions",
+            "balance"
+          ]
+        }
+      ],
+      "sources": [
+        "https://www.degiro.nl/helpdesk/belasting/welke-rapportagemogelijkheden-zijn-er-en-waar-kan-ik-de-rapportages-vinden",
+        "https://github.com/Chavithra/degiro-connector"
+      ]
+    },
+    {
+      "id": "traderepublic",
+      "name": "Trade Republic",
+      "kind": "both",
+      "countries": [
+        "NL"
+      ],
+      "recommended": "upload",
+      "methods": [
+        {
+          "type": "aggregator",
+          "provider": "enablebanking",
+          "covers": [
+            "cash",
+            "transactions"
+          ],
+          "notes": "Free in restricted mode (accounts you link yourself). PSD2 payment accounts only: balances and transactions, no investments. Clearing/cash account only, not the securities depot. Enable Banking notes (Aug 2026) the bank's PSD2 API returns only amount, currency and booking date per transaction, with no description.",
+          "verified": true
+        },
+        {
+          "type": "aggregator",
+          "provider": "gocardless",
+          "covers": [
+            "cash",
+            "transactions"
+          ],
+          "notes": "GoCardless: existing accounts only (no new sign-ups since July 2025). Coverage for this bank was not re-checked.",
+          "verified": false
+        },
+        {
+          "type": "upload",
+          "file_format": "csv",
+          "report_name": "Transaction export (Transaktionsexport)",
+          "steps": [
+            "Open the Trade Republic app",
+            "Tap Profile",
+            "Open Account statements",
+            "Tap Transaction export",
+            "Choose All transactions or a period",
+            "Tap Create and save the CSV"
+          ],
+          "covers": [
+            "transactions",
+            "dividends",
+            "cash"
+          ],
+          "notes": "Added April 2026; one file covers the securities account and the cash account, including crypto. Reported to be in the web app too from 15 Apr 2026. No positions file: rebuild holdings from trades. German label: Kontoauszüge > Transaktionsexport. No official API.",
+          "docs_url": "https://www.mobiflip.de/trade-republic-bekommt-neue-export-funktion-und-outbank-zieht-sofort-nach/",
+          "verified": false
+        },
+        {
+          "type": "unofficial",
+          "library": "pytr",
+          "notes": "Unofficial client for Trade Republic's private API. Stores phone number and PIN in a local file; app-login mode logs your phone out; not affiliated with Trade Republic and may break or breach the terms."
+        },
+        {
+          "type": "manual",
+          "covers": [
+            "positions",
+            "balance"
+          ]
+        }
+      ],
+      "sources": [
+        "https://www.mobiflip.de/trade-republic-bekommt-neue-export-funktion-und-outbank-zieht-sofort-nach/",
+        "https://forum.portfolio-performance.info/t/import-trade-republic-csv-transaktionsexport/39126",
+        "https://help.getquin.com/en/articles/14633614",
+        "https://github.com/pytr-org/pytr"
+      ]
+    },
+    {
+      "id": "saxo",
+      "name": "Saxo",
+      "kind": "broker",
+      "countries": [
+        "NL",
+        "UK"
+      ],
+      "recommended": "api",
+      "methods": [
+        {
+          "type": "api",
+          "auth": "oauth",
+          "read_only": false,
+          "fields": [
+            {
+              "name": "app_key",
+              "label": "App key",
+              "secret": false
+            },
+            {
+              "name": "app_secret",
+              "label": "App secret",
+              "secret": true
+            }
+          ],
+          "steps": [
+            "Create a developer account on developer.saxo",
+            "Create a SIM app and test it (the 24-hour portal token works in SIM only)",
+            "Make sure your live Saxo account is funded",
+            "In the developer portal open Apps > Live Apps",
+            "Link your SIM developer account to your live account and log in",
+            "Click Request LIVE app, accept the disclaimers and fill in the form",
+            "Copy the App Key and App Secret into the dashboard",
+            "Sign in with Saxo once in the browser to authorise"
+          ],
+          "covers": [
+            "positions",
+            "cash",
+            "transactions"
+          ],
+          "notes": "Saxo allows direct retail clients to use OpenAPI for personal use; approval is usually automatic. Tokens are short-lived (sample responses: access 20 min, refresh 40-60 min), so the dashboard must keep refreshing or the user logs in again. Apps are not read-only scoped; only call GET endpoints. Eligibility for Saxo NL (ex-BinckBank) clients not confirmed.",
+          "docs_url": "https://www.developer.saxo/openapi/learn/direct-clients-request-for-openapi-application-credentials-for-the-live-environ",
+          "verified": true
+        },
+        {
+          "type": "upload",
+          "file_format": "xlsx",
+          "report_name": "Transactions export / Account Statement",
+          "steps": [
+            "Log in to SaxoInvestor or SaxoTraderGO on the web",
+            "Open Portfolio and choose the account or all accounts",
+            "Open Transactions",
+            "Click Export and choose Excel"
+          ],
+          "covers": [
+            "transactions",
+            "dividends",
+            "cash"
+          ],
+          "notes": "Transactions include trades, corporate actions and cash transfers. Alternative: My Profile > Account reports > Account Statement > Excel. A separate Dividends report exists. Menu labels vary by region.",
+          "docs_url": "https://www.help.saxo/hc/en-us/articles/360039762472-Monitoring-your-Portfolio",
+          "verified": true
+        },
+        {
+          "type": "manual",
+          "covers": [
+            "positions",
+            "balance"
+          ]
+        }
+      ],
+      "sources": [
+        "https://www.developer.saxo/openapi/learn/direct-clients-request-for-openapi-application-credentials-for-the-live-environ",
+        "https://saxobank.zendesk.com/hc/en-us/articles/4416505486481-Can-I-use-OpenAPI-for-personal-use",
+        "https://developer.saxo/openapi/learn/oauth-authorization-code-grant-pkce",
+        "https://www.help.saxo/hc/en-us/articles/360039762472-Monitoring-your-Portfolio",
+        "https://www.help.saxo/hc/en-us/articles/360001268946-Where-can-I-find-my-account-reports"
+      ]
+    },
+    {
+      "id": "lynx",
+      "name": "LYNX",
+      "kind": "broker",
+      "countries": [
+        "NL"
+      ],
+      "recommended": "upload",
+      "methods": [
+        {
+          "type": "api",
+          "auth": "flex_token_query",
+          "read_only": true,
+          "fields": [
+            {
+              "name": "flex_token",
+              "label": "Flex Web Service token",
+              "secret": true
+            },
+            {
+              "name": "query_id",
+              "label": "Flex Query ID",
+              "secret": false
+            }
+          ],
+          "steps": [
+            "Log in to the LYNX Client Portal",
+            "Open Performance & Reports > Flex Queries",
+            "Create an Activity Flex Query with Open Positions, Trades, Cash Transactions and Cash Report, format XML",
+            "Save it and copy the Query ID",
+            "In Flex Web Service Configuration, enable the service and generate a token",
+            "Paste the token and Query ID into the dashboard"
+          ],
+          "covers": [
+            "positions",
+            "cash",
+            "transactions",
+            "dividends"
+          ],
+          "notes": "LYNX runs on the IBKR Client Portal, and a third-party tracker says Flex Queries with a read-only token work as at IBKR. Not confirmed on LYNX's own help pages; same limits as IBKR Flex (token expiry you choose, max 365 days per query).",
+          "docs_url": "https://www.interactivebrokers.com/docs/web-api/flex-web-service/client-portal-configuration/create-a-flex-query",
+          "verified": false
+        },
+        {
+          "type": "upload",
+          "file_format": "csv",
+          "report_name": "Activity Statement",
+          "steps": [
+            "Log in to the LYNX Client Portal",
+            "Open Performance & Reports > Statements",
+            "Under Default Statements, click Run next to Activity Statement",
+            "Choose the period or a custom date range",
+            "Download as CSV"
+          ],
+          "covers": [
+            "positions",
+            "cash",
+            "transactions",
+            "dividends"
+          ],
+          "notes": "Max 365 days per statement; last seven calendar years available. Multi-section IBKR-style CSV.",
+          "docs_url": "https://www.lynxbroker.com/service/reports-and-taxes/reports/account-statement/",
+          "verified": true
+        },
+        {
+          "type": "manual",
+          "covers": [
+            "positions",
+            "balance"
+          ]
+        }
+      ],
+      "sources": [
+        "https://www.lynxbroker.com/service/reports-and-taxes/reports/account-statement/",
+        "https://www.lynxbroker.com/service/software/client-portal/",
+        "https://www.debelegger.nl/lynx-portfolio-tracker"
+      ]
+    },
+    {
+      "id": "bux",
+      "name": "BUX",
+      "kind": "broker",
+      "countries": [
+        "NL"
+      ],
+      "recommended": "upload",
+      "methods": [
+        {
+          "type": "aggregator",
+          "provider": "snaptrade",
+          "covers": [
+            "positions",
+            "cash",
+            "transactions"
+          ],
+          "notes": "SnapTrade Personal (free) uses an UNOFFICIAL_API connector here: it logs in with your broker username, password and 2FA. Read-only. Terms-of-service and security risk.",
+          "verified": true
+        },
+        {
+          "type": "upload",
+          "file_format": "csv",
+          "report_name": "Transaction history export",
+          "steps": [
+            "Open the BUX app menu",
+            "Tap Transaction history",
+            "Choose the date range and transaction type",
+            "Request the export; the CSV arrives by email"
+          ],
+          "covers": [
+            "transactions",
+            "cash"
+          ],
+          "notes": "Comma-separated. Whether dividends appear as a transaction type is not stated. A monthly PDF report can also be switched on under Notifications and Email. No official API. Help article is about two years old.",
+          "docs_url": "https://support.bux.com/en/support/solutions/articles/1000295005-where-can-i-find-an-overview-of-my-transactions-",
+          "verified": true
+        },
+        {
+          "type": "manual",
+          "covers": [
+            "positions",
+            "balance"
+          ]
+        }
+      ],
+      "sources": [
+        "https://support.bux.com/en/support/solutions/articles/1000295005-where-can-i-find-an-overview-of-my-transactions-"
+      ]
+    },
+    {
+      "id": "meesman",
+      "name": "Meesman Indexbeleggen",
+      "kind": "robo",
+      "countries": [
+        "NL"
+      ],
+      "recommended": "upload",
+      "methods": [
+        {
+          "type": "upload",
+          "file_format": "xlsx",
+          "report_name": "Transacties",
+          "steps": [
+            "Log in to MijnMeesman",
+            "Go to Opdrachten > Transacties",
+            "Click 'Exporteren als Excel' below the table"
+          ],
+          "covers": [
+            "transactions"
+          ],
+          "notes": "Dutch labels; fund units and prices per order. Holdings and value are not in this file: use the Jaaroverzicht PDF (MijnMeesman > Documenten) or enter the value manually. No official API.",
+          "docs_url": "https://www.meesman.nl/media/5ktnud20/uitlegdocument-opgeven-werkelijk-rendement-box-3.pdf",
+          "verified": true
+        },
+        {
+          "type": "manual",
+          "covers": [
+            "positions",
+            "balance"
+          ]
+        }
+      ],
+      "sources": [
+        "https://www.meesman.nl/media/5ktnud20/uitlegdocument-opgeven-werkelijk-rendement-box-3.pdf"
+      ]
+    },
+    {
+      "id": "brandnewday",
+      "name": "Brand New Day",
+      "kind": "robo",
+      "countries": [
+        "NL"
+      ],
+      "recommended": "manual",
+      "methods": [
+        {
+          "type": "upload",
+          "file_format": "pdf",
+          "report_name": "Jaaroverzicht / transactieoverzicht",
+          "steps": [
+            "Log in to MijnBND on the website",
+            "Go to Mijn documenten > Overzichten",
+            "Download the Jaaroverzicht or a transaction overview"
+          ],
+          "covers": [
+            "transactions"
+          ],
+          "notes": "Statement documents, not a data export; file format and app support not confirmed. No consumer CSV/Excel export found and no API.",
+          "docs_url": "https://new.brandnewday.nl/veelgestelde-vragen-over-het-jaaroverzicht/",
+          "verified": false
+        },
+        {
+          "type": "manual",
+          "covers": [
+            "balance"
+          ]
+        }
+      ],
+      "sources": [
+        "https://new.brandnewday.nl/veelgestelde-vragen-over-het-jaaroverzicht/",
+        "https://new.brandnewday.nl/app-functionaliteiten/"
+      ]
+    },
+    {
+      "id": "bitvavo",
+      "name": "Bitvavo",
+      "kind": "crypto",
+      "countries": [
+        "NL"
+      ],
+      "recommended": "api",
+      "methods": [
+        {
+          "type": "api",
+          "auth": "api_key_secret",
+          "read_only": true,
+          "fields": [
+            {
+              "name": "api_key",
+              "label": "API key",
+              "secret": true
+            },
+            {
+              "name": "api_secret",
+              "label": "API secret",
+              "secret": true
+            }
+          ],
+          "steps": [
+            "Turn on 2FA for your Bitvavo account",
+            "Log in on the Bitvavo website (keys cannot be made in the app)",
+            "Go to Settings > API and click Add new API key",
+            "Enter a name and your server's IP address for the whitelist",
+            "Tick only View access",
+            "Confirm with your 2FA code",
+            "Copy the API key and secret (the secret is shown once)"
+          ],
+          "covers": [
+            "positions",
+            "cash",
+            "transactions"
+          ],
+          "notes": "1000 weight points per minute. View access covers GET /balance, /account/history, /depositHistory and /withdrawalHistory; GET /trades also needs Trade permission, so use /account/history with a read-only key.",
+          "docs_url": "https://docs.bitvavo.com/docs/get-started/",
+          "verified": true
+        },
+        {
+          "type": "upload",
+          "file_format": "csv",
+          "report_name": "Transaction history",
+          "steps": [
+            "Log in on the Bitvavo website",
+            "Open Transaction history",
+            "Click Export (top right)",
+            "Choose the current year, a previous year or full history"
+          ],
+          "covers": [
+            "transactions"
+          ],
+          "notes": "Trades, deposits and withdrawals. Max 30,000 lines (ask support for more). Annual balance statement PDF is separate.",
+          "docs_url": "https://support.bitvavo.com/hc/en-us/articles/24858391166097-How-can-I-view-and-download-my-transaction-history-and-balance-statement",
+          "verified": true
+        },
+        {
+          "type": "manual",
+          "covers": [
+            "positions",
+            "balance"
+          ]
+        }
+      ],
+      "sources": [
+        "https://docs.bitvavo.com/docs/get-started/",
+        "https://docs.bitvavo.com/docs/rest-api/introduction/",
+        "https://support.bitvavo.com/hc/en-us/articles/4405059841809",
+        "https://support.bitvavo.com/hc/en-us/articles/24858391166097-How-can-I-view-and-download-my-transaction-history-and-balance-statement"
+      ]
+    },
+    {
+      "id": "abnamro",
+      "name": "ABN AMRO",
+      "kind": "both",
+      "countries": [
+        "NL"
+      ],
+      "recommended": "aggregator",
+      "methods": [
+        {
+          "type": "aggregator",
+          "provider": "enablebanking",
+          "covers": [
+            "cash",
+            "transactions"
+          ],
+          "notes": "Free in restricted mode (accounts you link yourself). PSD2 payment accounts only: balances and transactions, no investments. Current/payment accounts only; credit cards are out of scope.",
+          "verified": true
+        },
+        {
+          "type": "aggregator",
+          "provider": "gocardless",
+          "covers": [
+            "cash",
+            "transactions"
+          ],
+          "notes": "GoCardless: existing accounts only (no new sign-ups since July 2025). Coverage for this bank was not re-checked.",
+          "verified": false
+        },
+        {
+          "type": "aggregator",
+          "provider": "saltedge",
+          "covers": [
+            "cash",
+            "transactions"
+          ],
+          "notes": "Probably covered as a major NL bank, but not confirmed; business-only anyway.",
+          "verified": false
+        },
+        {
+          "type": "upload",
+          "file_format": "xls",
+          "report_name": "Bij- en afschrijvingen downloaden",
+          "steps": [
+            "Log in to Internet Bankieren",
+            "Open the page to download transactions (Bij- en afschrijvingen downloaden)",
+            "Choose the account holder and a file format",
+            "Set the start and end date",
+            "Click the download icon next to the account"
+          ],
+          "covers": [
+            "transactions",
+            "cash"
+          ],
+          "notes": "Formats: PDF, TXT, MT940, XLS or CAMT.053 (no CSV). Up to 18 months back. File language follows the Internet Bankieren language. Developer APIs are for licensed third parties only, not individuals.",
+          "docs_url": "https://www.abnamro.nl/nl/prive/betalen/bij-en-afschrijvingen/downloaden.html",
+          "verified": true
+        },
+        {
+          "type": "upload",
+          "file_format": "unknown",
+          "report_name": "Overzicht Box 3 Beleggen Transacties",
+          "steps": [
+            "Log in to Internet Bankieren",
+            "Go to Zelf regelen > Overzichten en afschriften",
+            "Choose Overige overzichten downloaden",
+            "Download 'Overzicht Box 3 Beleggen Transacties'"
+          ],
+          "covers": [
+            "transactions"
+          ],
+          "notes": "For Zelf Beleggen investment accounts; file format and contents not confirmed. No positions export found.",
+          "docs_url": "https://www.abnamro.nl/nl/prive/beleggen/service/overzicht-rendement-box-3.html",
+          "verified": false
+        },
+        {
+          "type": "manual",
+          "covers": [
+            "positions",
+            "balance"
+          ]
+        }
+      ],
+      "sources": [
+        "https://www.abnamro.nl/nl/prive/betalen/bij-en-afschrijvingen/downloaden.html",
+        "https://www.abnamro.nl/nl/prive/beleggen/service/overzicht-rendement-box-3.html"
+      ]
+    },
+    {
+      "id": "ing_nl",
+      "name": "ING (Netherlands)",
+      "kind": "both",
+      "countries": [
+        "NL"
+      ],
+      "recommended": "aggregator",
+      "methods": [
+        {
+          "type": "aggregator",
+          "provider": "enablebanking",
+          "covers": [
+            "cash",
+            "transactions"
+          ],
+          "notes": "Free in restricted mode (accounts you link yourself). PSD2 payment accounts only: balances and transactions, no investments.",
+          "verified": true
+        },
+        {
+          "type": "aggregator",
+          "provider": "gocardless",
+          "covers": [
+            "cash",
+            "transactions"
+          ],
+          "notes": "GoCardless: existing accounts only (no new sign-ups since July 2025). Coverage for this bank was not re-checked.",
+          "verified": false
+        },
+        {
+          "type": "upload",
+          "file_format": "csv",
+          "report_name": "Af- en bijschrijvingen downloaden",
+          "steps": [
+            "Log in to Mijn ING on the website",
+            "Open the payment account",
+            "Choose to download transactions",
+            "Pick a period and CSV format",
+            "Download the file"
+          ],
+          "covers": [
+            "transactions"
+          ],
+          "notes": "ING help mentions 'Puntkommagescheiden (CSV)' (semicolon) and up to 24 months back; Dutch headers and decimal commas. Exact personal menu labels not confirmed. Developer APIs are for licensed third parties only.",
+          "docs_url": "https://www.ing.nl/particulier/digitaal-bankieren/afschriften-downloaden",
+          "verified": false
+        },
+        {
+          "type": "upload",
+          "file_format": "csv",
+          "report_name": "Transactieoverzicht (Beleggen)",
+          "steps": [
+            "Log in on the ING website (not the app)",
+            "Go to Beleggen and open your investment account",
+            "Scroll down and open Transactieoverzicht",
+            "Select Beleggingen, set a period (max 365 days) and click Toepassen",
+            "Click Download CSV",
+            "Repeat with Geld selected for cash movements"
+          ],
+          "covers": [
+            "transactions",
+            "dividends",
+            "cash"
+          ],
+          "notes": "Two CSV files (securities and cash), Dutch only, max 365 days per file. Steps from a third-party importer guide.",
+          "docs_url": "https://help-en.portfoliodividendtracker.com/article/337-import-your-ing-actions",
+          "verified": false
+        },
+        {
+          "type": "manual",
+          "covers": [
+            "positions",
+            "balance"
+          ]
+        }
+      ],
+      "sources": [
+        "https://www.ing.nl/particulier/digitaal-bankieren/afschriften-downloaden",
+        "https://www.ing.nl/zakelijk/digitaal-bankieren/mijn-ing/papierloos-bankieren",
+        "https://help-en.portfoliodividendtracker.com/article/337-import-your-ing-actions"
+      ]
+    },
+    {
+      "id": "rabobank",
+      "name": "Rabobank",
+      "kind": "both",
+      "countries": [
+        "NL"
+      ],
+      "recommended": "aggregator",
+      "methods": [
+        {
+          "type": "aggregator",
+          "provider": "enablebanking",
+          "covers": [
+            "cash",
+            "transactions"
+          ],
+          "notes": "Free in restricted mode (accounts you link yourself). PSD2 payment accounts only: balances and transactions, no investments.",
+          "verified": true
+        },
+        {
+          "type": "aggregator",
+          "provider": "gocardless",
+          "covers": [
+            "cash",
+            "transactions"
+          ],
+          "notes": "GoCardless: existing accounts only (no new sign-ups since July 2025). Coverage for this bank was not re-checked.",
+          "verified": false
+        },
+        {
+          "type": "upload",
+          "file_format": "csv",
+          "report_name": "Transacties downloaden",
+          "steps": [
+            "Log in to Rabo Online Bankieren on a computer",
+            "Go to Instellingen > Betaalrekeningen",
+            "Choose Transacties downloaden",
+            "Pick the account, period and CSV",
+            "Download the file"
+          ],
+          "covers": [
+            "transactions"
+          ],
+          "notes": "Statement language can be set to English. CSV, also camt.053. Credit card transactions are under Instellingen > Betaalrekeningen > Transactieoverzicht (up to 15 months). Developer APIs are for licensed third parties only.",
+          "docs_url": "https://www.rabobank.nl/particulieren/service/financiele-overzichten/overzicht-betaalrekening-ontvangen",
+          "verified": true
+        },
+        {
+          "type": "upload",
+          "file_format": "csv",
+          "report_name": "Portefeuille-overzicht (Rabo Beleggen)",
+          "steps": [
+            "Log in to Rabo Online Bankieren on a computer (not the app)",
+            "Under Effectenrekening, click Portefeuille",
+            "Export the report as CSV"
+          ],
+          "covers": [
+            "positions"
+          ],
+          "notes": "Positions with current prices for Rabo Zelf/Advies Beleggen. Transactions are viewable in-app but no transaction CSV was confirmed.",
+          "docs_url": "https://www.rabobank.nl/particulieren/service/beleggen/portefeuille-overzicht-bekijken-en-bewaren",
+          "verified": false
+        },
+        {
+          "type": "manual",
+          "covers": [
+            "positions",
+            "balance"
+          ]
+        }
+      ],
+      "sources": [
+        "https://www.rabobank.nl/particulieren/service/financiele-overzichten/overzicht-betaalrekening-ontvangen",
+        "https://www.rabobank.nl/particulieren/service/beleggen/portefeuille-overzicht-bekijken-en-bewaren",
+        "https://www.rabobank.nl/particulieren/service/beleggen/beleggingstransacties-bekijken"
+      ]
+    },
+    {
+      "id": "bunq",
+      "name": "bunq",
+      "kind": "bank",
+      "countries": [
+        "NL"
+      ],
+      "recommended": "aggregator",
+      "methods": [
+        {
+          "type": "api",
+          "auth": "api_key",
+          "read_only": false,
+          "fields": [
+            {
+              "name": "api_key",
+              "label": "API key",
+              "secret": true
+            }
+          ],
+          "steps": [
+            "Open the bunq app",
+            "Go to Settings > Developers > API keys",
+            "Tap Add API key and confirm",
+            "Paste the key into the dashboard (it registers an installation, device and session)"
+          ],
+          "covers": [
+            "cash",
+            "transactions"
+          ],
+          "notes": "Official and free to use, but the key has full access (can make payments); there is no read-only key. Binds to the server IP on first registration; sessions follow the app auto-logout. Standard data endpoints allow about 70-140 requests per 30 s.",
+          "docs_url": "https://doc.bunq.com/basics/authentication/api-keys",
+          "verified": true
+        },
+        {
+          "type": "aggregator",
+          "provider": "enablebanking",
+          "covers": [
+            "cash",
+            "transactions"
+          ],
+          "notes": "Free in restricted mode (accounts you link yourself). PSD2 payment accounts only: balances and transactions, no investments. Listed as 'Bunq (DE, ES, FR, IE, NL)' in the Oct 2025 changelog.",
+          "verified": true
+        },
+        {
+          "type": "aggregator",
+          "provider": "gocardless",
+          "covers": [
+            "cash",
+            "transactions"
+          ],
+          "notes": "GoCardless: existing accounts only (no new sign-ups since July 2025). Coverage for this bank was not re-checked.",
+          "verified": false
+        },
+        {
+          "type": "aggregator",
+          "provider": "saltedge",
+          "covers": [
+            "cash",
+            "transactions"
+          ],
+          "notes": "Listed only by a third-party tracker; business-only.",
+          "verified": false
+        },
+        {
+          "type": "upload",
+          "file_format": "csv",
+          "report_name": "Export statement",
+          "steps": [
+            "Tap your profile icon in the bunq app",
+            "Open Accounting",
+            "Choose export statement",
+            "Pick the account, period and CSV",
+            "Download the file"
+          ],
+          "covers": [
+            "transactions"
+          ],
+          "notes": "Also PDF and MT940. One file per (sub)account. Web: web.bunq.com > account > Settings > export. Not available for unverified accounts.",
+          "docs_url": "https://help.bunq.com/d/59052-what-types-of-bank-statements-can-i-export",
+          "verified": true
+        },
+        {
+          "type": "manual",
+          "covers": [
+            "balance"
+          ]
+        }
+      ],
+      "sources": [
+        "https://doc.bunq.com/basics/authentication/api-keys",
+        "https://doc.bunq.com/basics/getting-started",
+        "https://doc.bunq.com/basics/rate-limits",
+        "https://together.bunq.com/d/24861-difference-between-oauth-and-api-key",
+        "https://help.bunq.com/d/59052-what-types-of-bank-statements-can-i-export"
+      ]
+    },
+    {
+      "id": "revolut",
+      "name": "Revolut",
+      "kind": "both",
+      "countries": [
+        "NL",
+        "UK",
+        "US"
+      ],
+      "recommended": "aggregator",
+      "methods": [
+        {
+          "type": "aggregator",
+          "provider": "enablebanking",
+          "covers": [
+            "cash",
+            "transactions"
+          ],
+          "notes": "Free in restricted mode (accounts you link yourself). PSD2 payment accounts only: balances and transactions, no investments. EEA Revolut accounts only (Revolut Bank UAB, e.g. NL/LT IBAN). A UK Revolut account is not covered because Enable Banking has no UK market.",
+          "verified": true
+        },
+        {
+          "type": "aggregator",
+          "provider": "truelayer",
+          "covers": [
+            "cash",
+            "transactions"
+          ],
+          "notes": "TrueLayer lists this provider, but live access is for registered businesses only, so it is not usable for a personal dashboard. Provider id ob-revolut (UK).",
+          "verified": true
+        },
+        {
+          "type": "aggregator",
+          "provider": "gocardless",
+          "covers": [
+            "cash",
+            "transactions"
+          ],
+          "notes": "GoCardless: existing accounts only (no new sign-ups since July 2025). Coverage for this bank was not re-checked.",
+          "verified": false
+        },
+        {
+          "type": "upload",
+          "file_format": "xlsx",
+          "report_name": "Account statement",
+          "steps": [
+            "In the Revolut app, go to Home > Accounts and pick the currency account",
+            "Tap More > Statement",
+            "Choose the period and Excel",
+            "Tap Generate, then the export icon"
+          ],
+          "covers": [
+            "transactions",
+            "cash"
+          ],
+          "notes": "PDF or Excel (no CSV found for personal accounts); includes Pockets; times in UTC. No personal API: Revolut's API is for Business accounts and licensed open-banking providers.",
+          "docs_url": "https://help.revolut.com/en-US/help/profile-and-plan/managing-my-account/account-statement-per-chosen-currency/",
+          "verified": true
+        },
+        {
+          "type": "upload",
+          "file_format": "csv",
+          "report_name": "Stocks account statement",
+          "steps": [
+            "In the app, open Invest",
+            "Tap More > Documents",
+            "Choose Stocks > Account statement",
+            "Choose the period (All time for the first import) and CSV or Excel",
+            "Generate and download"
+          ],
+          "covers": [
+            "transactions",
+            "dividends",
+            "positions"
+          ],
+          "notes": "Use the Account statement, not Profit & Loss. Path is official; the CSV option comes from third-party importer guides. Crypto has separate statements.",
+          "docs_url": "https://help.revolut.com/en-US/help/wealth/stocks/getting-started-with-trading/managing-your-trading-account/trading-statements/accessing-my-trading-statements-and-reports/",
+          "verified": false
+        },
+        {
+          "type": "manual",
+          "covers": [
+            "positions",
+            "balance"
+          ]
+        }
+      ],
+      "sources": [
+        "https://help.revolut.com/en-US/help/profile-and-plan/managing-my-account/account-statement-per-chosen-currency/",
+        "https://help.revolut.com/en-US/help/wealth/stocks/getting-started-with-trading/managing-your-trading-account/trading-statements/accessing-my-trading-statements-and-reports/",
+        "https://developer.revolut.com/docs/build-banking-apps",
+        "https://help.navexa.com/en/articles/16116548-import-trades-from-revolut"
+      ]
+    },
+    {
+      "id": "wise",
+      "name": "Wise",
+      "kind": "bank",
+      "countries": [
+        "NL",
+        "UK",
+        "US"
+      ],
+      "recommended": "api",
+      "methods": [
+        {
+          "type": "api",
+          "auth": "token",
+          "read_only": true,
+          "fields": [
+            {
+              "name": "api_token",
+              "label": "Personal API token",
+              "secret": true
+            }
+          ],
+          "steps": [
+            "Turn on 2-step verification in your Wise account",
+            "Log in on wise.com in a browser (not the app)",
+            "Open Settings, then API tokens",
+            "Click Add new token, name it and choose Read only",
+            "Confirm with 2-step verification and copy the token"
+          ],
+          "covers": [
+            "cash"
+          ],
+          "notes": "Personal accounts can create a token (Wise help centre); it lasts until revoked. For UK and EEA accounts PSD2 blocks balance statements with a personal token, so expect current balances only; transaction history via API works only for US, CA, AU, NZ, SG and MY accounts. Use the CSV statement for history.",
+          "docs_url": "https://docs.wise.com/guides/developer/auth-and-security/personal-api-token",
+          "verified": true
+        },
+        {
+          "type": "aggregator",
+          "provider": "enablebanking",
+          "covers": [
+            "cash",
+            "transactions"
+          ],
+          "notes": "Free in restricted mode (accounts you link yourself). PSD2 payment accounts only: balances and transactions, no investments. Wise EEA accounts only (listed for NL and other EEA countries); a Wise UK account is not covered.",
+          "verified": true
+        },
+        {
+          "type": "aggregator",
+          "provider": "truelayer",
+          "covers": [
+            "cash",
+            "transactions"
+          ],
+          "notes": "TrueLayer lists this provider, but live access is for registered businesses only, so it is not usable for a personal dashboard. Provider id ob-transferwise (UK).",
+          "verified": true
+        },
+        {
+          "type": "aggregator",
+          "provider": "gocardless",
+          "covers": [
+            "cash",
+            "transactions"
+          ],
+          "notes": "GoCardless: existing accounts only (no new sign-ups since July 2025). Coverage for this bank was not re-checked.",
+          "verified": false
+        },
+        {
+          "type": "upload",
+          "file_format": "csv",
+          "report_name": "Balance statement",
+          "steps": [
+            "On wise.com, open the currency balance or Jar",
+            "Select More > Statements and reports",
+            "Choose the statement type, period and CSV",
+            "Download (re-enter your password if asked)"
+          ],
+          "covers": [
+            "transactions",
+            "cash"
+          ],
+          "notes": "Max 365 days per file; one file per currency. Web also offers XLSX, PDF, MT940, QIF, CAMT.053; app offers PDF, CSV, XLSX.",
+          "docs_url": "https://wise.com/help/articles/2736049/how-do-i-download-a-statement",
+          "verified": true
+        },
+        {
+          "type": "upload",
+          "file_format": "unknown",
+          "report_name": "Holdings statement (Interest/Stocks)",
+          "steps": [
+            "Open your profile menu",
+            "Go to Statements and reports",
+            "Choose Holdings statement and a date"
+          ],
+          "covers": [
+            "positions"
+          ],
+          "notes": "Units and value of Interest/Stocks holdings on the chosen day. File format not confirmed.",
+          "docs_url": "https://wise.com/help/articles/7D51QoYSC1iuTn0XKGLB7o/reconciling-your-interest-and-stocks-with-your-account-integration",
+          "verified": true
+        },
+        {
+          "type": "manual",
+          "covers": [
+            "balance"
+          ]
+        }
+      ],
+      "sources": [
+        "https://docs.wise.com/guides/developer/auth-and-security/personal-api-token",
+        "https://wise.com/uk/help/articles/2958107/getting-started-with-the-api",
+        "https://docs.wise.com/api-docs/features/authentication-access/personal-tokens",
+        "https://wise.com/help/articles/2736049/how-do-i-download-a-statement",
+        "https://wise.com/help/articles/7D51QoYSC1iuTn0XKGLB7o/reconciling-your-interest-and-stocks-with-your-account-integration",
+        "https://wise.com/help/articles/2958107/getting-started-with-the-api"
+      ]
+    },
+    {
+      "id": "trading212",
+      "name": "Trading 212",
+      "kind": "broker",
+      "countries": [
+        "UK",
+        "NL"
+      ],
+      "recommended": "api",
+      "methods": [
+        {
+          "type": "api",
+          "auth": "api_key_secret",
+          "read_only": true,
+          "fields": [
+            {
+              "name": "api_key",
+              "label": "API key",
+              "secret": true
+            },
+            {
+              "name": "api_secret",
+              "label": "API secret",
+              "secret": true
+            }
+          ],
+          "steps": [
+            "Open Trading 212 (app or web) on your Invest or Stocks ISA account.",
+            "Tap the menu icon, then Settings.",
+            "Select 'API (Beta)' and accept the risk warning.",
+            "Tap 'Generate API key'.",
+            "Give the key a name and tick only the read permissions (account data, history, portfolio); leave order placing off.",
+            "Choose 'Restrict access to trusted IPs' and enter your server's IP, or choose Unrestricted.",
+            "Copy the API key and the API secret. The secret is shown only once."
+          ],
+          "covers": [
+            "positions",
+            "cash",
+            "transactions",
+            "dividends"
+          ],
+          "notes": "Beta API (v0), HTTP Basic auth with key:secret, base URL https://live.trading212.com/api/v0. Only Invest and Stocks ISA accounts (not SIPP, not CFD); one key per account, so add the ISA separately. No stated expiry. Rate limits are per account: account summary 1 per 5 s, positions 1 per 1 s, order/dividend/transaction history 20 per minute. The 'API (Beta)' menu may be hidden until the account is funded (third-party report).",
+          "docs_url": "https://docs.trading212.com/api",
+          "verified": true
+        },
+        {
+          "type": "aggregator",
+          "provider": "snaptrade",
+          "covers": [
+            "positions",
+            "cash",
+            "transactions",
+            "dividends"
+          ],
+          "notes": "SnapTrade connects with a TOKEN, i.e. your own Trading 212 API key, so the direct Trading 212 API is simpler. The connector also allows trading.",
+          "verified": true
+        },
+        {
+          "type": "upload",
+          "file_format": "csv",
+          "report_name": "History export (CSV)",
+          "steps": [
+            "Tap the menu icon, then History.",
+            "Tap the export button.",
+            "Choose the timeframe and the data types (orders, transactions, dividends).",
+            "Download the CSV file."
+          ],
+          "covers": [
+            "transactions",
+            "dividends",
+            "cash"
+          ],
+          "notes": "One export per account (Invest and ISA separately). A single export seems limited to about 12 months (official for CFD; community report for Invest/ISA), so export year by year. The same report can be requested via the API (POST /api/v0/equity/history/exports).",
+          "docs_url": "https://helpcentre.trading212.com/hc/en-us/articles/360016898917-Can-I-export-the-trading-data-from-my-account",
+          "verified": true
+        },
+        {
+          "type": "upload",
+          "file_format": "pdf",
+          "report_name": "Activity statement (PDF)",
+          "steps": [
+            "In Trading 212, open the menu, then History.",
+            "Choose Export and pick the Activity statement for your Invest account.",
+            "Select the full period since you opened the account and download the PDF.",
+            "Upload the PDF below."
+          ],
+          "covers": [
+            "positions",
+            "transactions",
+            "dividends",
+            "interest"
+          ],
+          "notes": "For EU (EUR) Invest accounts without an API key. Positions, trades, dividends and interest are read from it and checked against the statement's own totals.",
+          "verified": false
+        },
+        {
+          "type": "manual",
+          "covers": [
+            "balance"
+          ]
+        }
+      ],
+      "sources": [
+        "https://docs.trading212.com/api",
+        "https://helpcentre.trading212.com/hc/en-us/articles/14584770928157-Trading-212-API-key",
+        "https://helpcentre.trading212.com/hc/en-us/articles/360016898917-Can-I-export-the-trading-data-from-my-account",
+        "https://helpcentre.trading212.com/hc/en-us/articles/36243765206301-How-to-export-the-trading-data-from-my-CFD-account"
+      ]
+    },
+    {
+      "id": "etoro",
+      "name": "eToro",
+      "kind": "broker",
+      "countries": [
+        "UK",
+        "NL",
+        "US"
+      ],
+      "recommended": "api",
+      "methods": [
+        {
+          "type": "api",
+          "auth": "api_key_secret",
+          "read_only": true,
+          "fields": [
+            {
+              "name": "api_key",
+              "label": "Public API key (x-api-key)",
+              "secret": true
+            },
+            {
+              "name": "user_key",
+              "label": "User key (x-user-key)",
+              "secret": true
+            }
+          ],
+          "steps": [
+            "Log in to eToro on the web.",
+            "Click Settings in the left sidebar, then Trading.",
+            "Scroll to 'API Key Management' and click 'Create New Key'.",
+            "Enter a key name, choose Environment 'Real' and Permissions 'Read'.",
+            "Optionally set an IP whitelist or an expiration date.",
+            "Click 'Generate Key' and enter the code sent by SMS.",
+            "Copy the Public API key and the User key. The User key is shown only once."
+          ],
+          "covers": [
+            "positions",
+            "cash",
+            "transactions"
+          ],
+          "notes": "Public API launched Oct 2025. Every request needs x-api-key, x-user-key and a unique x-request-id. Keys do not expire unless you set an expiry date. About 60 requests per 60 s for portfolio, balance and history endpoints. Account must be fully verified; availability for eToro US accounts is not confirmed. Dividend detail via the API is not confirmed.",
+          "docs_url": "https://api-portal.etoro.com/getting-started",
+          "verified": true
+        },
+        {
+          "type": "aggregator",
+          "provider": "snaptrade",
+          "covers": [
+            "positions",
+            "cash"
+          ],
+          "notes": "OAuth, read-only. SnapTrade lists has_reporting=false, so transaction history is probably not returned.",
+          "verified": true
+        },
+        {
+          "type": "upload",
+          "file_format": "xlsx",
+          "report_name": "Account Statement",
+          "steps": [
+            "Log in to eToro on the web (not the new eToro app).",
+            "Click Settings, then the Account tab.",
+            "Under Documents, click View next to 'Account Statement'.",
+            "Pick a date range and click Create.",
+            "Click the Excel icon to download."
+          ],
+          "covers": [
+            "transactions",
+            "dividends",
+            "cash"
+          ],
+          "notes": "Real accounts only. Excel has tabs such as Closed Positions, Account Activity and Financial Summary; open positions are not listed one by one, so holdings must be rebuilt from activity. Also reachable from Portfolio > History > Account Statement.",
+          "docs_url": "https://help.etoro.com/s/article/what-is-the-etoro-account-statement?language=en_GB",
+          "verified": true
+        },
+        {
+          "type": "manual",
+          "covers": [
+            "balance"
+          ]
+        }
+      ],
+      "sources": [
+        "https://api-portal.etoro.com/getting-started",
+        "https://api-portal.etoro.com/core/getting-started/authentication",
+        "https://api-portal.etoro.com/llms.txt",
+        "https://builders.etoro.com/learn/authentication-and-api-keys",
+        "https://www.etoro.com/news-and-analysis/press-releases/etoro-marks-15-years-of-social-investing-with-launch-of-public-apis-and-expansion-of-copytradertm-to-the-us/",
+        "https://help.etoro.com/en-us/s/article/where-is-my-account-statement-US"
+      ]
+    },
+    {
+      "id": "ig",
+      "name": "IG",
+      "kind": "broker",
+      "countries": [
+        "UK",
+        "NL"
+      ],
+      "recommended": "upload",
+      "methods": [
+        {
+          "type": "api",
+          "auth": "other",
+          "read_only": false,
+          "fields": [
+            {
+              "name": "api_key",
+              "label": "API key",
+              "secret": true
+            },
+            {
+              "name": "username",
+              "label": "IG username",
+              "secret": false
+            },
+            {
+              "name": "password",
+              "label": "IG password",
+              "secret": true
+            }
+          ],
+          "steps": [
+            "Log in to the IG web platform with your live account.",
+            "Go to My Account > Settings > API Keys.",
+            "Enter a key name and click 'Generate new key'.",
+            "Copy the API key."
+          ],
+          "covers": [
+            "positions",
+            "cash",
+            "transactions"
+          ],
+          "notes": "Only works for spread betting and CFD accounts. Share dealing, ISA and SIPP accounts return 403 'stockbroking-not-supported'. Login uses API key + username + password to get CST and X-SECURITY-TOKEN session tokens; there is no read-only key, so the dashboard would hold your full login.",
+          "docs_url": "https://labs.ig.com/gettingstarted",
+          "verified": true
+        },
+        {
+          "type": "upload",
+          "file_format": "csv",
+          "report_name": "Trade / transaction history",
+          "steps": [
+            "Log in to IG on the web.",
+            "Open History for the account.",
+            "Set a custom date range.",
+            "Download the history as CSV."
+          ],
+          "covers": [
+            "transactions"
+          ],
+          "notes": "Menu path comes from user posts, not IG help. One user reported an empty CSV. Check share dealing and ISA accounts separately.",
+          "docs_url": "https://community.ig.com/forums/topic/1871-data-export-txt-csv-api/",
+          "verified": false
+        },
+        {
+          "type": "manual",
+          "covers": [
+            "balance"
+          ]
+        }
+      ],
+      "sources": [
+        "https://labs.ig.com/gettingstarted",
+        "https://net-labs.ig.com/rest-trading-api-reference.html",
+        "https://trading-ig.readthedocs.io/en/latest/faq.html",
+        "https://community.ig.com/forums/topic/1871-data-export-txt-csv-api/"
+      ]
+    },
+    {
+      "id": "starling",
+      "name": "Starling Bank",
+      "kind": "bank",
+      "countries": [
+        "UK"
+      ],
+      "recommended": "api",
+      "methods": [
+        {
+          "type": "api",
+          "auth": "token",
+          "read_only": true,
+          "fields": [
+            {
+              "name": "access_token",
+              "label": "Personal access token",
+              "secret": true
+            }
+          ],
+          "steps": [
+            "Sign up for a free developer account at developer.starlingbank.com.",
+            "Open 'Personal Access' and link your Starling account by scanning the QR code in the Starling app.",
+            "Click 'Create Token' and give it a name.",
+            "Tick only account:read and balance:read. That is all this app needs.",
+            "Click Create and copy the whole token (it is long and shown only once). Paste it below."
+          ],
+          "covers": [
+            "cash",
+            "transactions"
+          ],
+          "notes": "Free, read-only token for your own account, with no 90-day reconnect. The balance includes money in Spaces. Tokens reportedly last until you revoke them (third-party sources).",
+          "docs_url": "https://developer.starlingbank.com/docs",
+          "verified": true
+        },
+        {
+          "type": "aggregator",
+          "provider": "truelayer",
+          "covers": [
+            "cash",
+            "transactions"
+          ],
+          "notes": "TrueLayer lists this provider, but live access is for registered businesses only, so it is not usable for a personal dashboard. Provider id oauth-starling.",
+          "verified": true
+        },
+        {
+          "type": "aggregator",
+          "provider": "gocardless",
+          "covers": [
+            "cash",
+            "transactions"
+          ],
+          "notes": "GoCardless: existing accounts only (no new sign-ups since July 2025). Coverage for this bank was not re-checked.",
+          "verified": false
+        },
+        {
+          "type": "upload",
+          "file_format": "csv",
+          "report_name": "Statement history (CSV)",
+          "steps": [
+            "In the Starling app, open the menu.",
+            "Tap 'Statements and documents'.",
+            "Tap 'Statement history'.",
+            "Choose the period and select CSV."
+          ],
+          "covers": [
+            "transactions"
+          ],
+          "notes": "Only settled transactions; pending card payments are left out. Cash ISA has its own statements under the ISA's Manage menu.",
+          "docs_url": "https://help.starlingbank.com/joint/topics/account-management/how-do-i-receive-my-statements/",
+          "verified": true
+        },
+        {
+          "type": "manual",
+          "covers": [
+            "balance"
+          ]
+        }
+      ],
+      "sources": [
+        "https://developer.starlingbank.com/docs",
+        "https://www.home-assistant.io/integrations/starlingbank",
+        "https://accounts-os.com/features/starling",
+        "https://help.starlingbank.com/joint/topics/account-management/how-do-i-receive-my-statements/",
+        "https://www.starlingbank.com/features/statements/"
+      ]
+    },
+    {
+      "id": "monzo",
+      "name": "Monzo",
+      "kind": "bank",
+      "countries": [
+        "UK"
+      ],
+      "recommended": "api",
+      "methods": [
+        {
+          "type": "api",
+          "auth": "oauth",
+          "read_only": false,
+          "fields": [
+            {
+              "name": "client_id",
+              "label": "OAuth client ID",
+              "secret": false
+            },
+            {
+              "name": "client_secret",
+              "label": "OAuth client secret",
+              "secret": true
+            }
+          ],
+          "steps": [
+            "Go to developers.monzo.com and sign in with your Monzo email.",
+            "Approve the sign-in in the Monzo app.",
+            "Open Clients and click 'New OAuth Client'.",
+            "Enter a name, set the redirect URL to your dashboard's callback URL, and choose 'Confidential'.",
+            "Copy the client ID and client secret into the dashboard.",
+            "Log in through the dashboard, click the email link, then approve access in the Monzo app."
+          ],
+          "covers": [
+            "cash",
+            "transactions"
+          ],
+          "notes": "Personal use only ('not suitable for building public applications'). Full history is available only in the first 5 minutes after approval; after that only the last 90 days, so import history straight away. Access tokens expire after hours; confidential clients get refresh tokens. Pots via GET /pots. No read-only scope (token can move money between pots).",
+          "docs_url": "https://docs.monzo.com/",
+          "verified": true
+        },
+        {
+          "type": "aggregator",
+          "provider": "truelayer",
+          "covers": [
+            "cash",
+            "transactions"
+          ],
+          "notes": "TrueLayer lists this provider, but live access is for registered businesses only, so it is not usable for a personal dashboard. Provider id ob-monzo.",
+          "verified": true
+        },
+        {
+          "type": "aggregator",
+          "provider": "gocardless",
+          "covers": [
+            "cash",
+            "transactions"
+          ],
+          "notes": "GoCardless: existing accounts only (no new sign-ups since July 2025). Coverage for this bank was not re-checked.",
+          "verified": false
+        },
+        {
+          "type": "upload",
+          "file_format": "csv",
+          "report_name": "Bank statements export",
+          "steps": [
+            "In the Monzo app, tap the three-dot menu on your card.",
+            "Tap 'Bank statements'.",
+            "Choose the date range.",
+            "Choose CSV as the format."
+          ],
+          "covers": [
+            "transactions"
+          ],
+          "notes": "Includes Pots. Also available as PDF or QIF.",
+          "docs_url": "https://monzo.com/help/budgeting-overdrafts-savings/exporting-my-transactions",
+          "verified": true
+        },
+        {
+          "type": "manual",
+          "covers": [
+            "balance"
+          ]
+        }
+      ],
+      "sources": [
+        "https://docs.monzo.com/",
+        "https://monzo.com/help/budgeting-overdrafts-savings/exporting-my-transactions",
+        "https://www.home-assistant.io/integrations/monzo/"
+      ]
+    },
+    {
+      "id": "hl",
+      "name": "Hargreaves Lansdown",
+      "kind": "broker",
+      "countries": [
+        "UK"
+      ],
+      "recommended": "upload",
+      "methods": [
+        {
+          "type": "upload",
+          "file_format": "csv",
+          "report_name": "Transaction history",
+          "steps": [
+            "Log in at hl.co.uk and open the account (ISA, SIPP or Fund & Share).",
+            "Open 'Transaction history'.",
+            "Set the date range.",
+            "Click Download and choose CSV."
+          ],
+          "covers": [
+            "transactions",
+            "dividends",
+            "cash"
+          ],
+          "notes": "No official API. Menu path and CSV option come from third-party guides; HL's own help mentions Excel or PDF downloads from the Transaction history tab. Users report a 12-month window per download and a truncated security code column (no GB00 prefix). The account summary can also be downloaded as a spreadsheet for current holdings.",
+          "docs_url": "https://www.hl.co.uk/help/profile-settings/investment-reports-tax-certificates",
+          "verified": false
+        },
+        {
+          "type": "manual",
+          "covers": [
+            "balance"
+          ]
+        }
+      ],
+      "sources": [
+        "https://www.hl.co.uk/help/profile-settings/investment-reports-tax-certificates/find-investment-reports",
+        "https://community.sharesight.com/t/importing-hargreaves-lansdown-transaction-history/2194",
+        "https://www.sharesight.com/partners/hargreaves-lansdown/"
+      ]
+    },
+    {
+      "id": "ajbell",
+      "name": "AJ Bell (incl. Dodl)",
+      "kind": "broker",
+      "countries": [
+        "UK"
+      ],
+      "recommended": "upload",
+      "methods": [
+        {
+          "type": "aggregator",
+          "provider": "snaptrade",
+          "covers": [
+            "positions",
+            "cash",
+            "transactions"
+          ],
+          "notes": "SnapTrade Personal (free) uses an UNOFFICIAL_API connector here: it logs in with your broker username, password and 2FA. Read-only. Terms-of-service and security risk. Not real-time.",
+          "verified": true
+        },
+        {
+          "type": "upload",
+          "file_format": "csv",
+          "report_name": "Transaction history",
+          "steps": [
+            "Log in to AJ Bell on the web.",
+            "Click 'My account' (top right).",
+            "Go to Documents and statements > Transaction history.",
+            "Set the date range from account opening to today.",
+            "Download as CSV."
+          ],
+          "covers": [
+            "transactions",
+            "dividends",
+            "cash"
+          ],
+          "notes": "No official API. AJ Bell's FAQ confirms the 'Transaction history' page; the CSV download and exact menu come from a third-party guide. Dodl (AJ Bell's app-only service) export is not confirmed.",
+          "docs_url": "https://www.ajbell.co.uk/faq/how-do-i-view-my-completed-deals",
+          "verified": false
+        },
+        {
+          "type": "manual",
+          "covers": [
+            "balance"
+          ]
+        }
+      ],
+      "sources": [
+        "https://www.ajbell.co.uk/faq/how-do-i-view-my-completed-deals",
+        "https://www.sharesight.com/partners/aj-bell"
+      ]
+    },
+    {
+      "id": "vanguard_uk",
+      "name": "Vanguard Investor UK",
+      "kind": "broker",
+      "countries": [
+        "UK"
+      ],
+      "recommended": "manual",
+      "methods": [
+        {
+          "type": "upload",
+          "file_format": "pdf",
+          "report_name": "Report generator (valuation and other reports)",
+          "steps": [
+            "Log in to vanguardinvestor.co.uk.",
+            "Choose Documents from the left-hand menu, then the Documents tab.",
+            "In 'Report generator', click Go and pick a document.",
+            "Click Generate.",
+            "Download it from the list with the arrow icon."
+          ],
+          "covers": [
+            "positions"
+          ],
+          "notes": "No official API. Steps are official, but the file format is not stated (likely PDF); no CSV transaction export was found. Quarterly statements are also in Documents.",
+          "docs_url": "https://www.vanguardinvestor.co.uk/need-help/answer/how-do-i-generate-a-document",
+          "verified": false
+        },
+        {
+          "type": "manual",
+          "covers": [
+            "balance"
+          ]
+        }
+      ],
+      "sources": [
+        "https://www.vanguardinvestor.co.uk/need-help/answer/how-do-i-generate-a-document",
+        "https://www.vanguardinvestor.co.uk/need-help/answer/what-can-do-in-app"
+      ]
+    },
+    {
+      "id": "ii",
+      "name": "interactive investor (ii)",
+      "kind": "broker",
+      "countries": [
+        "UK"
+      ],
+      "recommended": "upload",
+      "methods": [
+        {
+          "type": "upload",
+          "file_format": "csv",
+          "report_name": "Transaction history",
+          "steps": [
+            "Log in to ii on the web.",
+            "Click Portfolio at the top.",
+            "Select Transaction history.",
+            "Set the date range to cover all transactions.",
+            "Click the download icon and choose CSV."
+          ],
+          "covers": [
+            "transactions",
+            "dividends",
+            "cash"
+          ],
+          "notes": "No official API. Steps come from a third-party guide (Sharesight); no official ii help page was found.",
+          "docs_url": "https://www.sharesight.com/partners/interactive-investor/",
+          "verified": false
+        },
+        {
+          "type": "manual",
+          "covers": [
+            "balance"
+          ]
+        }
+      ],
+      "sources": [
+        "https://www.sharesight.com/partners/interactive-investor/",
+        "https://www.allinvestview.com/interactive-investor-portfolio-tracker"
+      ]
+    },
+    {
+      "id": "freetrade",
+      "name": "Freetrade",
+      "kind": "broker",
+      "countries": [
+        "UK"
+      ],
+      "recommended": "upload",
+      "methods": [
+        {
+          "type": "upload",
+          "file_format": "csv",
+          "report_name": "Activity feed CSV export",
+          "steps": [
+            "Open the Freetrade app and go to the Activity tab.",
+            "Tap the upward-arrow button at the top right.",
+            "Tap 'All Activity'.",
+            "Save the CSV file."
+          ],
+          "covers": [
+            "transactions",
+            "dividends",
+            "cash"
+          ],
+          "notes": "No official API. App only. Covers everything since account opening: top-ups, withdrawals, trades (contract notes) and dividends. Transfers in/out from other providers and some corporate actions (e.g. takeovers) are missing.",
+          "docs_url": "https://help.freetrade.io/en/articles/6627908-how-do-i-download-a-csv-export-of-my-activity-feed",
+          "verified": true
+        },
+        {
+          "type": "manual",
+          "covers": [
+            "balance"
+          ]
+        }
+      ],
+      "sources": [
+        "https://help.freetrade.io/en/articles/6627908-how-do-i-download-a-csv-export-of-my-activity-feed",
+        "https://help.freetrade.io/en/articles/6627909-what-information-is-included-in-the-csv-download-of-my-activity-feed",
+        "https://help.freetrade.io/en/articles/6627915-can-i-rely-on-the-csv-download-of-my-activity-feed-to-complete-my-tax-return"
+      ]
+    },
+    {
+      "id": "fidelity_uk",
+      "name": "Fidelity Personal Investing (UK)",
+      "kind": "broker",
+      "countries": [
+        "UK"
+      ],
+      "recommended": "upload",
+      "methods": [
+        {
+          "type": "upload",
+          "file_format": "csv",
+          "report_name": "Transaction history",
+          "steps": [
+            "Log in at fidelity.co.uk.",
+            "On Account Summary, click 'Transactions and Reports'.",
+            "Choose 'Transaction history'.",
+            "Set Timeframe to 'Custom Date Range' and enter the dates.",
+            "Click Export (top right) and choose 'Export as a CSV'."
+          ],
+          "covers": [
+            "transactions",
+            "dividends",
+            "cash"
+          ],
+          "notes": "No official API. Covers all Fidelity accounts at once unless you filter by account. Also exports as spreadsheet (XLS) or PDF.",
+          "docs_url": "https://fidelity.co.uk/media/pi/pdfs/help-and-support/view-my-transaction-history.pdf",
+          "verified": true
+        },
+        {
+          "type": "manual",
+          "covers": [
+            "balance"
+          ]
+        }
+      ],
+      "sources": [
+        "https://fidelity.co.uk/media/pi/pdfs/help-and-support/view-my-transaction-history.pdf"
+      ]
+    },
+    {
+      "id": "investengine",
+      "name": "InvestEngine",
+      "kind": "broker",
+      "countries": [
+        "UK"
+      ],
+      "recommended": "upload",
+      "methods": [
+        {
+          "type": "upload",
+          "file_format": "csv",
+          "report_name": "Reports (custom report)",
+          "steps": [
+            "Log in to InvestEngine on the web.",
+            "Click Reports in the top-right corner.",
+            "Build a custom report for the date range you need.",
+            "Download it as CSV."
+          ],
+          "covers": [
+            "transactions"
+          ],
+          "notes": "No official API. InvestEngine's help article says custom reports download as PDF or CSV; the full step list could not be read (page blocked), and the report types are not confirmed.",
+          "docs_url": "https://help.investengine.com/hc/en-gb/articles/8927819031581-How-to-download-reports-and-statements",
+          "verified": false
+        },
+        {
+          "type": "manual",
+          "covers": [
+            "balance"
+          ]
+        }
+      ],
+      "sources": [
+        "https://help.investengine.com/hc/en-gb/articles/8927819031581-How-to-download-reports-and-statements",
+        "https://sharesight.com/partners/investengine"
+      ]
+    },
+    {
+      "id": "moneybox",
+      "name": "Moneybox",
+      "kind": "robo",
+      "countries": [
+        "UK"
+      ],
+      "recommended": "manual",
+      "methods": [
+        {
+          "type": "upload",
+          "file_format": "pdf",
+          "report_name": "Statement",
+          "steps": [
+            "In the Moneybox app or website, go to Settings > Statements & documents > Statements.",
+            "Generate a new statement and choose the account and date range.",
+            "Download it, or tap the envelope icon to email it to yourself."
+          ],
+          "covers": [
+            "transactions"
+          ],
+          "notes": "No official API. Menu path is official; the format is not stated (likely PDF), so it is not a practical import.",
+          "docs_url": "https://www.moneyboxapp.com/faqs/category/moneybox-online/managing-your-account/how-can-i-view-and-generate-statements-on-the-moneybox-website",
+          "verified": false
+        },
+        {
+          "type": "manual",
+          "covers": [
+            "balance"
+          ]
+        }
+      ],
+      "sources": [
+        "https://www.moneyboxapp.com/faqs/category/your-account/your-account/how-can-i-get-a-statement-of-my-account",
+        "https://www.moneyboxapp.com/faqs/category/moneybox-online/managing-your-account/how-can-i-view-and-generate-statements-on-the-moneybox-website"
+      ]
+    },
+    {
+      "id": "nutmeg",
+      "name": "Nutmeg (J.P. Morgan Personal Investing)",
+      "kind": "robo",
+      "countries": [
+        "UK"
+      ],
+      "recommended": "manual",
+      "methods": [
+        {
+          "type": "upload",
+          "file_format": "pdf",
+          "report_name": "Quarterly statement and valuation report",
+          "steps": [
+            "Log in to Nutmeg.",
+            "Open Nutmail or your documents to find the quarterly statement."
+          ],
+          "covers": [
+            "positions",
+            "transactions"
+          ],
+          "notes": "No official API and no CSV export found. Statements are quarterly PDFs. Nutmeg now trades as J.P. Morgan Personal Investing.",
+          "docs_url": "https://www.nutmeg.com/faq",
+          "verified": false
+        },
+        {
+          "type": "manual",
+          "covers": [
+            "balance"
+          ]
+        }
+      ],
+      "sources": [
+        "https://www.nutmeg.com/faq",
+        "https://support.nutmeg.com/?article=115000355031-Nutmail"
+      ]
+    },
+    {
+      "id": "lightyear",
+      "name": "Lightyear",
+      "kind": "broker",
+      "countries": [
+        "UK",
+        "NL"
+      ],
+      "recommended": "manual",
+      "methods": [
+        {
+          "type": "upload",
+          "file_format": "pdf",
+          "report_name": "Account statement",
+          "steps": [
+            "Web: open your account, click your profile icon (top right), then Settings.",
+            "Under Account, choose the statement type.",
+            "Pick the time period.",
+            "Click 'Export PDF'."
+          ],
+          "covers": [
+            "positions",
+            "transactions",
+            "dividends",
+            "cash"
+          ],
+          "notes": "No official API. Help centre lists PDF only (account, income, capital gains, costs). In the app: Transactions > Statements > Download PDF. A 2022 blog post mentioned a spreadsheet option, not confirmed today.",
+          "docs_url": "https://lightyear.com/en-gb/help/trading-and-investments/tax-and-statement",
+          "verified": true
+        },
+        {
+          "type": "manual",
+          "covers": [
+            "balance"
+          ]
+        }
+      ],
+      "sources": [
+        "https://lightyear.com/en-gb/help/trading-and-investments/tax-and-statement"
+      ]
+    },
+    {
+      "id": "barclays",
+      "name": "Barclays",
+      "kind": "bank",
+      "countries": [
+        "UK"
+      ],
+      "recommended": "manual",
+      "methods": [
+        {
+          "type": "aggregator",
+          "provider": "truelayer",
+          "covers": [
+            "cash",
+            "transactions"
+          ],
+          "notes": "TrueLayer lists this provider, but live access is for registered businesses only, so it is not usable for a personal dashboard. Provider id ob-barclays.",
+          "verified": true
+        },
+        {
+          "type": "aggregator",
+          "provider": "gocardless",
+          "covers": [
+            "cash",
+            "transactions"
+          ],
+          "notes": "GoCardless: existing accounts only (no new sign-ups since July 2025). Coverage for this bank was not re-checked.",
+          "verified": false
+        },
+        {
+          "type": "upload",
+          "file_format": "pdf",
+          "report_name": "Online statement",
+          "steps": [
+            "Log in to Barclays Online Banking.",
+            "Go to Manage accounts > Statements and documents.",
+            "Download the statement PDF."
+          ],
+          "covers": [
+            "transactions"
+          ],
+          "notes": "No personal API. Statements are PDF; a CSV export for personal accounts was not confirmed.",
+          "docs_url": "https://www.barclays.co.uk/help/accounts/statements-balances/print-online-statements/",
+          "verified": false
+        },
+        {
+          "type": "manual",
+          "covers": [
+            "balance"
+          ]
+        }
+      ],
+      "sources": [
+        "https://www.barclays.co.uk/help/accounts/statements-balances/print-online-statements/",
+        "https://www.barclays.co.uk/ways-to-bank/online-banking/online-statements/"
+      ]
+    },
+    {
+      "id": "hsbc_uk",
+      "name": "HSBC UK",
+      "kind": "bank",
+      "countries": [
+        "UK"
+      ],
+      "recommended": "upload",
+      "methods": [
+        {
+          "type": "aggregator",
+          "provider": "truelayer",
+          "covers": [
+            "cash",
+            "transactions"
+          ],
+          "notes": "TrueLayer lists this provider, but live access is for registered businesses only, so it is not usable for a personal dashboard. Provider id ob-hsbc.",
+          "verified": true
+        },
+        {
+          "type": "aggregator",
+          "provider": "gocardless",
+          "covers": [
+            "cash",
+            "transactions"
+          ],
+          "notes": "GoCardless: existing accounts only (no new sign-ups since July 2025). Coverage for this bank was not re-checked.",
+          "verified": false
+        },
+        {
+          "type": "upload",
+          "file_format": "csv",
+          "report_name": "Transaction list download",
+          "steps": [
+            "Log on to HSBC online banking and choose the account.",
+            "Open 'Search and filter' and set the date range.",
+            "Click Search.",
+            "Scroll to the bottom and click Download.",
+            "Choose CSV and click Continue."
+          ],
+          "covers": [
+            "transactions"
+          ],
+          "notes": "No personal API. Statements are PDF only; CSV comes from the transaction list. A midata file (12 months, ending 30 days ago) is also available on desktop via Manage > midata download.",
+          "docs_url": "https://www.hsbc.co.uk/help/banking-made-easy/online-statements/",
+          "verified": true
+        },
+        {
+          "type": "manual",
+          "covers": [
+            "balance"
+          ]
+        }
+      ],
+      "sources": [
+        "https://www.hsbc.co.uk/help/banking-made-easy/online-statements/",
+        "https://www.hsbc.co.uk/current-accounts/midata-faqs/"
+      ]
+    },
+    {
+      "id": "lloyds",
+      "name": "Lloyds Bank",
+      "kind": "bank",
+      "countries": [
+        "UK"
+      ],
+      "recommended": "upload",
+      "methods": [
+        {
+          "type": "aggregator",
+          "provider": "truelayer",
+          "covers": [
+            "cash",
+            "transactions"
+          ],
+          "notes": "TrueLayer lists this provider, but live access is for registered businesses only, so it is not usable for a personal dashboard. Provider id ob-lloyds.",
+          "verified": true
+        },
+        {
+          "type": "aggregator",
+          "provider": "gocardless",
+          "covers": [
+            "cash",
+            "transactions"
+          ],
+          "notes": "GoCardless: existing accounts only (no new sign-ups since July 2025). Coverage for this bank was not re-checked.",
+          "verified": false
+        },
+        {
+          "type": "upload",
+          "file_format": "csv",
+          "report_name": "Midata export",
+          "steps": [
+            "Log in to Lloyds Internet Banking.",
+            "Click More Actions next to your current account.",
+            "Expand Account Services.",
+            "Choose Midata Export and download the file."
+          ],
+          "covers": [
+            "transactions"
+          ],
+          "notes": "No personal API. Midata gives 12 months of current-account transactions. Regular statements download as PDF ('Download or print statement'); CSV/QIF export is documented only for business accounts.",
+          "docs_url": "https://www.lloydsbank.com/help-guidance/everyday-banking/statements/download-statements.html",
+          "verified": false
+        },
+        {
+          "type": "manual",
+          "covers": [
+            "balance"
+          ]
+        }
+      ],
+      "sources": [
+        "https://www.lloydsbank.com/help-guidance/everyday-banking/statements/download-statements.html",
+        "https://www.lloydsbank.com/online-banking/statements/search-transactions.html"
+      ]
+    },
+    {
+      "id": "nationwide",
+      "name": "Nationwide Building Society",
+      "kind": "bank",
+      "countries": [
+        "UK"
+      ],
+      "recommended": "upload",
+      "methods": [
+        {
+          "type": "aggregator",
+          "provider": "truelayer",
+          "covers": [
+            "cash",
+            "transactions"
+          ],
+          "notes": "TrueLayer lists this provider, but live access is for registered businesses only, so it is not usable for a personal dashboard. Provider id ob-nationwide.",
+          "verified": true
+        },
+        {
+          "type": "aggregator",
+          "provider": "gocardless",
+          "covers": [
+            "cash",
+            "transactions"
+          ],
+          "notes": "GoCardless: existing accounts only (no new sign-ups since July 2025). Coverage for this bank was not re-checked.",
+          "verified": false
+        },
+        {
+          "type": "upload",
+          "file_format": "csv",
+          "report_name": "Midata download",
+          "steps": [
+            "Log in to the Nationwide internet bank on a computer.",
+            "Choose your current account and open Transactions.",
+            "Use the midata download option."
+          ],
+          "covers": [
+            "transactions"
+          ],
+          "notes": "No personal API. Midata covers 12 months but leaves out the last 31 days, current accounts only. Statements are PDF (up to 36 months, one at a time).",
+          "docs_url": "https://www.nationwide.co.uk/help/online-banking-help/about-midata",
+          "verified": false
+        },
+        {
+          "type": "manual",
+          "covers": [
+            "balance"
+          ]
+        }
+      ],
+      "sources": [
+        "https://www.nationwide.co.uk/help/online-banking-help/about-midata",
+        "https://www.nationwide.co.uk/help/online-banking-help/account-balance-statement-online"
+      ]
+    },
+    {
+      "id": "ibkr",
+      "name": "Interactive Brokers",
+      "kind": "broker",
+      "countries": [
+        "NL",
+        "UK",
+        "US"
+      ],
+      "recommended": "api",
+      "methods": [
+        {
+          "type": "api",
+          "auth": "flex_token_query",
+          "read_only": true,
+          "fields": [
+            {
+              "name": "flex_token",
+              "label": "Flex Web Service token",
+              "secret": true
+            },
+            {
+              "name": "query_id",
+              "label": "Flex Query ID",
+              "secret": false
+            }
+          ],
+          "steps": [
+            "Log in to the IBKR Portal on the website. Go to Performance & Reports, then Flex Queries.",
+            "Next to Activity Flex Query, click + to make a new query. Name it, for example 'Dashboard'.",
+            "Under Sections, add Open Positions, Trades, Cash Transactions and Cash Report. Select all fields in each and click Save.",
+            "Under Delivery Configuration, set Format to XML (not CSV) and Period to Last 365 Calendar Days.",
+            "Click Continue, then Create. Open the query's info pop-over on the Flex Queries page and copy the Query ID.",
+            "Go to Flex Queries, then Flex Web Service Configuration. Tick Flex Web Service Status and click Save.",
+            "Under Should Expire After, choose the longest option (1 year). Leave Valid For IP Address empty unless your server has a fixed IP.",
+            "Click Generate New Token, copy it, and paste the token and the Query ID below."
+          ],
+          "covers": [
+            "positions",
+            "cash",
+            "transactions",
+            "dividends"
+          ],
+          "notes": "A Flex token can only download reports, never trade. IBKR updates the report once a day. The token expires after the time you chose (6 hours by default, up to 1 year): generate a new one then, which cancels the old one. Trades older than 365 days are not included. In a linked/multi-account structure only the master account can see the token.",
+          "docs_url": "https://www.interactivebrokers.com/campus/ibkr-api-page/flex-web-service/",
+          "verified": true
+        },
+        {
+          "type": "api",
+          "auth": "other",
+          "read_only": false,
+          "fields": [],
+          "steps": [
+            "Download and run the Client Portal Gateway (Java) on your own machine.",
+            "Open the gateway's local login page and sign in with your IBKR username, password and 2FA.",
+            "Call the Web API through the local gateway while the session is alive."
+          ],
+          "covers": [
+            "positions",
+            "cash",
+            "transactions"
+          ],
+          "notes": "Individuals cannot use OAuth; they must run IBKR's local Java gateway and log in by hand, and sessions time out. IBKR Pro accounts only; 10 requests/second limit. Not suited to an unattended dashboard; Flex is the better route.",
+          "docs_url": "https://www.interactivebrokers.com/campus/ibkr-api-page/webapi-doc/",
+          "verified": true
+        },
+        {
+          "type": "aggregator",
+          "provider": "snaptrade",
+          "covers": [
+            "positions",
+            "cash",
+            "transactions",
+            "dividends"
+          ],
+          "notes": "Two connectors: 'Interactive Brokers' (TOKEN, read-only, likely Flex query based) and 'IBKR' (OAuth, read and trade). The direct Flex query is simpler.",
+          "verified": true
+        },
+        {
+          "type": "aggregator",
+          "provider": "plaid",
+          "covers": [
+            "positions",
+            "cash",
+            "transactions"
+          ],
+          "notes": "Plaid supports 'Interactive Brokers - US' for Investments, Transactions and Balance. Only the Trial plan (US/CA developers) is free.",
+          "verified": true
+        },
+        {
+          "type": "upload",
+          "file_format": "csv",
+          "report_name": "Activity Flex Query (CSV) or Activity Statement",
+          "steps": [
+            "Create an Activity Flex Query as above with Format set to CSV.",
+            "Run the query from the Flex Queries page and download the file.",
+            "Upload the CSV to the dashboard."
+          ],
+          "covers": [
+            "positions",
+            "cash",
+            "transactions",
+            "dividends"
+          ],
+          "notes": "Format options are XML, CSV, Text (Pipe) and Text (Tab). Period options go up to Last 365 Calendar Days per run, so longer history needs several runs. The exact 'run' button label was not confirmed.",
+          "docs_url": "https://www.ibkrguides.com/clientportal/performanceandstatements/activityflex.htm",
+          "verified": false
+        },
+        {
+          "type": "unofficial",
+          "library": "ib_insync / ib_async (TWS API)",
+          "notes": "Uses the official TWS API but needs TWS or IB Gateway running and logged in; overkill for a read-only dashboard."
+        },
+        {
+          "type": "manual",
+          "covers": [
+            "balance"
+          ]
+        }
+      ],
+      "sources": [
+        "https://www.ibkrguides.com/clientportal/performanceandstatements/flex3.htm",
+        "https://www.ibkrguides.com/clientportal/performanceandstatements/activityflex.htm",
+        "https://www.interactivebrokers.com/campus/ibkr-api-page/flex-web-service/",
+        "https://www.interactivebrokers.com/docs/web-api/flex-web-service/using-flex-web-service/make-request-to-send-request",
+        "https://www.interactivebrokers.com/docs/web-api/authentication/oauth-2/introduction"
+      ]
+    },
+    {
+      "id": "schwab",
+      "name": "Charles Schwab",
+      "kind": "both",
+      "countries": [
+        "US"
+      ],
+      "recommended": "api",
+      "methods": [
+        {
+          "type": "api",
+          "auth": "oauth",
+          "read_only": false,
+          "fields": [
+            {
+              "name": "app_key",
+              "label": "App key",
+              "secret": true
+            },
+            {
+              "name": "app_secret",
+              "label": "App secret",
+              "secret": true
+            },
+            {
+              "name": "callback_url",
+              "label": "Callback URL",
+              "secret": false
+            }
+          ],
+          "steps": [
+            "Create a developer account at developer.schwab.com and log in.",
+            "Request access to 'Trader API - Individual' and wait for approval.",
+            "Go to Dashboard > Apps and click Create App.",
+            "Choose the API product 'Accounts and Trading Production'.",
+            "Enter an app name, a description and a callback URL such as https://127.0.0.1:8182 (no trailing slash).",
+            "Wait until the app status changes from 'Approved - Pending' to 'Ready For Use' (can take a few days).",
+            "Open the app and copy the App Key and Secret.",
+            "In the dashboard, sign in once with your Schwab brokerage login to authorise the app."
+          ],
+          "covers": [
+            "positions",
+            "cash",
+            "transactions",
+            "dividends"
+          ],
+          "notes": "No read-only scope: the app can trade. Access token lasts about 30 minutes; the refresh token expires after 7 days and cannot be renewed in code, so the user must sign in again every week. Reported limits: about 120 requests/minute (transactions about 60/minute), transactions call capped at 1 year per request.",
+          "docs_url": "https://developer.schwab.com/products/trader-api--individual",
+          "verified": false
+        },
+        {
+          "type": "aggregator",
+          "provider": "snaptrade",
+          "covers": [
+            "positions",
+            "cash",
+            "transactions"
+          ],
+          "notes": "OAuth (read and trade). 'After broker approval' for commercial apps; not confirmed for Personal keys.",
+          "verified": true
+        },
+        {
+          "type": "aggregator",
+          "provider": "plaid",
+          "covers": [
+            "positions",
+            "cash",
+            "transactions"
+          ],
+          "notes": "OAuth institution; one active OAuth Item per user per app. Free only for US/CA developers (Trial plan).",
+          "verified": true
+        },
+        {
+          "type": "upload",
+          "file_format": "csv",
+          "report_name": "Transaction history export",
+          "steps": [
+            "Log in at schwab.com.",
+            "Go to Accounts > History.",
+            "Choose the account and a date range, then click Search.",
+            "Click Export and choose CSV."
+          ],
+          "covers": [
+            "transactions",
+            "dividends"
+          ],
+          "notes": "Third-party guides report up to 4 years of history online and a cap of about 1,500 rows per CSV. Positions can also be exported from the Positions page, but that path was not confirmed.",
+          "docs_url": "https://www.schwab.com/",
+          "verified": false
+        },
+        {
+          "type": "unofficial",
+          "library": "schwab-api (itsjafer, browser automation)",
+          "notes": "Logs in with your username, password and TOTP secret stored on the server; breaks when the site changes and may breach Schwab's terms. The official API (via schwab-py) is the safer choice."
+        },
+        {
+          "type": "manual",
+          "covers": [
+            "balance"
+          ]
+        }
+      ],
+      "sources": [
+        "https://schwab-py.readthedocs.io/en/stable/getting-started.html",
+        "https://medium.com/@carstensavage/the-unofficial-guide-to-charles-schwabs-trader-apis-14c1f5bc1d57",
+        "https://ftp.fau.de/cran/web/packages/schwabr/refman/schwabr.html",
+        "https://traderfyles.helpscoutdocs.com/article/14-how-to-export-trade-history-from-schwab"
+      ]
+    },
+    {
+      "id": "etrade",
+      "name": "E*TRADE from Morgan Stanley",
+      "kind": "broker",
+      "countries": [
+        "US"
+      ],
+      "recommended": "aggregator",
+      "methods": [
+        {
+          "type": "api",
+          "auth": "oauth",
+          "read_only": false,
+          "fields": [
+            {
+              "name": "consumer_key",
+              "label": "Consumer key",
+              "secret": true
+            },
+            {
+              "name": "consumer_secret",
+              "label": "Consumer secret",
+              "secret": true
+            }
+          ],
+          "steps": [
+            "Log in at developer.etrade.com with your E*TRADE login.",
+            "Request an Individual sandbox key.",
+            "Complete the API Developer Agreement and the User Intent Survey.",
+            "Request an Individual production (live) key.",
+            "Copy the consumer key and secret.",
+            "Authorise the dashboard each day in a browser and paste the verifier code."
+          ],
+          "covers": [
+            "positions",
+            "cash",
+            "transactions",
+            "dividends"
+          ],
+          "notes": "OAuth 1.0a. Access token expires at midnight US Eastern every day and goes inactive after 2 hours without calls (renewable until midnight), so unattended use needs a manual login daily. No read-only scope. An Individual key works with your own accounts only.",
+          "docs_url": "https://apisb.etrade.com/docs/api/authorization/get_access_token.html",
+          "verified": true
+        },
+        {
+          "type": "aggregator",
+          "provider": "snaptrade",
+          "covers": [
+            "positions",
+            "cash",
+            "transactions"
+          ],
+          "notes": "OAuth (read and trade).",
+          "verified": true
+        },
+        {
+          "type": "aggregator",
+          "provider": "plaid",
+          "covers": [
+            "positions",
+            "cash",
+            "transactions"
+          ],
+          "notes": "Plaid page 'E*TRADE Financial' lists Investments. Free only for US/CA developers.",
+          "verified": true
+        },
+        {
+          "type": "upload",
+          "file_format": "csv",
+          "report_name": "Transaction history download (DownloadTxnHistory.csv)",
+          "steps": [
+            "Log in at etrade.com.",
+            "Open your account's transaction history.",
+            "Choose a time period.",
+            "Click Download and pick the spreadsheet (CSV) format."
+          ],
+          "covers": [
+            "transactions",
+            "dividends"
+          ],
+          "notes": "Menu names changed after the Morgan Stanley migration; exact path not confirmed from an official page. Gains & Losses can also be downloaded as TaxableGLDownload.csv.",
+          "docs_url": "https://us.etrade.com/",
+          "verified": false
+        },
+        {
+          "type": "unofficial",
+          "library": "pyetrade",
+          "notes": "A Python wrapper around the official API, not a scraper; still needs the daily OAuth login."
+        },
+        {
+          "type": "manual",
+          "covers": [
+            "balance"
+          ]
+        }
+      ],
+      "sources": [
+        "https://apisb.etrade.com/docs/api/authorization/get_access_token.html",
+        "https://developer.etrade.com/getting-started",
+        "https://us.etrade.com/l/f/agreement-library/api-developer-licensing-agreement",
+        "https://www.taxact.com/support/905/2018/export-csv-file-e-trade"
+      ]
+    },
+    {
+      "id": "webull",
+      "name": "Webull",
+      "kind": "broker",
+      "countries": [
+        "US"
+      ],
+      "recommended": "api",
+      "methods": [
+        {
+          "type": "api",
+          "auth": "api_key_secret",
+          "read_only": false,
+          "fields": [
+            {
+              "name": "app_key",
+              "label": "App key",
+              "secret": true
+            },
+            {
+              "name": "app_secret",
+              "label": "App secret",
+              "secret": true
+            }
+          ],
+          "steps": [
+            "Log in at webull.com.",
+            "Click your avatar (top right), then Developer Console.",
+            "Go to Access Credentials > API Keys and click Apply for API Service.",
+            "Wait for approval (1 to 2 business days at the earliest).",
+            "Click Register an API Application and fill in the form.",
+            "Click Submit, then Generate Key in the Operate column.",
+            "Copy the App Key and App Secret from the pop-up (shown only once).",
+            "When the dashboard first connects, approve the SMS code in the Webull app (Menu > Messages > OpenAPI Notifications)."
+          ],
+          "covers": [
+            "positions",
+            "cash",
+            "transactions"
+          ],
+          "notes": "Free; needs an open Webull US brokerage account. Permissions are Market Data and Trading only, so no read-only key. The access token must be approved in the app within 5 minutes and lasts 15 days by default, then needs re-approval. Rate limits are on a separate page, not checked.",
+          "docs_url": "https://developer.webull.com/apis/docs/authentication/IndividualApplicationAPI/",
+          "verified": true
+        },
+        {
+          "type": "aggregator",
+          "provider": "snaptrade",
+          "covers": [
+            "positions",
+            "cash",
+            "transactions"
+          ],
+          "notes": "SnapTrade Personal (free) uses an UNOFFICIAL_API connector here: it logs in with your broker username, password and 2FA. Read-only. Terms-of-service and security risk.",
+          "verified": true
+        },
+        {
+          "type": "aggregator",
+          "provider": "plaid",
+          "covers": [
+            "positions",
+            "transactions"
+          ],
+          "notes": "Not confirmed.",
+          "verified": false
+        },
+        {
+          "type": "upload",
+          "file_format": "pdf",
+          "report_name": "Account statements",
+          "steps": [
+            "Download monthly statements from the Webull app or website."
+          ],
+          "covers": [
+            "positions",
+            "transactions"
+          ],
+          "notes": "No official CSV export path was found. Menu path not confirmed.",
+          "docs_url": "https://www.webull.com/",
+          "verified": false
+        },
+        {
+          "type": "unofficial",
+          "library": "webull (tedchou12, PyPI)",
+          "notes": "Uses the private app API with your login, trading PIN and device ID; can break or lock the account and is against the terms. Use the official OpenAPI instead."
+        },
+        {
+          "type": "manual",
+          "covers": [
+            "balance"
+          ]
+        }
+      ],
+      "sources": [
+        "https://developer.webull.com/apis/docs/authentication/IndividualApplicationAPI/",
+        "https://developer.webull.com/apis/docs/authentication/token",
+        "https://developer.webull.com/apis/docs/faq"
+      ]
+    },
+    {
+      "id": "public",
+      "name": "Public.com",
+      "kind": "broker",
+      "countries": [
+        "US"
+      ],
+      "recommended": "api",
+      "methods": [
+        {
+          "type": "api",
+          "auth": "api_key",
+          "read_only": false,
+          "fields": [
+            {
+              "name": "secret_key",
+              "label": "API secret key",
+              "secret": true
+            }
+          ],
+          "steps": [
+            "Log in at public.com.",
+            "Go to Settings > Security > API (public.com/settings/security/api).",
+            "Generate a secret key and copy it.",
+            "Paste the secret key into the dashboard; it swaps it for short-lived access tokens itself."
+          ],
+          "covers": [
+            "positions",
+            "cash",
+            "transactions"
+          ],
+          "notes": "Free for personal, non-commercial use. The secret is exchanged at POST /userapiauthservice/personal/access-tokens for a Bearer token whose lifetime you set (validityInMinutes). No read-only scope documented. Limit 10 requests/second per account. Some pages mention a request form and approval email before the key appears. History rows lag fills; whether dividends appear in history was not confirmed.",
+          "docs_url": "https://public.com/api/docs/quickstart",
+          "verified": true
+        },
+        {
+          "type": "aggregator",
+          "provider": "snaptrade",
+          "covers": [
+            "positions",
+            "cash",
+            "transactions"
+          ],
+          "notes": "OAuth (read and trade).",
+          "verified": true
+        },
+        {
+          "type": "aggregator",
+          "provider": "plaid",
+          "covers": [
+            "positions",
+            "transactions"
+          ],
+          "notes": "Not confirmed.",
+          "verified": false
+        },
+        {
+          "type": "upload",
+          "file_format": "csv",
+          "report_name": "Activity export",
+          "steps": [
+            "On the Public website, open the activity/history view and use Download or Export if offered."
+          ],
+          "covers": [
+            "transactions"
+          ],
+          "notes": "Only a third-party source mentions a CSV export (web only). Not confirmed.",
+          "docs_url": "https://public.com/",
+          "verified": false
+        },
+        {
+          "type": "manual",
+          "covers": [
+            "balance"
+          ]
+        }
+      ],
+      "sources": [
+        "https://public.com/api/docs/quickstart",
+        "https://public.com/api/docs/faq",
+        "https://public.com/get/api"
+      ]
+    },
+    {
+      "id": "alpaca",
+      "name": "Alpaca",
+      "kind": "broker",
+      "countries": [
+        "US"
+      ],
+      "recommended": "api",
+      "methods": [
+        {
+          "type": "api",
+          "auth": "api_key_secret",
+          "read_only": false,
+          "fields": [
+            {
+              "name": "api_key_id",
+              "label": "API key ID",
+              "secret": true
+            },
+            {
+              "name": "api_secret_key",
+              "label": "API secret key",
+              "secret": true
+            },
+            {
+              "name": "paper",
+              "label": "Paper account (yes/no)",
+              "secret": false
+            }
+          ],
+          "steps": [
+            "Log in at app.alpaca.markets.",
+            "Use the account switcher (top left) to select your live account, not Paper.",
+            "On the Home page, find API Keys and click Generate New Keys (or Regenerate).",
+            "Copy the Key ID and the Secret Key (the secret is shown only once)."
+          ],
+          "covers": [
+            "positions",
+            "cash",
+            "transactions",
+            "dividends"
+          ],
+          "notes": "Keys do not expire but regenerating replaces them. Live keys start with AK and use api.alpaca.markets; paper keys start with PK and use paper-api.alpaca.markets. No read-only scope. Limit 200 requests/minute per account. Button labels vary by account.",
+          "docs_url": "https://docs.alpaca.markets/docs/getting-started",
+          "verified": true
+        },
+        {
+          "type": "aggregator",
+          "provider": "snaptrade",
+          "covers": [
+            "positions",
+            "cash",
+            "transactions"
+          ],
+          "notes": "OAuth. For commercial apps SnapTrade needs your own Alpaca OAuth app (approval up to about 4 weeks); not confirmed for Personal keys. Alpaca's own API is simpler.",
+          "verified": true
+        },
+        {
+          "type": "manual",
+          "covers": [
+            "balance"
+          ]
+        }
+      ],
+      "sources": [
+        "https://alpaca.markets/support/usage-limit-api-calls",
+        "https://alpaca.markets/learn/start-paper-trading",
+        "https://alpaca.markets/learn/api-key-security-best-practices-for-alpaca-builders"
+      ]
+    },
+    {
+      "id": "robinhood",
+      "name": "Robinhood",
+      "kind": "broker",
+      "countries": [
+        "US"
+      ],
+      "recommended": "aggregator",
+      "methods": [
+        {
+          "type": "api",
+          "auth": "other",
+          "read_only": true,
+          "fields": [
+            {
+              "name": "api_key",
+              "label": "API key (rh-api-...)",
+              "secret": true
+            },
+            {
+              "name": "private_key",
+              "label": "Ed25519 private key (base64)",
+              "secret": true
+            }
+          ],
+          "steps": [
+            "Generate an Ed25519 key pair on your computer.",
+            "Sign in to Robinhood web classic and open crypto account settings (robinhood.com/account/crypto).",
+            "Select Add key and paste your public key.",
+            "Tick only the read actions: Read crypto accounts, holdings, orders, products and quotes.",
+            "Copy the API key and keep the private key for the dashboard."
+          ],
+          "covers": [
+            "positions",
+            "cash",
+            "transactions"
+          ],
+          "notes": "Crypto only (Robinhood Crypto Trading API, US customers). Stocks, options and retirement accounts have no official API. Expiry and rate limits not stated in the help article.",
+          "docs_url": "https://docs.robinhood.com/crypto/trading/",
+          "verified": true
+        },
+        {
+          "type": "aggregator",
+          "provider": "snaptrade",
+          "covers": [
+            "positions",
+            "cash",
+            "transactions"
+          ],
+          "notes": "OAuth, read-only.",
+          "verified": true
+        },
+        {
+          "type": "aggregator",
+          "provider": "plaid",
+          "covers": [
+            "positions",
+            "cash",
+            "transactions"
+          ],
+          "notes": "OAuth institution. Free only for US/CA developers.",
+          "verified": true
+        },
+        {
+          "type": "upload",
+          "file_format": "csv",
+          "report_name": "Account activity report",
+          "steps": [
+            "On robinhood.com click Account (in the app: Account > Menu).",
+            "Go to Reports and statements > Reports.",
+            "Click Generate new report.",
+            "Choose the account type, start date and end date.",
+            "Click Generate report and download the CSV when notified."
+          ],
+          "covers": [
+            "transactions",
+            "dividends"
+          ],
+          "notes": "Covers brokerage and retirement accounts; excludes futures, crypto and spending accounts. Takes about 2 hours, up to 24. No positions snapshot in this file.",
+          "docs_url": "https://robinhood.com/us/en/support/articles/finding-your-reports-and-statements/",
+          "verified": true
+        },
+        {
+          "type": "unofficial",
+          "library": "robin_stocks",
+          "notes": "Uses the private app API with your username, password and MFA/TOTP stored on the server; against the terms, can trigger account locks, and breaks without notice."
+        },
+        {
+          "type": "manual",
+          "covers": [
+            "balance"
+          ]
+        }
+      ],
+      "sources": [
+        "https://robinhood.com/us/en/support/articles/crypto-api/",
+        "https://robinhood.com/us/en/support/articles/finding-your-reports-and-statements/"
+      ]
+    },
+    {
+      "id": "fidelity_us",
+      "name": "Fidelity Investments",
+      "kind": "broker",
+      "countries": [
+        "US"
+      ],
+      "recommended": "aggregator",
+      "methods": [
+        {
+          "type": "aggregator",
+          "provider": "snaptrade",
+          "covers": [
+            "positions",
+            "cash",
+            "transactions"
+          ],
+          "notes": "OAuth, read-only. For commercial apps it is 'available after broker approval'; not confirmed for Personal keys.",
+          "verified": true
+        },
+        {
+          "type": "aggregator",
+          "provider": "plaid",
+          "covers": [
+            "positions",
+            "cash",
+            "transactions"
+          ],
+          "notes": "OAuth institution with Investments. On paid plans, Fidelity access takes about 8 weeks after Production approval. Not confirmed whether the Trial plan includes it immediately. Free only for US/CA developers.",
+          "verified": true
+        },
+        {
+          "type": "upload",
+          "file_format": "csv",
+          "report_name": "Portfolio Positions download",
+          "steps": [
+            "Log in at fidelity.com.",
+            "Open Accounts & Trade > Portfolio > Positions.",
+            "Click Download at the top of the page and save the CSV."
+          ],
+          "covers": [
+            "positions",
+            "cash"
+          ],
+          "notes": "Exports what the Positions page shows, with prices as of the moment the page loaded. The help page confirming the Download button is an older Fidelity page; the menu labels may have moved.",
+          "docs_url": "https://www.fidelity.com/webxpress/help/topics/learn_portfolio_positions.shtml",
+          "verified": true
+        },
+        {
+          "type": "upload",
+          "file_format": "csv",
+          "report_name": "Activity & Orders history (History_for_Account_....csv)",
+          "steps": [
+            "Log in at fidelity.com.",
+            "Go to Activity & Orders and open History.",
+            "Pick one account (not All Accounts) and a time period.",
+            "Click Download."
+          ],
+          "covers": [
+            "transactions",
+            "dividends"
+          ],
+          "notes": "Data runs to the previous business day. Sources disagree on the date limit (90 days to 5 years per file), so long history may need several downloads. The All Accounts file has a different column order.",
+          "docs_url": "https://www.fidelity.com/customer-service/faqs-exporting-account-information",
+          "verified": false
+        },
+        {
+          "type": "unofficial",
+          "library": "fidelity-api (NelsonDane, Playwright)",
+          "notes": "Drives a headless browser with your username, password and TOTP stored on the server; fragile and likely against the terms."
+        },
+        {
+          "type": "manual",
+          "covers": [
+            "balance"
+          ]
+        }
+      ],
+      "sources": [
+        "https://www.fidelity.com/webxpress/help/topics/learn_portfolio_positions.shtml",
+        "https://www.fidelity.com/customer-service/faqs-exporting-account-information",
+        "https://beancount.io/tools/csv-to-beancount/fidelity"
+      ]
+    },
+    {
+      "id": "vanguard_us",
+      "name": "Vanguard (US)",
+      "kind": "broker",
+      "countries": [
+        "US"
+      ],
+      "recommended": "upload",
+      "methods": [
+        {
+          "type": "aggregator",
+          "provider": "snaptrade",
+          "covers": [
+            "positions",
+            "cash",
+            "transactions"
+          ],
+          "notes": "SnapTrade Personal (free) uses an UNOFFICIAL_API connector here: it logs in with your broker username, password and 2FA. Read-only. Terms-of-service and security risk. Not real-time.",
+          "verified": true
+        },
+        {
+          "type": "aggregator",
+          "provider": "plaid",
+          "covers": [
+            "positions",
+            "cash",
+            "transactions"
+          ],
+          "notes": "Plaid institution page lists Investments, Transactions and Balance. Free only for US/CA developers.",
+          "verified": true
+        },
+        {
+          "type": "upload",
+          "file_format": "csv",
+          "report_name": "Transaction download (spreadsheet/CSV)",
+          "steps": [
+            "Log in at investor.vanguard.com.",
+            "Open the transaction history / download area.",
+            "Choose the CSV (spreadsheet) format, the accounts and a date range.",
+            "Download the file."
+          ],
+          "covers": [
+            "transactions",
+            "dividends"
+          ],
+          "notes": "Vanguard help says downloads cover the past 18 months (7 years viewable on screen); 529 and annuity accounts are excluded. Funds under the same account number are grouped and duplicates may need removing. Exact current menu path not confirmed; help pages are old.",
+          "docs_url": "https://investor.vanguard.com/technical-support",
+          "verified": false
+        },
+        {
+          "type": "unofficial",
+          "library": "vanguard-api (NelsonDane, Playwright)",
+          "notes": "Browser automation with your stored login and 2FA; fragile and likely against the terms."
+        },
+        {
+          "type": "manual",
+          "covers": [
+            "balance"
+          ]
+        }
+      ],
+      "sources": [
+        "https://retirementplans.vanguard.com/VGApp/pe/faces/web/help/ihelp/HelpCenterTechnicalAutonomyFeed.xhtml?id=ef0db3f1",
+        "https://retirementplans.vanguard.com/VGApp/pe/faces/web/help/ihelp/HelpCenterTechnicalAutonomyFeed.xhtml?id=211013a6",
+        "https://investor.vanguard.com/technical-support"
+      ]
+    },
+    {
+      "id": "merrill",
+      "name": "Merrill Edge",
+      "kind": "broker",
+      "countries": [
+        "US"
+      ],
+      "recommended": "upload",
+      "methods": [
+        {
+          "type": "aggregator",
+          "provider": "plaid",
+          "covers": [
+            "positions",
+            "cash",
+            "transactions"
+          ],
+          "notes": "Merrill Edge page lists Investments; the Trial plan names Merrill among included OAuth institutions. Free only for US/CA developers.",
+          "verified": true
+        },
+        {
+          "type": "upload",
+          "file_format": "csv",
+          "report_name": "Download Account Data",
+          "steps": [
+            "Log in at merrilledge.com.",
+            "Hover over Accounts and, under Account Resources, click Download Account Data.",
+            "Choose the account and date range.",
+            "Select Comma-Separated Spreadsheet (.CSV) and download."
+          ],
+          "covers": [
+            "transactions",
+            "dividends"
+          ],
+          "notes": "Path from third-party guides; other guides describe Accounts > Activity > Export. Not confirmed on an official page.",
+          "docs_url": "https://www.merrilledge.com/",
+          "verified": false
+        },
+        {
+          "type": "manual",
+          "covers": [
+            "balance"
+          ]
+        }
+      ],
+      "sources": [
+        "https://traderfyles.helpscoutdocs.com/article/16-how-to-export-trade-history-from-merrill",
+        "https://form8949.appspot.com/MerrillEdge.html"
+      ]
+    },
+    {
+      "id": "sofi",
+      "name": "SoFi Invest",
+      "kind": "both",
+      "countries": [
+        "US"
+      ],
+      "recommended": "manual",
+      "methods": [
+        {
+          "type": "aggregator",
+          "provider": "plaid",
+          "covers": [
+            "cash",
+            "transactions",
+            "positions"
+          ],
+          "notes": "Not confirmed on an official Plaid page.",
+          "verified": false
+        },
+        {
+          "type": "upload",
+          "file_format": "pdf",
+          "report_name": "Invest statements and tax forms",
+          "steps": [
+            "Log in to SoFi and open your Invest account.",
+            "Go to Documents > Statements and tax forms (in the app: Manage Account > Documents).",
+            "Download the statement."
+          ],
+          "covers": [
+            "positions",
+            "transactions"
+          ],
+          "notes": "Official help confirms statements are PDFs. A CSV transaction export on the website is mentioned only by third parties (reportedly max 2 years per export); not confirmed.",
+          "docs_url": "https://support.sofi.com/hc/en-us/articles/360040121231-How-do-I-get-my-financial-statements-",
+          "verified": true
+        },
+        {
+          "type": "manual",
+          "covers": [
+            "balance"
+          ]
+        }
+      ],
+      "sources": [
+        "https://support.sofi.com/hc/en-us/articles/360040121231-How-do-I-get-my-financial-statements-"
+      ]
+    },
+    {
+      "id": "ally",
+      "name": "Ally (Ally Bank and Ally Invest)",
+      "kind": "both",
+      "countries": [
+        "US"
+      ],
+      "recommended": "upload",
+      "methods": [
+        {
+          "type": "aggregator",
+          "provider": "plaid",
+          "covers": [
+            "cash",
+            "transactions"
+          ],
+          "notes": "Plaid page 'Ally Bank' lists Transactions and Balance but not Investments, so Ally Invest holdings were not confirmed. Free only for US/CA developers.",
+          "verified": true
+        },
+        {
+          "type": "upload",
+          "file_format": "csv",
+          "report_name": "Transaction download",
+          "steps": [
+            "Log in at ally.com, open the account's activity or history and use the download option if offered."
+          ],
+          "covers": [
+            "transactions"
+          ],
+          "notes": "No official help page on exports was found for Ally Invest or Ally Bank. The old Ally Invest (ex-TradeKing) API is widely reported as retired; no current personal API.",
+          "docs_url": "https://www.ally.com/",
+          "verified": false
+        },
+        {
+          "type": "manual",
+          "covers": [
+            "balance"
+          ]
+        }
+      ],
+      "sources": [
+        "https://blog.traderspost.io/article/does-ally-invest-have-api",
+        "https://www.ally.com/resources/pdf/invest/api-agreement.pdf"
+      ]
+    },
+    {
+      "id": "bofa",
+      "name": "Bank of America",
+      "kind": "bank",
+      "countries": [
+        "US"
+      ],
+      "recommended": "upload",
+      "methods": [
+        {
+          "type": "aggregator",
+          "provider": "plaid",
+          "covers": [
+            "cash",
+            "transactions"
+          ],
+          "notes": "The Trial plan names Bank of America explicitly. Its Plaid page lists Transactions and Balance (investments sit under Merrill). Free only for US/CA developers.",
+          "verified": true
+        },
+        {
+          "type": "upload",
+          "file_format": "csv",
+          "report_name": "Download transactions (Microsoft Excel format)",
+          "steps": [
+            "Log in to Bank of America online banking.",
+            "Open the account.",
+            "Click Download above the transaction list.",
+            "Choose a transaction period or custom date range (mm/dd/yyyy).",
+            "Choose Microsoft Excel format (CSV) and download."
+          ],
+          "covers": [
+            "cash",
+            "transactions"
+          ],
+          "notes": "Third-party guides report about 18 months for checking/savings and 12 months for credit cards; column layouts differ by account type. No personal API (CashPro is business-only).",
+          "docs_url": "https://www.bankofamerica.com/",
+          "verified": false
+        },
+        {
+          "type": "manual",
+          "covers": [
+            "balance"
+          ]
+        }
+      ],
+      "sources": [
+        "https://tiller.com/how-to-export-bank-of-america-statements-into-excel-and-google-sheets/"
+      ]
+    },
+    {
+      "id": "chase",
+      "name": "Chase (incl. J.P. Morgan Self-Directed Investing)",
+      "kind": "both",
+      "countries": [
+        "US"
+      ],
+      "recommended": "aggregator",
+      "methods": [
+        {
+          "type": "aggregator",
+          "provider": "snaptrade",
+          "covers": [
+            "positions",
+            "cash",
+            "transactions"
+          ],
+          "notes": "OAuth, read-only, probably J.P. Morgan Self-Directed Investing accounts. 'After broker approval' for commercial apps; not confirmed for Personal keys.",
+          "verified": true
+        },
+        {
+          "type": "aggregator",
+          "provider": "plaid",
+          "covers": [
+            "cash",
+            "transactions"
+          ],
+          "notes": "The Trial plan names Chase explicitly. Free only for US/CA developers.",
+          "verified": true
+        },
+        {
+          "type": "upload",
+          "file_format": "csv",
+          "report_name": "Download account activity",
+          "steps": [
+            "Log in at chase.com.",
+            "Open the checking, savings or card account.",
+            "Click the download icon above the transaction list.",
+            "Choose Spreadsheet (Excel, CSV) and a date range.",
+            "Click Download."
+          ],
+          "covers": [
+            "cash",
+            "transactions"
+          ],
+          "notes": "Third parties report roughly 2 years and about 1,000 rows per download; QFX/QBO also offered. Self-Directed Investing export path not checked. No personal API (Chase developer APIs are for businesses).",
+          "docs_url": "https://www.chase.com/",
+          "verified": false
+        },
+        {
+          "type": "unofficial",
+          "library": "chaseinvest-api (NelsonDane, Playwright)",
+          "notes": "Browser automation with your stored login and 2FA; fragile and likely against the terms."
+        },
+        {
+          "type": "manual",
+          "covers": [
+            "balance"
+          ]
+        }
+      ],
+      "sources": [
+        "https://tiller.com/how-to-export-chase-bank-statements-into-excel-and-google-sheets/"
+      ]
+    },
+    {
+      "id": "wells_fargo",
+      "name": "Wells Fargo (incl. WellsTrade)",
+      "kind": "both",
+      "countries": [
+        "US"
+      ],
+      "recommended": "aggregator",
+      "methods": [
+        {
+          "type": "aggregator",
+          "provider": "snaptrade",
+          "covers": [
+            "positions",
+            "cash",
+            "transactions"
+          ],
+          "notes": "OAuth, read-only (WellsTrade). 'After broker approval' for commercial apps; not confirmed for Personal keys.",
+          "verified": true
+        },
+        {
+          "type": "aggregator",
+          "provider": "plaid",
+          "covers": [
+            "cash",
+            "transactions",
+            "positions"
+          ],
+          "notes": "Plaid page lists Investments, Transactions and Balance. Free only for US/CA developers.",
+          "verified": true
+        },
+        {
+          "type": "upload",
+          "file_format": "csv",
+          "report_name": "Download Account Activity (Comma Delimited)",
+          "steps": [
+            "Log in at wellsfargo.com.",
+            "Open Download Account Activity (from the Accounts menu or the account's activity page).",
+            "Choose the account and date range.",
+            "Select Comma Delimited (ASCII, Spreadsheet) and download."
+          ],
+          "covers": [
+            "cash",
+            "transactions"
+          ],
+          "notes": "Third parties report up to 18 months for checking, savings and money market; card limits unclear. WellsTrade export not checked. Wells Fargo's developer gateway is for commercial clients, not individuals.",
+          "docs_url": "https://www.wellsfargo.com/",
+          "verified": false
+        },
+        {
+          "type": "manual",
+          "covers": [
+            "balance"
+          ]
+        }
+      ],
+      "sources": [
+        "https://thebricks.com/resources/how-to-export-wells-fargo-statements-to-excel",
+        "https://www.wellsfargo.com/online-banking/deposit-details/"
+      ]
+    }
+  ]
+}

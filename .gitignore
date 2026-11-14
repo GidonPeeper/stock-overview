@@ -16,6 +16,10 @@ data/trading212_statement.json
 data/cash_accounts.json
 data/watchlist.json
 data/finances.json
+# accounts added in Settings (API keys!) and positions read from CSV files
+data/connections.json
+data/manual_holdings.json
+data/.*.tmp
 
 # generated at runtime (rebuilt automatically)
 data/history.db

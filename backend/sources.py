@@ -10,6 +10,7 @@ from __future__ import annotations
 
 from typing import Callable
 
+from . import connections
 from .connectors import degiro, traderepublic, trading212
 from .connectors.base import Holding
 from .fx import to_eur
@@ -17,7 +18,8 @@ from .positions import Trade
 
 
 def holdings() -> list[Holding]:
-    return trading212.get_holdings() + degiro.get_holdings() + traderepublic.get_holdings()
+    return (trading212.get_holdings() + degiro.get_holdings() + traderepublic.get_holdings()
+            + connections.holdings())  # accounts added in Settings (IBKR, CSV, ...)
 
 
 def trade_sources() -> dict[str, tuple[bool, Callable[[], list[Trade]]]]:
@@ -25,6 +27,7 @@ def trade_sources() -> dict[str, tuple[bool, Callable[[], list[Trade]]]]:
     out = dict(trading212.trade_sources())
     out["DeGiro"] = (False, degiro.get_trades)
     out["Trade Republic"] = (False, traderepublic.get_trades)
+    out.update(connections.trade_sources())
     return out
 
 
