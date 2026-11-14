@@ -28,6 +28,7 @@ python3 -m venv .venv && .venv/bin/pip install -r requirements.txt
 |---|---|
 | 🔀 **Merged holdings** | The same company held at several brokers or accounts becomes one position (matched by ISIN) |
 | 🇬🇧 **UK tax year** | Gains and dividends outside your ISA since 6 April, CGT and dividend allowance left, ISA allowance used, and a 30-day ("bed and breakfast") reminder after each sale |
+| 💡 **Ways to save** | Money-saving tips ranked by size, each with the working shown: ISA and CGT allowances before 5 April, dividend tax, funds taxed as income, cheaper funds on the same index, pension tax relief (including the 60% band above £100k), loans vs cash, tax on savings interest, and the foreign income and gains regime for new UK residents |
 | 💷 **£ / €** | One tap switches every amount between pounds and euros; London prices quoted in pence are handled |
 | 💶 **Exact P/L accounting** | Real per-trade FX + fees from broker statements; handles splits, delistings, ISIN changes; reconciles with each broker's own figures |
 | 📊 **Live market layer** | Index ticker strip, per-holding sparklines, today's movers, tap-through detail sheet with 1D/1W/1M/1Y chart + news |
