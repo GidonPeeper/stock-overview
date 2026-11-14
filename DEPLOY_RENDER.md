@@ -111,6 +111,28 @@ Anything built from your own data is recomputed straight away after an
 upload or any other edit, so new numbers never wait for a timer. If Yahoo or a
 broker fails, the last good value is kept.
 
+## Bank links (Enable Banking)
+EU bank balances (Rabobank, ING, ABN AMRO, bunq, EU Revolut, …) can update on
+their own. Link banks from the `https://…onrender.com` address: Enable Banking
+only sends you back to an https URL, so it does not work from `http://localhost`.
+
+1. In Enable Banking's Control Panel, register a **Production** application
+   with the redirect URL `https://<your-service>.onrender.com/enablebanking/callback`
+   (Settings → Add an account → your bank → *Bank link* shows it, ready to copy).
+2. Click **Activate by linking accounts** and approve your own accounts.
+3. Give the app its key, one of:
+   - in Settings: the application ID and the downloaded `.pem` file (stored
+     encrypted in the vault — set `GITHUB_TOKEN` so it survives restarts), or
+   - on Render: env var `ENABLEBANKING_APP_ID`, and the `.pem` as a **Secret File**
+     with `ENABLEBANKING_KEY_FILE=/etc/secrets/<file name>` (or paste it into
+     `ENABLEBANKING_PRIVATE_KEY`).
+4. Pick the bank and press **Link**. On iPhone the bank may send you back in
+   Safari: the return page needs no login, then just reopen the home-screen app.
+
+Balances are read every 6 hours (banks allow about 4 reads a day) and saved
+with the connection, so a restart does not spend extra reads. Renew each bank
+when the app says so (usually every 180 days).
+
 ## Notes
 - Do **not** IP-restrict the Trading 212 key (Render's outbound IP changes).
 - Keep `.env` and your real `data/*.csv|json` files out of git (they already are).

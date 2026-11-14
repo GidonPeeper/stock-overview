@@ -84,12 +84,16 @@ _DASH_USER = os.getenv("DASHBOARD_USER", "admin")
 _DASH_PASS = os.getenv("DASHBOARD_PASSWORD")
 _DASH_SECRET = os.getenv("DASHBOARD_SECRET") or secrets.token_urlsafe(32)
 
-# Reachable without logging in: the login page, the PWA assets and the
-# data-free health check used by keep-alive pings.
+# Reachable without logging in: the login page, the PWA assets, the
+# data-free health check used by keep-alive pings, and the page a bank sends
+# you back to after approving a bank link (on iPhone it often opens in Safari,
+# which has no login cookie; it is protected by a single-use `state` instead,
+# see banklink_api.py).
 _PUBLIC = {
     "/login", "/manifest.webmanifest", "/favicon.ico",
     "/icon-180.png", "/icon-192.png", "/icon-512.png",
     "/healthz", "/sw.js",
+    "/enablebanking/callback",
 }
 
 
@@ -522,10 +526,12 @@ def _loads_or_400(text: str) -> dict:
     return payload if isinstance(payload, dict) else {}
 
 
-# "Add an account": catalog, connected accounts, live connectors, CSV import.
-from . import connections_api  # noqa: E402
+# "Add an account": catalog, connected accounts, live connectors, CSV import,
+# and bank links through Enable Banking.
+from . import banklink_api, connections_api  # noqa: E402
 
 app.include_router(connections_api.router)
+app.include_router(banklink_api.router)
 
 
 def _connections_changed(trades_changed: bool) -> None:

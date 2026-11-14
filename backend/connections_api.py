@@ -10,6 +10,11 @@
   POST   /api/connections/{id}/refresh   fetch again now
   DELETE /api/connections/{id}           remove (and forget its key)
 
+Bank links (Enable Banking) are added through a trip to the bank instead of
+a key form: see banklink_api.py. Connections that feed cash list
+`manual_duplicates`: balances typed in by hand for the same institution, so
+the UI can suggest removing them (they would be counted twice).
+
 Every edit re-encrypts the vault via github_sync.push_vault_async(). main.py
 registers `after_change` hooks (rebuild the trendline when trade history
 changed, leave demo mode).
@@ -19,11 +24,13 @@ from __future__ import annotations
 
 import json
 import os
+import re
+import threading
 from typing import Callable
 
-from fastapi import APIRouter, File, Form, HTTPException, UploadFile
+from fastapi import APIRouter, File, Form, HTTPException, Request, UploadFile
 
-from . import catalog, connections, datafiles, github_sync
+from . import cash, catalog, connections, datafiles, github_sync
 from .connectors import registry
 from .connectors.live import ConnectorError
 from .importers import generic_csv
@@ -82,6 +89,29 @@ def _taken_labels(exclude: str | None = None) -> set[str]:
     return labels | _FIXED_LABELS
 
 
+def _names(conn: dict) -> set[str]:
+    """Names an institution goes by: 'ING (Netherlands)' -> {'ING', ...}."""
+    out = {re.sub(r"\s*\(.*?\)\s*", " ", conn.get("institution_name") or "").strip(),
+           (conn.get("bank") or {}).get("aspsp") or ""}
+    return {n for n in out if len(registry.norm(n)) >= 2}
+
+
+def _mentions(text: str, name: str) -> bool:
+    text = text or ""
+    if registry.norm(text) == registry.norm(name):
+        return True
+    return re.search(r"(?<![a-z0-9])" + re.escape(name.lower()) + r"(?![a-z0-9])",
+                     text.lower()) is not None
+
+
+def manual_duplicates(conn: dict, manual: list[dict]) -> list[str]:
+    """Hand-typed balances that look like the same institution as `conn`."""
+    names = _names(conn)
+    return [a.get("name") or "" for a in manual
+            if any(_mentions(a.get("institution") or "", n) or _mentions(a.get("name") or "", n)
+                   for n in names)]
+
+
 # ------------------------------------------------------------------ catalog
 @router.get("/api/institutions")
 def institutions() -> dict:
@@ -123,8 +153,15 @@ def list_connections() -> dict:
             except OSError:
                 updated = None
             files.append({"kind": kind, "institution": inst_id, "label": name, "updated": updated})
-    return {"connections": [connections.public(c) for c in conns],
-            "server": server, "files": files}
+    manual = cash.manual_accounts()
+    out = []
+    for c in conns:
+        pub = connections.public(c)
+        spec = registry.connector(c.get("connector"))
+        if manual and spec and "cash" in spec.feeds and not spec.extra.get("managed_by"):
+            pub["manual_duplicates"] = manual_duplicates(c, manual)
+        out.append(pub)
+    return {"connections": out, "server": server, "files": files}
 
 
 @router.post("/api/connections/csv/preview")
@@ -180,6 +217,9 @@ def create(institution: str = Form(...), method: str = Form(...), label: str = F
         raise HTTPException(400, "This option can't be connected in the app.")
 
     cid = m["connector"]
+    if registry.connector(cid).extra.get("flow") == "bank_link":
+        raise HTTPException(400, "Link this bank with the Link button: it opens your bank's "
+                                 "page to approve access.")
     creds = connections.canonical_credentials(cid, _json_form(credentials, "details"),
                                               m.get("fields") or [])
     if any(len(v) > 4096 for v in creds.values()):
@@ -233,8 +273,16 @@ def replace_csv(conn_id: str, file: UploadFile = File(...), mapping: str = Form(
 
 
 @router.post("/api/connections/{conn_id}/refresh")
-def refresh(conn_id: str) -> dict:
-    conn = connections.refresh(conn_id)
+def refresh(conn_id: str, request: Request) -> dict:
+    existing = connections.get(conn_id)
+    spec = registry.connector((existing or {}).get("connector"))
+    psu = None
+    if spec and spec.extra.get("psu"):
+        # the user pressed Refresh: tell the bank they are online, so it does
+        # not count against its few background reads a day
+        from .connectors.enablebanking import psu_from_request
+        psu = psu_from_request(request.headers, request.client.host if request.client else "")
+    conn = connections.refresh(conn_id, psu=psu)
     if conn is None:
         raise HTTPException(404, "Connection not found.")
     return {"connection": connections.public(conn)}
@@ -247,5 +295,17 @@ def delete(conn_id: str) -> dict:
         raise HTTPException(404, "Connection not found.")
     if gone.get("connector") == "trading212":
         connections._clear_t212(gone)
+    if gone.get("connector") == "enablebanking":
+        _end_bank_link(gone)
     _changed(gone)
     return {"removed": conn_id}
+
+
+def _end_bank_link(conn: dict) -> None:
+    """End the consent at Enable Banking too (best effort, in the background)."""
+    from .connectors import enablebanking as eb
+
+    session_id = (conn.get("credentials") or {}).get("session_id")
+    app, _ = eb.current()
+    if app is not None and session_id:
+        threading.Thread(target=eb.end_session, args=(app, session_id), daemon=True).start()

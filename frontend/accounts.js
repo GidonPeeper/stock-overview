@@ -167,10 +167,15 @@
     const t = tabs.find(x => x.key === tab) || tabs[0];
     if (!t) return;
     const box = $("acct-method");
-    if (t.key === "agg") box.innerHTML = aggregatorHtml(inst, t.methods);
+    if (t.key === "agg") {
+      box.innerHTML = aggregatorHtml(inst, t.methods);
+      const link = t.methods.find(isBankLink);
+      if (link) bankLink(inst, link);
+    }
     else if (t.key === "unofficial") box.innerHTML = unofficialHtml(inst, t.methods);
     else renderMethod(box, inst, t.methods[0]);
   }
+  const isBankLink = m => m.support === "live" && m.connector === "enablebanking";
 
   /* -------------------------------------------------------- pieces */
   function facts(m) {
@@ -248,7 +253,22 @@
   }
 
   function aggregatorHtml(inst, methods) {
-    const cards = methods.map(m => {
+    const usable = methods.filter(isBankLink);
+    const rest = methods.filter(m => !isBankLink(m));
+    if (!usable.length) return comingSoon(inst, rest);
+    return `<div id="eb-box"><div class="sub" style="margin:10px 0">Loading…</div></div>` +
+      (rest.length ? `<details style="margin-top:12px"><summary class="cmeta" style="cursor:pointer">Other bank link
+        services (not built into the app)</summary>${aggCards(inst, rest)}</details>` : "");
+  }
+
+  function comingSoon(inst, methods) {
+    return `<div class="note warn">Coming soon. A bank link service connects through your bank's official
+      open-banking access and refreshes on its own. It is not built into the app yet.${esc(others(inst))}</div>` +
+      aggCards(inst, methods);
+  }
+
+  function aggCards(inst, methods) {
+    return methods.map(m => {
       const a = m.aggregator || AGG[norm(m.provider)] || {};
       const name = a.name || m.provider || "Bank link service";
       const open = a.available_to_individuals;
@@ -265,8 +285,6 @@
           <ol class="steps">${steps.map(s => `<li>${esc(s)}</li>`).join("")}</ol></details>` : ""}
         ${docLink(a, name + " docs")}</div>`;
     }).join("");
-    return `<div class="note warn">Coming soon. A bank link service connects through your bank's official
-      open-banking access and refreshes on its own. It is not built into the app yet.${esc(others(inst))}</div>` + cards;
   }
 
   function unofficialHtml(inst, methods) {
@@ -274,6 +292,170 @@
       username, password or PIN. This app never stores bank or broker logins.${esc(others(inst))}</div>` +
       methods.map(m => `<div class="agg"><b>${esc(m.library || "Unofficial tool")}</b>${notes(m)}</div>`).join("");
   }
+
+  /* ------------------------------------------- bank link (Enable Banking) */
+  // One Enable Banking application (ID + private key) serves every bank. Not
+  // set up yet: the setup steps and the two fields. Set up: pick the bank,
+  // go there to approve, come back on /enablebanking/callback.
+  let ebEdit = false;
+  const LINKING = "ebLinking";
+  const markLinking = () => { try { localStorage.setItem(LINKING, String(Date.now())); } catch (e) {} };
+  const wasLinking = () => { try { return Date.now() - +(localStorage.getItem(LINKING) || 0) < 30 * 60e3; } catch (e) { return false; } };
+
+  async function bankLink(inst, m) {
+    const box = $("eb-box"); if (!box) return;
+    let st;
+    try {
+      const r = await fetch("/api/enablebanking");
+      if (!r.ok) throw new Error();
+      st = await r.json();
+    } catch (e) { box.innerHTML = '<div class="msg err">Could not load the bank link settings.</div>'; return; }
+    if (!st.configured || ebEdit) ebSetup(box, inst, m, st);
+    else ebPicker(box, inst, m, st);
+  }
+
+  const httpsWarn = st => st.https ? "" : `<div class="note warn">Enable Banking only sends you back to an https
+    address. Open the dashboard at its https address (for example on Render) to link a bank.</div>`;
+
+  function ebSetup(box, inst, m, st) {
+    const a = m.aggregator || AGG.enablebanking || {};
+    const steps = (a.setup_steps || []).filter(Boolean);
+    box.innerHTML = facts(m) + notes(m) +
+      `<div class="sub" style="margin:10px 0 0"><b>One-time setup</b> (free, about 10 minutes). One Enable Banking
+        application links all your banks.</div>
+      <ol class="steps">${steps.map(s => `<li>${esc(s)}</li>`).join("")}</ol>
+      <label class="fld"><span>Redirect URL to register (copy it exactly)</span>
+        <span class="copy"><input class="ipt" id="eb-redirect" readonly value="${esc(st.redirect_url)}" />
+        <button class="btn sm ghost" id="eb-copy" type="button">Copy</button></span></label>
+      ${httpsWarn(st)}
+      ${st.problem ? `<div class="note warn">${esc(st.problem)}</div>` : ""}
+      <label class="fld"><span>Application ID</span>
+        <input class="ipt" id="eb-app" autocomplete="off" autocapitalize="off" spellcheck="false"
+          placeholder="aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee" /></label>
+      <label class="fld"><span>Private key: the .pem file your browser downloaded</span>
+        <input type="file" id="eb-keyfile" accept=".pem,.key,.txt" /></label>
+      <details><summary class="cmeta" style="cursor:pointer">Or paste the key</summary>
+        <textarea class="ipt" id="eb-key" rows="5" autocomplete="off" autocapitalize="off" spellcheck="false"
+          placeholder="-----BEGIN PRIVATE KEY-----"></textarea></details>
+      <div style="margin-top:10px"><button class="btn" id="eb-save" type="button">Save and check</button>
+        ${st.configured ? '<button class="btn ghost" id="eb-cancel" type="button">Cancel</button>' : ""}
+        ${st.source === "app" ? '<button class="btn ghost" id="eb-forget" type="button">Remove the saved key</button>' : ""}</div>
+      <div class="msg" id="eb-msg"></div>
+      <div class="fine">The key is checked with Enable Banking, then kept on your own server (encrypted in the backup
+        vault) and never shown again. It can only read the accounts you link.</div>
+      ${docLink(a, "Enable Banking docs")}`;
+    $("eb-copy").addEventListener("click", () => {
+      const i = $("eb-redirect"); i.select();
+      (navigator.clipboard ? navigator.clipboard.writeText(i.value) : Promise.reject()).then(
+        () => { $("eb-copy").textContent = "Copied"; }, () => { try { document.execCommand("copy"); } catch (e) {} });
+    });
+    $("eb-keyfile").addEventListener("change", () => {
+      // the .pem file is named after the application ID
+      const f = $("eb-keyfile").files[0], id = $("eb-app");
+      const hit = f && /([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})/i.exec(f.name);
+      if (hit && !id.value.trim()) id.value = hit[1];
+    });
+    if ($("eb-cancel")) $("eb-cancel").addEventListener("click", () => { ebEdit = false; bankLink(inst, m); });
+    if ($("eb-forget")) $("eb-forget").addEventListener("click", async () => {
+      if (!confirm("Remove the Enable Banking key from this app? Linked banks stop updating until you add it again.")) return;
+      const r = await fetch("/api/enablebanking/app", {method: "DELETE"}).catch(() => null);
+      if (!r || !r.ok) return bad($("eb-msg"), r ? await detail(r) : "Could not reach the server.");
+      ebEdit = false; bankLink(inst, m);
+    });
+    $("eb-save").addEventListener("click", () => ebSave(inst, m));
+  }
+
+  async function ebSave(inst, m) {
+    const msg = $("eb-msg"), btn = $("eb-save");
+    const appId = $("eb-app").value.trim(), file = $("eb-keyfile").files[0], pasted = $("eb-key").value.trim();
+    if (!appId) return bad(msg, "Fill in the application ID.");
+    if (!file && !pasted) return bad(msg, "Choose the .pem file, or paste the key.");
+    const fd = new FormData();
+    fd.append("app_id", appId);
+    if (pasted) fd.append("private_key", pasted); else fd.append("key_file", file);
+    btn.disabled = true; info(msg, "Checking with Enable Banking…");
+    try {
+      const r = await fetch("/api/enablebanking/app", {method: "POST", body: fd});
+      if (!r.ok) return bad(msg, await detail(r));
+      ebEdit = false;
+      await bankLink(inst, m);
+    } catch (e) { bad(msg, "Could not reach the server."); }
+    finally { if (document.body.contains(btn)) btn.disabled = false; }
+  }
+
+  function ebPicker(box, inst, m, st) {
+    box.innerHTML = facts(m) + notes(m) +
+      `<div class="cmeta" style="margin:6px 0">Enable Banking application ${esc(st.app_id)} ·
+        ${st.source === "env" ? "set on the server" : "saved in the app"} ·
+        <a href="#" id="eb-change" class="doc" style="font-size:inherit">change</a></div>
+      ${httpsWarn(st)}
+      <div class="map" style="grid-template-columns:minmax(90px,120px) 1fr">
+        <label class="fld"><span>Country</span><select class="ipt" id="eb-country"></select></label>
+        <label class="fld"><span>Bank</span><select class="ipt" id="eb-bank"><option>Loading…</option></select></label>
+      </div>
+      ${labelBox(inst)}
+      <button class="btn" id="eb-go" type="button" disabled>Link</button>
+      <div class="msg" id="eb-msg"></div>
+      <div class="fine">You go to your bank to approve read-only access to your balances, then come back here.
+        On iPhone the bank may finish in Safari: then just open this app again. Access lasts up to the bank's maximum
+        (often 180 days); the app reminds you to renew it.</div>`;
+    $("eb-change").addEventListener("click", e => { e.preventDefault(); ebEdit = true; bankLink(inst, m); });
+    $("eb-country").addEventListener("change", () => ebBanks(inst, $("eb-country").value));
+    $("eb-bank").addEventListener("change", ebButton);
+    $("eb-go").addEventListener("click", () => ebStart(inst, m));
+    ebBanks(inst, "");
+  }
+
+  async function ebBanks(inst, country) {
+    const msg = $("eb-msg"), sel = $("eb-bank");
+    sel.innerHTML = "<option>Loading…</option>"; $("eb-go").disabled = true;
+    let d;
+    try {
+      const r = await fetch(`/api/enablebanking/banks?institution=${encodeURIComponent(inst.id)}&country=${encodeURIComponent(country)}`);
+      if (!r.ok) { sel.innerHTML = ""; return bad(msg, await detail(r)); }
+      d = await r.json();
+    } catch (e) { sel.innerHTML = ""; return bad(msg, "Could not reach the server."); }
+    $("eb-country").innerHTML = (d.countries || []).map(c =>
+      `<option ${c === d.country ? "selected" : ""}>${esc(c)}</option>`).join("");
+    sel.innerHTML = (d.banks || []).length
+      ? d.banks.map(b => `<option value="${esc(b.name)}" data-days="${esc(b.max_days || "")}" ${b.name === d.suggested ? "selected" : ""}>${esc(b.name)}${b.beta ? " (beta)" : ""}</option>`).join("")
+      : "<option value=''>No banks in this country</option>";
+    if (!d.suggested && (d.banks || []).length) sel.insertAdjacentHTML("afterbegin", "<option value='' selected>Choose your bank…</option>");
+    info(msg, d.suggested || !(d.banks || []).length ? "" : `${inst.name} was not found in this country's list. Pick it, or another country.`);
+    ebButton();
+  }
+
+  function ebButton() {
+    const sel = $("eb-bank"), btn = $("eb-go");
+    btn.disabled = !sel.value;
+    btn.textContent = sel.value ? `Link ${sel.value}` : "Link";
+  }
+
+  async function ebStart(inst, m) {
+    const msg = $("eb-msg"), btn = $("eb-go");
+    const fd = new FormData();
+    fd.append("institution", inst.id); fd.append("method", m.key);
+    fd.append("aspsp", $("eb-bank").value); fd.append("country", $("eb-country").value);
+    fd.append("label", $("cf-label").value.trim());
+    btn.disabled = true; info(msg, `Opening ${$("eb-bank").value}…`);
+    await goToBank(fd, msg);
+    btn.disabled = false;
+  }
+
+  async function goToBank(fd, msg) {
+    try {
+      const r = await fetch("/api/enablebanking/start", {method: "POST", body: fd});
+      if (!r.ok) { const t = await detail(r); if (msg) bad(msg, t); else alert(t); return; }
+      const out = await r.json();
+      markLinking();
+      location.href = out.url;
+    } catch (e) { if (msg) bad(msg, "Could not reach the server."); else alert("Could not reach the server."); }
+  }
+
+  // Back from the bank (the PWA was only in the background): show the new link.
+  document.addEventListener("visibilitychange", () => {
+    if (document.visibilityState === "visible" && wasLinking()) afterChange();
+  });
 
   /* ---------------------------------------------------------- actions */
   async function connect(inst, m) {
@@ -400,6 +582,26 @@
     return new Date(t).toLocaleDateString("en-GB", {day: "numeric", month: "short", year: "numeric"});
   }
   const STATUS = {ok: ["live", "OK"], error: ["bad", "Error"], pending: ["sample", "Checking"]};
+  const day = iso => new Date(iso + "T12:00:00Z").toLocaleDateString("en-GB", {day: "numeric", month: "short", year: "numeric"});
+  const days = n => `${n} day${n === 1 ? "" : "s"}`;
+
+  // A bank link's consent: "renew in N days"; a warning from 14 days before.
+  function consentHtml(c) {
+    const k = c.consent; if (!k) return "";
+    if (k.expired) return c.error ? "" : `<div class="cerr">Bank access ended on ${esc(day(k.expires))}. Press Renew to link it again.</div>`;
+    if (k.warn) return `<div class="cerr" style="color:#e3b341">Bank access ends ${k.days_left ? "in " + esc(days(k.days_left)) : "today"}
+      (${esc(day(k.expires))}). Press Renew to keep it updating.</div>`;
+    return `<div class="cmeta">Renew in ${esc(days(k.days_left))} (bank access until ${esc(day(k.expires))})</div>`;
+  }
+
+  // The same bank also typed in by hand would be counted twice.
+  function dupHtml(c) {
+    const names = c.manual_duplicates || [];
+    if (!names.length) return "";
+    return `<div class="note" style="margin:6px 0 0">You also typed in ${names.map(n => `“${esc(n)}”`).join(", ")} as a balance.
+      If it is the same account, remove it under <a href="#cash" class="doc" style="font-size:inherit">Bank, savings &amp;
+      retirement accounts</a> so it is not counted twice.</div>`;
+  }
 
   async function loadConnections() {
     let d;
@@ -408,15 +610,20 @@
     const rows = [];
     for (const c of d.connections || []) {
       const [cls, word] = STATUS[c.status] || STATUS.pending;
-      const csv = c.connector === "generic_csv";
+      const csv = c.connector === "generic_csv", link = c.connector === "enablebanking";
+      const bank = c.bank || {};
+      const via = link ? ` via Enable Banking${bank.aspsp && norm(bank.aspsp) !== norm(c.institution_name) ? ` (${bank.aspsp})` : ""}` : "";
       rows.push(`<div class="crow"><div><b>${esc(c.label)}</b>
           ${c.wrapper ? `<span class="pill tag grey">${esc(c.wrapper)}</span>` : ""}
           <span class="pill ${cls}">${word}</span>
-          <div class="cmeta">${esc(c.institution_name)}${c.summary ? " · " + esc(c.summary) : ""}</div>
+          <div class="cmeta">${esc(c.institution_name)}${esc(via)}${c.summary ? " · " + esc(c.summary) : ""}</div>
           <div class="cmeta">Updated ${esc(ago(c.last_sync))} · ${esc((c.updates || "").toLowerCase())}</div>
-          ${c.error ? `<div class="cerr" ${c.status === "pending" ? 'style="color:#e3b341"' : ""}>${esc(c.error)}</div>` : ""}</div>
+          ${consentHtml(c)}
+          ${c.error ? `<div class="cerr" ${c.status === "pending" ? 'style="color:#e3b341"' : ""}>${esc(c.error)}</div>` : ""}
+          ${dupHtml(c)}</div>
         <div class="cact"><button class="btn sm ghost" type="button" data-act="${csv ? "file" : "refresh"}" data-id="${esc(c.id)}">${csv ? "New file" : "Refresh"}</button>
-          <button class="del" type="button" title="Remove" aria-label="Remove ${esc(c.label)}" data-act="remove" data-id="${esc(c.id)}" data-label="${esc(c.label)}">✕</button></div></div>`);
+          ${link ? `<button class="btn sm ${c.consent && (c.consent.warn || c.consent.expired) ? "" : "ghost"}" type="button" data-act="renew" data-id="${esc(c.id)}">Renew</button>` : ""}
+          <button class="del" type="button" title="Remove" aria-label="Remove ${esc(c.label)}" data-act="remove" data-id="${esc(c.id)}" data-label="${esc(c.label)}" ${link ? 'data-link="1"' : ""}>✕</button></div></div>`);
     }
     for (const s of d.server || []) {
       const [cls, word] = STATUS[s.status] || STATUS.pending;
@@ -439,10 +646,17 @@
     const b = e.target.closest("button[data-act]"); if (!b) return;
     const id = b.dataset.id;
     if (b.dataset.act === "remove") {
-      if (!confirm(`Remove “${b.dataset.label}”? Its key is deleted from this app. You can also delete the key at the bank or broker.`)) return;
+      const what = b.dataset.link ? "The bank link is ended and removed from this app."
+        : "Its key is deleted from this app. You can also delete the key at the bank or broker.";
+      if (!confirm(`Remove “${b.dataset.label}”? ${what}`)) return;
       const r = await fetch("/api/connections/" + encodeURIComponent(id), {method: "DELETE"});
       if (!r.ok) alert(await detail(r));
       afterChange();
+    } else if (b.dataset.act === "renew") {
+      b.disabled = true; b.textContent = "Opening…";
+      const fd = new FormData(); fd.append("renew", id);
+      await goToBank(fd, null);
+      b.disabled = false; b.textContent = "Renew";
     } else if (b.dataset.act === "refresh") {
       b.disabled = true; b.textContent = "Checking…";
       await fetch("/api/connections/" + encodeURIComponent(id) + "/refresh", {method: "POST"}).catch(() => {});

@@ -20,10 +20,13 @@ needs no code change, and only a new importer or connector needs a line here.
 To add a live connector: write `backend/connectors/<name>.py` with
 `fetch(creds, conn) -> live.Snapshot`, add a `Spec` to `CONNECTORS`, and link
 it in `LINKS` (or set "connector" on the catalog method). An aggregator
-(Enable Banking, SnapTrade, ...) plugs in the same way under its provider id:
-`{"type": "aggregator", "provider": "enablebanking"}` becomes live as soon as
-`CONNECTORS["enablebanking"]` exists (its Spec can add fields such as an app
-id and a consent expiry; connections already store status and errors).
+plugs in the same way under its provider id: every catalog method
+`{"type": "aggregator", "provider": "enablebanking"}` is live because
+`CONNECTORS["enablebanking"]` exists, while other providers (GoCardless,
+TrueLayer, SnapTrade, ...) stay information only ("Coming soon") until they
+get a connector. A bank link has no per-connection fields: its Spec says
+`extra={"flow": "bank_link"}`, and the account is added by the redirect flow
+in backend/banklink_api.py instead of the key form.
 """
 
 from __future__ import annotations
@@ -32,7 +35,7 @@ import re
 from dataclasses import dataclass, field
 from typing import Callable
 
-from . import bitvavo, etoro, ibkr_flex, starling, wise
+from . import bitvavo, enablebanking, etoro, ibkr_flex, starling, wise
 from .live import ConnectorError, Snapshot
 
 
@@ -47,6 +50,8 @@ class Spec:
     fetch: Callable[[dict, dict], Snapshot] | None = None
     first_wait: float = 8.0         # seconds the dashboard waits for a first result
     validate_wait: float = 45.0     # seconds "Connect" waits for the test call
+    retry: float = 120.0            # seconds before retrying after a failure
+    persist: bool = False           # keep the last balances in connections.json
     extra: dict = field(default_factory=dict)
 
 
@@ -123,6 +128,15 @@ CONNECTORS: dict[str, Spec] = {
                 {"name": "api_secret", "label": "API secret", "secret": True,
                  "aliases": ("secret",)}),
         fetch=bitvavo.fetch),
+    # One Enable Banking application serves every linked bank; each connection
+    # is one consent at one bank. Banks allow about 4 background reads a day,
+    # so balances are kept for 6 hours (and saved, to survive a restart).
+    "enablebanking": Spec(
+        id="enablebanking", name="Enable Banking", feeds=("cash",),
+        ttl=enablebanking.BALANCES_TTL, retry=enablebanking.RETRY, persist=True,
+        updates="Up to 4 times a day (a bank limit), and when you press Refresh",
+        fetch=enablebanking.fetch, first_wait=10.0,
+        extra={"flow": "bank_link", "psu": True}),
 }
 
 # Upload importers handled by the existing /api/upload/{kind} endpoint, with

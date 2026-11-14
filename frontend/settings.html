@@ -81,6 +81,10 @@
     .pv th,.pv td{ padding:5px 6px; border-bottom:1px solid var(--border); text-align:left; white-space:nowrap; }
     .pv th{ color:var(--muted); font-weight:600; }
     .agg{ border:1px solid var(--border); border-radius:12px; padding:10px 12px; margin:8px 0; }
+    .copy{ display:flex; gap:6px; align-items:center; }
+    .copy .ipt{ flex:1; min-width:0; font-size:13px; }
+    #eb-key{ width:100%; margin-top:6px; font:12px/1.4 ui-monospace,Menlo,monospace; }
+    select.ipt{ max-width:100%; }
     .crow{ display:flex; justify-content:space-between; gap:10px; padding:11px 0; border-bottom:1px solid var(--border); }
     .crow:last-child{ border-bottom:none; }
     .cmeta{ font-size:11.5px; color:var(--faint); }
@@ -182,8 +186,9 @@
     <div class="card" id="cash">
       <h2>Bank, savings &amp; retirement accounts</h2>
       <div class="sub" style="margin-bottom:10px">Cash, savings and pension pots — 401(k), IRA,
-        pensioen, lijfrente. Balances change often, so you edit them here in seconds. (Personal bank
-        APIs are gated behind PSD2 licensing; auto-sync via Enable Banking can be added later.)</div>
+        pensioen, lijfrente. Type in a balance here and edit it in seconds. Banks in the EU (Rabobank,
+        ING, ABN AMRO, bunq, EU Revolut…) can also update on their own: add them above under
+        Add an account → Bank link.</div>
       <div id="cash-list"><span style="color:var(--faint)">Loading…</span></div>
       <div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:14px;align-items:center">
         <input id="c-name" placeholder="Account name" style="flex:2;min-width:110px" class="ipt" />

@@ -10,6 +10,7 @@ the request URL (IBKR puts its token in the URL) or a raw exception text.
 from __future__ import annotations
 
 from dataclasses import dataclass, field
+from datetime import datetime, timezone
 
 import requests
 
@@ -25,12 +26,16 @@ class ConnectorError(Exception):
     """A plain-language problem with one connection (safe to show)."""
 
     def __init__(self, message: str, *, status: int | str | None = None,
-                 pending: bool = False):
+                 pending: bool = False, retry_after: float | None = None):
         super().__init__(message)
         self.status = status
         # True when the institution accepted the request but the data is not
         # ready yet (IBKR builds its report on demand). Not a failure.
         self.pending = pending
+        # Seconds to wait before trying this connection again in the
+        # background (a bank's daily limit, an ended consent). None: the
+        # connector's usual retry delay.
+        self.retry_after = retry_after
 
 
 @dataclass
@@ -92,3 +97,22 @@ def num(value, default: float = 0.0) -> float:
         return float(value)
     except (TypeError, ValueError):
         return default
+
+
+def consent(valid_until: str | None, now: float | None = None, warn_days: int = 14) -> dict | None:
+    """How long a bank link's consent still runs, for the UI:
+    {expires: "2027-05-13", days_left, warn (`warn_days` or fewer left),
+    expired}. `valid_until` is an ISO date-time (no zone = UTC); None when it
+    is missing or unreadable."""
+    if not valid_until:
+        return None
+    try:
+        t = datetime.fromisoformat(str(valid_until).strip().replace("Z", "+00:00"))
+    except ValueError:
+        return None
+    if t.tzinfo is None:
+        t = t.replace(tzinfo=timezone.utc)
+    left = t.timestamp() - (datetime.now(timezone.utc).timestamp() if now is None else now)
+    days = max(0, int(left // 86400))
+    return {"expires": t.date().isoformat(), "days_left": days,
+            "warn": left > 0 and days <= warn_days, "expired": left <= 0}

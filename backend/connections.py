@@ -13,13 +13,23 @@ A connection record:
 the code that reads it (registry.CONNECTORS id, or "generic_csv"). `wrapper`
 is "ISA" for a UK ISA (tax-free) or "". Secrets never leave the server:
 `public()` masks every credential the connector does not mark non-secret.
+A bank link (aggregator) also keeps `bank` (bank name, country, account
+names; nothing secret), `consent_expires` (ISO date-time) and `snapshot` (the
+last balances, so a restart does not spend one of the bank's few daily reads).
+
+connections.json also holds `apps`: one set of credentials per bank-link
+service (e.g. the Enable Banking application ID and private key), shared by
+all its connections and never sent to the browser. Bank links in progress
+(the single-use `state` sent to the bank) live in bank_link_states.json for
+30 minutes; that file is git-ignored and not part of the vault.
 
 Runtime
     Live data is fetched in a small thread pool with timeouts and cached per
     connection for the connector's TTL. Dashboard calls wait a few seconds for
     a first result, then use the last good one while a refresh runs in the
     background. A failing institution only marks its own connection as
-    "error"; it never raises into the dashboard.
+    "error"; it never raises into the dashboard. After a failure it is tried
+    again after the connector's retry delay (or the error's `retry_after`).
 
 Integration
     holdings() / trade_sources()  -> sources.py
@@ -33,6 +43,7 @@ from __future__ import annotations
 
 import copy
 import functools
+import hashlib
 import json
 import os
 import secrets
@@ -44,20 +55,24 @@ from pathlib import Path
 
 from .connectors import registry
 from .connectors.base import Holding
-from .connectors.live import ConnectorError, Snapshot
+from .connectors.live import ConnectorError, Snapshot, consent
 from .datafiles import DATA_DIR, resolve
 from .fx import to_eur
 
 FILE = "connections.json"
 HOLDINGS_FILE = "manual_holdings.json"
+STATES_FILE = "bank_link_states.json"
 
-# After a failed fetch, wait this long before trying the institution again.
-RETRY_AFTER = 120
+# (After a failed fetch, an institution is tried again after its connector's
+# `retry`, registry.Spec, 120 s by default, or the error's `retry_after`.)
+
+# A bank link must come back from the bank within this many seconds.
+STATE_TTL = 30 * 60
 
 _lock = threading.RLock()
 _pool = ThreadPoolExecutor(max_workers=4, thread_name_prefix="connection")
 _cache: dict[str, tuple[Snapshot, float]] = {}      # id -> (snapshot, fetched_at)
-_failed: dict[str, float] = {}                       # id -> time of last failure
+_failed: dict[str, tuple[float, float]] = {}        # id -> (failed_at, seconds to wait)
 _inflight: dict[str, object] = {}                    # id -> Future
 _read_cache: dict[str, tuple[float, object]] = {}    # file name -> (mtime, parsed)
 
@@ -101,9 +116,76 @@ def load_all() -> list[dict]:
     return [c for c in data.get("connections", []) if isinstance(c, dict) and c.get("id")]
 
 
-def _save_all(conns: list[dict]) -> None:
-    _write(FILE, {"version": 1, "connections": conns,
-                  "updated": time.strftime("%Y-%m-%d %H:%M")})
+def _save_all(conns: list[dict], apps: dict | None = None) -> None:
+    doc = {"version": 1, "connections": conns}
+    apps = _read(FILE, {}).get("apps") if apps is None else apps
+    if apps:
+        doc["apps"] = apps
+    doc["updated"] = time.strftime("%Y-%m-%d %H:%M")
+    _write(FILE, doc)
+
+
+# ------------------------------------------------- bank-link app credentials
+def app_credentials(provider: str) -> dict:
+    """Credentials of a bank-link service's app (shared by all its
+    connections), as saved in Settings; {} when none. Server-side only."""
+    apps = _read(FILE, {}).get("apps") or {}
+    return dict(apps.get(provider) or {})
+
+
+def save_app_credentials(provider: str, creds: dict) -> None:
+    with _lock:
+        doc = _read(FILE, {})
+        apps = dict(doc.get("apps") or {})
+        apps[provider] = {**creds, "saved": _now()}
+        _save_all(load_all(), apps)
+
+
+def forget_app_credentials(provider: str) -> bool:
+    with _lock:
+        apps = dict(_read(FILE, {}).get("apps") or {})
+        if apps.pop(provider, None) is None:
+            return False
+        _save_all(load_all(), apps)
+        return True
+
+
+# ------------------------------------------------------ bank links in progress
+def _state_key(state: str) -> str:
+    return hashlib.sha256(state.encode()).hexdigest()
+
+
+def new_link_state(info: dict, now: float | None = None) -> str:
+    """A random single-use `state` for one trip to the bank. Only its hash is
+    stored, with `info` (which bank, which connection to renew) and a
+    STATE_TTL expiry; expired entries are dropped on every write."""
+    now = time.time() if now is None else now
+    state = secrets.token_urlsafe(24)
+    with _lock:
+        states = {k: v for k, v in _read(STATES_FILE, {}).items()
+                  if isinstance(v, dict) and v.get("expires", 0) > now}
+        states[_state_key(state)] = {"info": info, "expires": now + STATE_TTL}
+        _write(STATES_FILE, states)
+    return state
+
+
+def take_link_state(state: str, now: float | None = None) -> dict | None:
+    """The info saved with `state`, removing it (single use). None when the
+    state is unknown, already used or expired."""
+    if not state or len(state) > 200:
+        return None
+    now = time.time() if now is None else now
+    key = _state_key(state)
+    with _lock:
+        states = _read(STATES_FILE, {})
+        entry = states.pop(key, None)
+        if entry is None:
+            return None
+        _write(STATES_FILE, {k: v for k, v in states.items()
+                             if isinstance(v, dict) and v.get("expires", 0) > now})
+    if not isinstance(entry, dict) or entry.get("expires", 0) <= now:
+        return None
+    return entry.get("info") or {}
 
 
 def get(conn_id: str) -> dict | None:
@@ -170,6 +252,16 @@ def _set_state(conn_id: str, **fields) -> None:
                 return
 
 
+def update(conn_id: str, **fields) -> dict | None:
+    """Change stored fields of one connection (e.g. a renewed bank link's
+    credentials) and forget its cached data, so the next read fetches anew."""
+    _set_state(conn_id, **fields)
+    with _lock:
+        _cache.pop(conn_id, None)
+        _failed.pop(conn_id, None)
+    return get(conn_id)
+
+
 def unique_label(label: str, taken: set[str]) -> str:
     base, n, out = label.strip(), 2, label.strip()
     lower = {t.lower() for t in taken}
@@ -187,20 +279,25 @@ def _shown_fields(conn: dict) -> set[str]:
 
 
 def mask(value) -> str:
+    if isinstance(value, (list, tuple, dict)):
+        return "••••" if value else ""
     s = str(value or "")
     return "••••" + s[-4:] if len(s) >= 16 else ("••••" if s else "")
 
 
 def public(conn: dict) -> dict:
     """The connection as the browser may see it: secrets masked, plus the
-    number of positions for a CSV import. Every credential is treated as
-    secret unless the connector explicitly marks the field as not secret."""
+    number of positions for a CSV import and how long a bank link's consent
+    still runs. Every credential is treated as secret unless the connector
+    explicitly marks the field as not secret."""
     shown = _shown_fields(conn)
-    out = {k: v for k, v in conn.items() if k != "credentials"}
+    out = {k: v for k, v in conn.items() if k not in ("credentials", "snapshot")}
     out["credentials"] = {k: (v if k in shown else mask(v))
                           for k, v in (conn.get("credentials") or {}).items()}
     spec = registry.connector(conn.get("connector"))
     out["updates"] = spec.updates if spec else "When you upload a new file"
+    if conn.get("consent_expires"):
+        out["consent"] = consent(conn["consent_expires"])
     if conn.get("connector") == registry.GENERIC_CSV:
         entry = _read(HOLDINGS_FILE, {}).get(conn["id"]) or {}
         out["positions"] = len(entry.get("holdings") or [])
@@ -232,7 +329,31 @@ def missing_fields(connector_id: str, creds: dict) -> list[str]:
 
 
 # ----------------------------------------------------------------- fetching
+def _retry_wait(spec, err: ConnectorError | None) -> float:
+    if err is not None and err.retry_after:
+        return float(err.retry_after)
+    return min(spec.retry, spec.ttl)
+
+
+def _persisted(conn: dict) -> tuple[Snapshot, float] | None:
+    """The last balances saved with the connection (connectors with
+    `persist`), as a cache entry."""
+    s = conn.get("snapshot")
+    if not isinstance(s, dict) or not s.get("at") or not isinstance(s.get("cash"), list):
+        return None
+    return Snapshot(summary=s.get("summary") or "", cash=s["cash"]), float(s["at"])
+
+
+def _state_after(spec, snap: Snapshot, at: float) -> dict:
+    fields = {"status": "ok", "error": "", "last_sync": _now(), "summary": snap.summary}
+    if spec is not None and spec.persist:
+        fields["snapshot"] = {"cash": snap.cash, "summary": snap.summary, "at": at}
+    return fields
+
+
 def _run(conn: dict, validate: bool = False) -> Snapshot:
+    """Fetch one connection. `conn` may carry `_psu` (headers that tell a bank
+    the user is online: only for fetches the user asked for)."""
     spec = registry.connector(conn.get("connector"))
     if spec is None or spec.fetch is None:
         raise ConnectorError("This connection type is not available.")
@@ -241,23 +362,24 @@ def _run(conn: dict, validate: bool = False) -> Snapshot:
     except ConnectorError as e:
         if not validate:
             with _lock:
-                _failed[conn["id"]] = time.time()
+                _failed[conn["id"]] = (time.time(), _retry_wait(spec, e))
             _set_state(conn["id"], status="pending" if e.pending else "error", error=str(e))
         raise
     except Exception as e:  # unexpected: never let details (URLs, keys) escape
         err = ConnectorError(f"Something went wrong reading {spec.name} ({type(e).__name__}).")
         if not validate:
             with _lock:
-                _failed[conn["id"]] = time.time()
+                _failed[conn["id"]] = (time.time(), _retry_wait(spec, None))
             _set_state(conn["id"], status="error", error=str(err))
         raise err from None
     if not validate:
+        now = time.time()
         with _lock:
             if get(conn["id"]) is None:
                 return snap          # removed while fetching
-            _cache[conn["id"]] = (snap, time.time())
+            _cache[conn["id"]] = (snap, now)
             _failed.pop(conn["id"], None)
-        _set_state(conn["id"], status="ok", error="", last_sync=_now(), summary=snap.summary)
+        _set_state(conn["id"], **_state_after(spec, snap, now))
     return snap
 
 
@@ -283,11 +405,16 @@ def _snapshots(conns: list[dict]) -> dict[str, Snapshot]:
         if spec is None or spec.fetch is None:
             continue
         hit = _cache.get(c["id"])
+        if hit is None and spec.persist:
+            hit = _persisted(c)            # after a restart: the saved balances
+            if hit is not None:
+                with _lock:
+                    _cache.setdefault(c["id"], hit)
         if hit and now - hit[1] < spec.ttl:
             out[c["id"]] = hit[0]
             continue
         failed = _failed.get(c["id"])
-        if failed and now - failed < min(RETRY_AFTER, spec.ttl):
+        if failed and now - failed[0] < failed[1]:
             if hit:
                 out[c["id"]] = hit[0]
             continue
@@ -322,12 +449,15 @@ def validate(conn: dict) -> Snapshot:
 
 def remember(conn: dict, snap: Snapshot) -> None:
     """Keep the validation result as the first snapshot (no second fetch)."""
+    now = time.time()
     with _lock:
-        _cache[conn["id"]] = (snap, time.time())
-    _set_state(conn["id"], status="ok", error="", last_sync=_now(), summary=snap.summary)
+        _cache[conn["id"]] = (snap, now)
+    _set_state(conn["id"], **_state_after(registry.connector(conn.get("connector")), snap, now))
 
 
-def refresh(conn_id: str, wait: float = 30.0) -> dict | None:
+def refresh(conn_id: str, wait: float = 30.0, psu: dict | None = None) -> dict | None:
+    """Fetch again now. `psu`: headers saying the user is online (they asked
+    for this refresh), so a bank does not count it against its daily limit."""
     conn = get(conn_id)
     if conn is None:
         return None
@@ -339,7 +469,7 @@ def refresh(conn_id: str, wait: float = 30.0) -> dict | None:
         _cache.pop(conn_id, None)
         _failed.pop(conn_id, None)
     try:
-        _start(conn).result(timeout=wait)
+        _start({**conn, "_psu": psu} if psu else conn).result(timeout=wait)
     except Exception:
         pass
     return get(conn_id)

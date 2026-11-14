@@ -25,18 +25,18 @@
       "available_to_individuals": true,
       "cost": "Free. The Terms (updated 9 Jan 2026) allow production use only for accounts you link yourself, for the personal use of private individuals. The number of linked accounts per app may be limited.",
       "setup_steps": [
-        "Sign in at enablebanking.com/cp (an account is created on first sign-in)",
-        "Open API applications and register a new app with environment Production",
-        "Enter an app name and an https redirect URL",
-        "Click Register; the browser downloads a private key (.pem) named after the application ID",
-        "Click 'Activate by linking accounts' and log in to each bank you want to track",
-        "Enter the application ID and upload the .pem file in the dashboard",
-        "Authorise each bank once more from the dashboard (the app signs a JWT with the key)",
-        "Re-authorise when the consent expires"
+        "Sign in at enablebanking.com/sign-in with your email (no password: you get a one-time link; the account is created on first sign-in)",
+        "Open API applications (enablebanking.com/cp/applications) and add a new application. Choose Production and keep the key made by your browser",
+        "Fill in the form: a name, and as redirect URL the address shown below, exactly. If it also asks for a description, data protection email, privacy policy and terms links, fill those in (links start with https://)",
+        "Click Register. Your browser downloads the private key: a .pem file named after the application ID",
+        "The new application shows as Inactive. Click 'Activate by linking accounts' and approve each bank account you want to track (the free restricted mode reads only these accounts)",
+        "Below, enter the application ID and choose the .pem file",
+        "Pick your bank and approve access once more at the bank (Enable Banking asks for this even for accounts you linked)",
+        "Renew when the bank access ends (180 days at most banks, less at some). The app warns you 14 days before"
       ],
       "consent_renewal_days": 180,
       "docs_url": "https://enablebanking.com/docs/api/linked-accounts/",
-      "notes": "Restricted mode can only read accounts you linked in the Control Panel. It covers EEA banks in 30 countries; the markets list does not include the UK. It reads PSD2 payment accounts only (balances and transactions), not investment holdings. Default consent has been 180 days since Oct 2025, but each bank sets its own maximum (Actual Budget's docs warn some allow 90 days or less). Many banks allow only 4 background fetches a day. The redirect must be https, so the dashboard needs an https callback URL.",
+      "notes": "Restricted mode can only read accounts you linked in the Control Panel. It covers EEA banks in 30 countries; the markets list does not include the UK. It reads PSD2 payment accounts only (balances and transactions), not investment holdings. The FAQ says consent is 180 days for most banks; each bank sets its own maximum (GET /aspsps maximum_consent_validity). Many banks allow only 4 background reads a day, so the app reads balances every 6 hours, or when you press Refresh. The redirect URL must be https, so link banks from the dashboard's https address (e.g. on Render).",
       "verified": true
     },
     {
