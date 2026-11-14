@@ -109,7 +109,10 @@ def institution(inst: dict, aggregators: dict) -> dict:
     if not any(m["type"] == "manual" for m in methods):
         methods.append(_method(inst, MANUAL_METHOD, "manual", aggregators))
     rec = inst.get("recommended")
-    first = next((m for m in methods if m["type"] == rec), None)
+    # of several methods of the recommended type (e.g. bank-link services),
+    # recommend one the app can use
+    first = next((m for m in methods if m["type"] == rec and m["support"] in ACTIONABLE), None) \
+        or next((m for m in methods if m["type"] == rec), None)
     if first is not None:
         first["recommended"] = True
         methods.remove(first)

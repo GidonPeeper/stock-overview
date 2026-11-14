@@ -1,11 +1,11 @@
 """Cash, savings & retirement accounts — the non-brokerage side of your money.
 
-Personal bank APIs are gated behind PSD2 licensing (Rabobank/Revolut only talk
-to licensed AISPs), so balances live in a small local store you edit in-app in
-seconds — no file exports. Cash sitting in a live Trading 212 account is
-added automatically (read-only). Accounts carry a type (cash / savings / retirement /
-other) so 401(k)-style pension pots sit beside bank balances in the net-worth
-view. An aggregator (e.g. Enable Banking) can automate this later.
+Balances you type in live in a small local store you edit in-app in seconds.
+Read-only ("auto") entries are added next to them: cash in live Trading 212
+accounts, and balances from accounts added in Settings (Starling, Wise, and
+EU banks linked through Enable Banking). Accounts carry a type (cash /
+savings / retirement / other) so 401(k)-style pension pots sit beside bank
+balances in the net-worth view.
 """
 
 from __future__ import annotations
@@ -80,6 +80,19 @@ def _connection_cash() -> list[dict]:
 
 def _manual(accounts: list[dict]) -> list[dict]:
     return [a for a in accounts if not a.get("auto")]
+
+
+def manual_accounts() -> list[dict]:
+    """The balances typed in by hand (not the demo file), without fetching
+    any live balance."""
+    path, real = resolve(_FILE)
+    if not real:
+        return []
+    try:
+        data = json.loads(path.read_text())
+    except (OSError, ValueError):
+        return []
+    return [a for a in _manual(data.get("accounts", [])) if isinstance(a, dict)]
 
 
 def upsert(name: str, institution: str, balance: float, currency: str,

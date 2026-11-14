@@ -534,7 +534,7 @@ class CatalogTest(unittest.TestCase):
                 "wise": "wise", "etoro": "etoro", "bitvavo": "bitvavo"}
         for inst_id, cid in want.items():
             inst = catalog.find(inst_id)
-            live = [m for m in inst["methods"] if m["support"] == "live"]
+            live = [m for m in inst["methods"] if m["support"] == "live" and m["type"] == "api"]
             self.assertEqual([m["connector"] for m in live], [cid], inst_id)
             names = [f["name"] for f in live[0]["fields"]]
             self.assertEqual(names, [f["name"] for f in registry.connector(cid).fields])
@@ -552,8 +552,11 @@ class CatalogTest(unittest.TestCase):
                                               "report_name": "Activity statement"})["upload_kind"], "t212_statement")
         self.assertEqual(registry.link({"id": "x"}, {"type": "upload", "file_format": "csv",
                                                      "report_name": "Portfolio positions"})["support"], "csv")
-        self.assertEqual(registry.link({"id": "x"}, {"type": "aggregator", "provider": "enablebanking"})["support"],
-                         "info")
+        self.assertEqual(registry.link({"id": "x"}, {"type": "aggregator", "provider": "enablebanking"}),
+                         {"support": "live", "connector": "enablebanking"})
+        for other in ("gocardless", "truelayer", "snaptrade", "plaid"):   # still "coming soon"
+            self.assertEqual(registry.link({"id": "x"}, {"type": "aggregator", "provider": other})["support"],
+                             "info", other)
         self.assertEqual(registry.link({"id": "x"}, {"type": "unofficial", "library": "pytr"})["support"], "info")
 
     def test_unverified_and_aggregators_pass_through(self):

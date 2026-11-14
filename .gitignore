@@ -20,6 +20,9 @@ data/finances.json
 data/connections.json
 data/manual_holdings.json
 data/.*.tmp
+# bank links in progress (single-use states, 30 min) and bank-link private keys
+data/bank_link_states.json
+*.pem
 
 # generated at runtime (rebuilt automatically)
 data/history.db
