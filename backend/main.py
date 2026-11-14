@@ -462,6 +462,29 @@ def _loads_or_400(text: str) -> dict:
     return payload if isinstance(payload, dict) else {}
 
 
+# "Add an account": catalog, connected accounts, live connectors, CSV import.
+from . import connections_api  # noqa: E402
+
+app.include_router(connections_api.router)
+
+
+def _connections_changed(trades_changed: bool) -> None:
+    """A connection was added/removed: leave demo mode, and rebuild the
+    trendline from the new trade history (as an upload does)."""
+    global DEMO_MODE, _backfill_started
+    DEMO_MODE = not any(v.get("real") for k, v in datafiles.status().items() if not k.startswith("_"))
+    if trades_changed:
+        try:
+            store.DB_PATH.unlink(missing_ok=True)
+        except OSError:
+            pass
+        with _backfill_lock:
+            _backfill_started = False
+
+
+connections_api.after_change.append(_connections_changed)
+
+
 @app.get("/api/analytics")
 def analytics_endpoint() -> dict:
     """Quant metrics: beta, volatility, Sharpe, max drawdown, concentration,

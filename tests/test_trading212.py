@@ -102,6 +102,12 @@ class FxTest(Base):
 
 
 class AccountsTest(unittest.TestCase):
+    def setUp(self):
+        # only the environment counts here, not accounts added in Settings
+        p = mock.patch("backend.connections.t212_accounts", return_value=[])
+        p.start()
+        self.addCleanup(p.stop)
+
     def test_labels_from_env(self):
         env = {**ENV, "T212_GIA_API_KEY": "no-secret"}
         with mock.patch.dict(os.environ, env, clear=True):

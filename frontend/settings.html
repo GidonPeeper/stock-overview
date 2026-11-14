@@ -42,6 +42,53 @@
     .bal{ width:100px; text-align:right; }
     .del{ background:none; border:none; color:var(--faint); cursor:pointer; font-size:14px; padding:4px; }
     .del:hover{ color:var(--red); }
+    /* ---- Add an account / Connected accounts (accounts.js) ---- */
+    .combo{ position:relative; }
+    .combo .ipt.q{ width:100%; font-size:16px; padding:10px 12px; }
+    .combo-list{ position:absolute; left:0; right:0; top:100%; margin-top:4px; z-index:20; background:var(--panel);
+      border:1px solid var(--border); border-radius:12px; max-height:min(360px,60vh); overflow:auto; box-shadow:0 10px 28px rgba(0,0,0,.28); }
+    .grp{ font-size:11px; text-transform:uppercase; letter-spacing:.05em; color:var(--muted); padding:9px 12px 3px; }
+    .opt{ display:flex; align-items:center; gap:8px; padding:9px 12px; cursor:pointer; }
+    .opt.act, .opt:hover{ background:var(--panel2); }
+    .opt-name{ flex:1; min-width:0; }
+    .opt-meta{ display:block; font-size:11.5px; color:var(--faint); }
+    .tag{ font-size:10.5px; padding:2px 8px; border-radius:20px; background:rgba(76,141,255,.15); color:var(--accent);
+      font-weight:600; white-space:nowrap; }
+    .tag.grey{ background:var(--panel2); color:var(--muted); }
+    .chips{ display:flex; gap:6px; flex-wrap:wrap; margin:10px 0 0; }
+    .chip{ border:1px solid var(--border); background:var(--panel2); color:var(--muted); border-radius:20px; padding:5px 12px;
+      font-size:12.5px; cursor:pointer; font-family:inherit; }
+    .chip.on{ background:var(--accent); border-color:var(--accent); color:#fff; }
+    .chip.dim{ opacity:.65; }
+    .acct-head{ margin-top:16px; padding-top:14px; border-top:1px solid var(--border); }
+    .acct-head b{ font-size:16px; }
+    .facts{ display:flex; flex-wrap:wrap; gap:4px 14px; font-size:12.5px; color:var(--muted); margin:10px 0 4px; }
+    .steps{ margin:8px 0; padding-left:22px; }
+    .steps li{ margin:5px 0; font-size:13.5px; }
+    .note{ font-size:12.5px; color:var(--muted); background:var(--panel2); border-radius:10px; padding:8px 11px; margin:8px 0; }
+    .note.warn{ color:#e3b341; }
+    .fine{ font-size:12px; color:var(--faint); margin-top:8px; }
+    .doc{ color:var(--accent); font-size:13px; text-decoration:none; }
+    .fld{ display:flex; flex-direction:column; gap:3px; font-size:12px; color:var(--muted); margin:9px 0; }
+    .fld .ipt{ width:100%; font-size:15px; }
+    .chk{ display:flex; gap:8px; align-items:center; font-size:13.5px; margin:9px 0; }
+    .btn.ghost{ background:var(--panel2); color:var(--text); border:1px solid var(--border); }
+    .btn.sm{ padding:6px 11px; font-size:12.5px; }
+    .btn:disabled{ opacity:.6; cursor:default; }
+    .map{ display:grid; grid-template-columns:repeat(auto-fill,minmax(150px,1fr)); gap:0 10px; }
+    .pvwrap{ overflow-x:auto; margin-top:6px; }
+    .pv{ width:100%; border-collapse:collapse; font-size:12px; }
+    .pv th,.pv td{ padding:5px 6px; border-bottom:1px solid var(--border); text-align:left; white-space:nowrap; }
+    .pv th{ color:var(--muted); font-weight:600; }
+    .agg{ border:1px solid var(--border); border-radius:12px; padding:10px 12px; margin:8px 0; }
+    .crow{ display:flex; justify-content:space-between; gap:10px; padding:11px 0; border-bottom:1px solid var(--border); }
+    .crow:last-child{ border-bottom:none; }
+    .cmeta{ font-size:11.5px; color:var(--faint); }
+    .cerr{ font-size:12px; color:var(--red); margin-top:2px; }
+    .cact{ display:flex; gap:4px; align-items:flex-start; flex-shrink:0; }
+    .bad{ background:rgba(240,97,109,.15); color:var(--red); }
+    .flash{ animation:flash 1.6s ease-out; }
+    @keyframes flash{ 0%{ box-shadow:0 0 0 3px var(--accent); } 100%{ box-shadow:0 0 0 0 transparent; } }
   </style>
 </head>
 <body>
@@ -51,6 +98,25 @@
     <div class="sub">Upload your broker statements here — changes apply instantly. On free
       hosting the disk resets on each redeploy, so re-upload after updates (or add the same
       files as Render Secret Files to make them permanent).</div>
+
+    <div class="card" id="add-account">
+      <h2>Add an account</h2>
+      <div class="sub" style="margin-bottom:10px">Pick your broker or bank. You'll see the simplest way to
+        track it: a read-only key, a file from the broker, or a balance you type in.</div>
+      <div class="combo">
+        <input id="acct-q" class="ipt q" type="search" placeholder="Search brokers and banks…" autocomplete="off"
+          role="combobox" aria-expanded="false" aria-controls="acct-list" aria-autocomplete="list" />
+        <div id="acct-list" class="combo-list" role="listbox" hidden></div>
+      </div>
+      <div id="acct-chips" class="chips"></div>
+      <div id="acct-panel"></div>
+    </div>
+
+    <div class="card" id="connected">
+      <h2>Connected accounts</h2>
+      <div id="conn-list"><span style="color:var(--faint)">Loading…</span></div>
+      <input type="file" id="conn-file" accept=".csv,.txt,.tsv" hidden />
+    </div>
 
     <div class="card">
       <h2>Status</h2>
@@ -327,5 +393,6 @@
       else { const e=await r.json().catch(()=>({detail:"Upload failed"})); msg.textContent="✗ "+(e.detail||"Upload failed"); msg.className="msg err"; }
     }
   </script>
+  <script src="/accounts.js"></script>
 </body>
 </html>
