@@ -311,6 +311,7 @@ class Trading212ThroughSourcesTest(unittest.TestCase):
 
         acct = t212.Account("T212 Invest", "k", "s")
         for p in (mock.patch.object(t212, "accounts", return_value=[acct]),
+                  mock.patch.object(t212, "_statement", return_value=None),
                   mock.patch.object(t212, "_get", slow_get),
                   mock.patch.object(fx, "_live_rates", return_value={"EUR": 1.0, "USD": 0.9}),
                   mock.patch.object(sources.degiro, "get_holdings", return_value=[]),
