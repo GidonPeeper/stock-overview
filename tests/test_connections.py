@@ -540,14 +540,15 @@ class CatalogTest(unittest.TestCase):
             self.assertEqual(names, [f["name"] for f in registry.connector(cid).fields])
         kinds = {i: [m.get("upload_kind") for m in catalog.find(i)["methods"] if m["support"] == "import"]
                  for i in ("degiro", "traderepublic", "trading212")}
+        # Trading 212: the history CSV and the activity statement PDF both feed the statement
         self.assertEqual(kinds, {"degiro": ["degiro"], "traderepublic": ["trade_republic"],
-                                 "trading212": ["t212_statement"]})
+                                 "trading212": ["t212_statement", "t212_statement"]})
 
     def test_link_rules(self):
         t212 = {"id": "Trading-212", "kind": "broker"}
         self.assertEqual(registry.link(t212, {"type": "upload", "file_format": "csv",
                                               "report_name": "History export (CSV)",
-                                              "covers": ["transactions"]})["support"], "info")
+                                              "covers": ["transactions"]})["upload_kind"], "t212_statement")
         self.assertEqual(registry.link(t212, {"type": "upload", "file_format": "pdf",
                                               "report_name": "Activity statement"})["upload_kind"], "t212_statement")
         self.assertEqual(registry.link({"id": "x"}, {"type": "upload", "file_format": "csv",

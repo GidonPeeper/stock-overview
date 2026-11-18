@@ -150,11 +150,12 @@
     </div>
 
     <div class="card">
-      <h2>Trade Republic — transaction export (CSV)</h2>
-      <div class="sub" style="margin-bottom:8px">Trade Republic app → Profile → Activity → <b>Export</b> (CSV).
-        One file covers everything: trades, dividends and interest are all read from it (a hand-made
-        <code>trades_trade_republic.json</code> is still accepted).</div>
-      <div class="up"><input type="file" id="f-trade_republic" accept=".csv,.json" />
+      <h2>Trade Republic — account statement (PDF) or transaction export (CSV)</h2>
+      <div class="sub" style="margin-bottom:8px">Trade Republic app → Profile → <b>Account statements</b>: the
+        account statement PDF from the day you opened the account, or the transaction export (CSV).
+        One file covers everything: trades, dividends and interest are all read from it, and every
+        PDF row is checked against the running balance.</div>
+      <div class="up"><input type="file" id="f-trade_republic" accept=".pdf,.csv,.json" />
         <button onclick="up('trade_republic')">Upload</button></div>
       <div class="msg" id="m-trade_republic"></div>
     </div>
@@ -178,8 +179,9 @@
       <div class="sub" style="margin:8px 0">For an account without a key, such as a closed EU account, upload its statement
         (EUR): Trading 212 → Menu → History → <b>Export / Activity statement</b> (PDF, full period the account was open).
         It is shown next to your live accounts, so its trades, dividends and interest stay in your history.
+        A History CSV export (12 months at most) uploaded after it is added on.
         Don't upload a statement for an account that also has a key: it would count twice.</div>
-      <div class="up"><input type="file" id="f-t212_statement" accept=".pdf,.json" />
+      <div class="up"><input type="file" id="f-t212_statement" accept=".pdf,.csv,.json" />
         <button onclick="up('t212_statement')">Upload</button></div>
       <div class="msg" id="m-t212_statement"></div>
     </div>
@@ -394,6 +396,9 @@
         if(rep.fills!==undefined) extra=` · ${rep.fills} fills, ${rep.orders} orders${rep.fill_amount_errors&&rep.fill_amount_errors.length?` · ⚠ ${rep.fill_amount_errors.length} amount mismatches`:""}`;
         if(rep.trades!==undefined&&rep.cash_balance_eur!==undefined) extra=` · ${rep.trades} trades, ${rep.dividends} dividends · cash €${rep.cash_balance_eur}`;
         if(rep.all_checks_ok!==undefined) extra=rep.all_checks_ok?` · all ${Object.keys(rep.checks).length} statement checks passed`:` · ⚠ some statement checks failed: ${Object.entries(rep.checks).filter(([k,v])=>!v.ok).map(([k])=>k).join(", ")}`;
+        if(rep.merged_after) extra=` · added ${rep.added.trades} trades, ${rep.added.dividends} dividends after ${rep.merged_after}`;
+        else if(rep.summary&&rep.summary.trades!==undefined&&rep.all_checks_ok===undefined) extra=` · ${rep.summary.trades} trades, ${rep.summary.dividends} dividends`;
+        if(rep.warnings&&rep.warnings.length) extra+=` · ⚠ ${rep.warnings.join(" ")}`;
         msg.textContent=savedMsg().replace("Saved","Uploaded — live now.")+extra; msg.className="msg ok"; renderStatus(st);
       }
       else { const e=await r.json().catch(()=>({detail:"Upload failed"})); msg.textContent="✗ "+(e.detail||"Upload failed"); msg.className="msg err"; }

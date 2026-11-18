@@ -37,6 +37,7 @@ TICKERS: dict[str, str] = {
     "IE00BJ38QD84": "ZPRR.DE",  # SPDR Russell 2000 US Small Cap UCITS ETF
     "IE00B5BMR087": "SXR8.DE",  # iShares Core S&P 500 UCITS ETF USD (Acc)
     "IE00B4ND3602": "PPFB.DE",  # iShares Physical Gold ETC
+    "US5024413065": "LVMUY",    # LVMH ADR (5 ADRs = 1 share)
     # --- no usable market data (delisted / worthless) ---
     "US34619R1023": "", "US33813J1060": "", "US84677R1068": "", "US74374T1097": "",
     "US44951Y1029": "", "US44951Y2019": "", "US01671P1003": "",
@@ -52,7 +53,7 @@ NAMES: dict[str, str] = {
     "US70450Y1038": "PayPal Holdings", "US0378331005": "Apple Inc", "US5949181045": "Microsoft Corp",
     "US68389X1054": "Oracle Corp", "US79466L3024": "Salesforce Inc", "US6541061031": "Nike Inc Class B",
     "US00724F1012": "Adobe Inc", "US86800U3023": "Super Micro Computer",
-    "IE00B4ND3602": "iShares Physical Gold ETC",
+    "IE00B4ND3602": "iShares Physical Gold ETC", "US5024413065": "LVMH (ADR)",
     "IE00B5BMR087": "iShares Core S&P 500 UCITS ETF (Acc)",
     "IE00BZCQB185": "iShares MSCI India UCITS ETF (Acc)",
     "IE00BJ38QD84": "SPDR Russell 2000 US Small Cap UCITS ETF",
