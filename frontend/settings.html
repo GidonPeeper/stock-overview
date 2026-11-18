@@ -175,9 +175,10 @@
         <code>T212_ISA_API_KEY</code> + <code>T212_ISA_API_SECRET</code> on the host (or one plain
         <code>T212_API_KEY</code> + <code>T212_API_SECRET</code>). Accounts with "ISA" in the name are treated as tax-free.</div>
       <div id="t212-accounts"></div>
-      <div class="sub" style="margin:8px 0">Without a key, upload the statement instead (EU account, EUR):
-        Trading 212 → Menu → History → <b>Export / Activity statement</b> (PDF, Invest account, full period).
-        Positions, trades, dividends and interest are read from it and cross-checked against its own totals.</div>
+      <div class="sub" style="margin:8px 0">For an account without a key, such as a closed EU account, upload its statement
+        (EUR): Trading 212 → Menu → History → <b>Export / Activity statement</b> (PDF, full period the account was open).
+        It is shown next to your live accounts, so its trades, dividends and interest stay in your history.
+        Don't upload a statement for an account that also has a key: it would count twice.</div>
       <div class="up"><input type="file" id="f-t212_statement" accept=".pdf,.json" />
         <button onclick="up('t212_statement')">Upload</button></div>
       <div class="msg" id="m-t212_statement"></div>

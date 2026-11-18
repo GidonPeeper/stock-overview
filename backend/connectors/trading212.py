@@ -16,8 +16,9 @@ Optional T212_<NAME>_NAME overrides the label.
 Money fields come back in each account's own currency (GBP for a UK account,
 EUR for an EU one); they are converted to EUR here, like every other source.
 
-Without any key pair, the imported activity statement is used, or sample
-holdings so the dashboard still runs.
+An imported activity statement (for an account without a key, e.g. a closed
+one) is shown next to the live accounts. With neither, sample holdings keep
+the dashboard running.
 
 API reference: https://docs.trading212.com/api (beta, v0). Positions come from
 /equity/positions; the older /equity/portfolio is used only if that 404s.
@@ -45,8 +46,8 @@ from ..positions import Trade
 BASE_URL = os.getenv("T212_BASE_URL", "https://live.trading212.com/api/v0")
 _HOST = BASE_URL.split("/api/")[0]
 
-# Offline fallback: the Activity-statement PDF imported by
-# backend/importers/trading212_pdf.py. Used whenever no API key pair is set.
+# The Activity-statement PDF imported by backend/importers/trading212_pdf.py,
+# for an account without an API key (e.g. a closed one). Shown next to live accounts.
 STATEMENT_FILE = "trading212_statement.json"
 STATEMENT_LABEL = "Trading212"
 
@@ -422,7 +423,14 @@ def has_statement() -> bool:
     return _statement() is not None
 
 
-def _statement_holdings(st: dict) -> list[Holding]:
+def _statement_label(accts: list[Account]) -> str:
+    """The statement's account name; renamed if a live account already uses it."""
+    if any(a.label == STATEMENT_LABEL for a in accts):
+        return STATEMENT_LABEL + " (statement)"
+    return STATEMENT_LABEL
+
+
+def _statement_holdings(st: dict, label: str = STATEMENT_LABEL) -> list[Holding]:
     """Open positions straight from the statement's own table: quantity and the
     exact EUR cost (value − return, i.e. incl. FX at purchase); the live price
     is fetched by the price layer."""
@@ -433,7 +441,7 @@ def _statement_holdings(st: dict) -> list[Holding]:
         ticker = p.get("ticker") or ticker_for(p["isin"]) or p["symbol"]
         ticker = _ALIAS.get(ticker, ticker)
         out.append(Holding(
-            broker=STATEMENT_LABEL, ticker=ticker, name=p.get("name") or p["symbol"],
+            broker=label, ticker=ticker, name=p.get("name") or p["symbol"],
             isin=p["isin"], quantity=qty, buy_price=round(cost_eur / qty, 4) if qty else 0.0,
             currency=price_currency(ticker), buy_currency="EUR",
         ))
@@ -450,12 +458,15 @@ def _statement_trades(st: dict) -> list[Trade]:
 
 
 # ------------------------------------------------------------- public API
+# The imported activity statement is for an account without an API key, e.g. a
+# closed one (an old EU account after moving to the UK). It is shown next to the
+# live accounts, so its history (trades, dividends, interest) is kept.
 def get_holdings() -> list[Holding]:
     accts = accounts()
-    if not accts:
-        st = _statement()
-        return _statement_holdings(st) if st else _sample_holdings()
-    out: list[Holding] = []
+    st = _statement()
+    if not accts and not st:
+        return _sample_holdings()
+    out: list[Holding] = _statement_holdings(st, _statement_label(accts)) if st else []
     for a in accts:
         try:
             out.extend(account_holdings(a))
@@ -469,10 +480,11 @@ def trade_sources() -> dict[str, tuple[bool, callable]]:
     realized P/L is computed per account (an ISA and a normal account holding
     the same share are separate pools)."""
     accts = accounts()
-    if accts:
-        return {a.label: (a.is_isa, functools.partial(account_trades, a)) for a in accts}
+    out = {a.label: (a.is_isa, functools.partial(account_trades, a)) for a in accts}
     st = _statement()
-    return {STATEMENT_LABEL: (False, lambda: _statement_trades(st) if st else [])}
+    if st or not accts:
+        out[_statement_label(accts)] = (False, lambda: _statement_trades(st) if st else [])
+    return out
 
 
 def get_trades() -> list[Trade]:
@@ -488,15 +500,14 @@ def get_trades() -> list[Trade]:
 def get_dividends() -> list[dict]:
     """[{account, isa, date, ticker, isin, amount, currency, amount_eur}]"""
     accts = accounts()
-    if not accts:
-        st = _statement()
-        if not st:
-            return []
-        return [{"account": STATEMENT_LABEL, "isa": False, "date": d["date"][:10],
+    out: list[dict] = []
+    st = _statement()
+    if st:
+        label = _statement_label(accts)
+        out += [{"account": label, "isa": False, "date": d["date"][:10],
                  "ticker": d.get("symbol", ""), "isin": d["isin"],
                  "amount": d["amount_eur"], "currency": "EUR", "amount_eur": d["amount_eur"]}
                 for d in st.get("dividends", [])]
-    out: list[dict] = []
     for a in accts:
         try:
             out.extend(account_dividends(a))
@@ -520,15 +531,18 @@ _INTEREST_TYPES = {"INTEREST_ON_FREE_CASH", "LENDING_INTEREST"}
 
 def get_interest() -> list[dict]:
     """Interest on cash (and share-lending income): [{account, isa, date, amount_eur}]."""
-    if accounts():
-        return [{"account": t["account"], "isa": t["isa"], "date": t["date"],
+    accts = accounts()
+    out: list[dict] = []
+    st = _statement()
+    if st:
+        label = _statement_label(accts)
+        out += [{"account": label, "isa": False, "date": t["date"], "amount_eur": t["amount_eur"]}
+                for t in st.get("transactions", []) if t.get("kind") == "interest"]
+    if accts:
+        out += [{"account": t["account"], "isa": t["isa"], "date": t["date"],
                  "amount_eur": t["amount_eur"]}
                 for t in get_transactions() if t["type"] in _INTEREST_TYPES]
-    st = _statement()
-    if not st:
-        return []
-    return [{"account": STATEMENT_LABEL, "isa": False, "date": t["date"], "amount_eur": t["amount_eur"]}
-            for t in st.get("transactions", []) if t.get("kind") == "interest"]
+    return out
 
 
 def get_cash() -> list[dict]:

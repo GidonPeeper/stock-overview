@@ -88,9 +88,11 @@ class Base(unittest.TestCase):
     def setUp(self):
         clear_caches()
         cache.clear()
-        p = mock.patch.object(fx, "_live_rates", return_value=RATES)
-        p.start()
-        self.addCleanup(p.stop)
+        for p in (mock.patch.object(fx, "_live_rates", return_value=RATES),
+                  # a local data/trading212_statement.json must not leak into these tests
+                  mock.patch.object(t212, "_statement", return_value=None)):
+            p.start()
+            self.addCleanup(p.stop)
 
 
 class FxTest(Base):
@@ -217,6 +219,53 @@ class HistoryTest(Base):
         get = fake_get({"/equity/history/dividends": http_error(404), "/history/dividends": DIVIDENDS})
         with mock.patch.object(t212, "_get", get):
             self.assertEqual(len(t212.account_dividends(acct)), 1)
+
+
+# an imported statement for a closed EU account (all positions sold)
+CLOSED_STATEMENT = {
+    "positions": [],
+    "trades": [
+        {"date": "2024-03-01", "isin": "NL0010273215", "symbol": "ASML", "name": "ASML",
+         "side": "buy", "quantity": 2, "amount_eur": 1200.0},
+        {"date": "2025-06-01", "isin": "NL0010273215", "symbol": "ASML", "name": "ASML",
+         "side": "sell", "quantity": 2, "amount_eur": 1300.0},
+    ],
+    "dividends": [{"date": "2024-08-01", "isin": "NL0010273215", "symbol": "ASML", "amount_eur": 3.0}],
+    "transactions": [{"date": "2024-09-01", "kind": "interest", "amount_eur": 2.5}],
+}
+
+
+class ClosedAccountTest(Base):
+    """A closed account's statement stays next to the live accounts."""
+
+    def setUp(self):
+        super().setUp()
+        p = mock.patch.object(t212, "_statement", return_value=CLOSED_STATEMENT)
+        p.start()
+        self.addCleanup(p.stop)
+        self.acct = t212.Account("T212 Invest", "k", "s")
+        routes = {"/equity/positions": POSITIONS, "/equity/history/orders": {"items": []},
+                  "/equity/history/dividends": DIVIDENDS, "/equity/history/transactions": TRANSACTIONS,
+                  "/equity/account/info": {"currencyCode": "GBP"}}
+        for p in (mock.patch.object(t212, "_get", fake_get(routes)),
+                  mock.patch.object(t212, "accounts", return_value=[self.acct])):
+            p.start()
+            self.addCleanup(p.stop)
+
+    def test_history_is_kept_with_live_accounts(self):
+        self.assertEqual(set(t212.trade_sources()), {"T212 Invest", "Trading212"})
+        statement_trades = t212.trade_sources()["Trading212"][1]()
+        self.assertEqual([t.side for t in statement_trades], ["buy", "sell"])
+        self.assertEqual({d["account"] for d in t212.get_dividends()}, {"Trading212", "T212 Invest"})
+        self.assertIn(("Trading212", 2.5), {(i["account"], i["amount_eur"]) for i in t212.get_interest()})
+        # closed: nothing held there, the live positions are all still shown
+        self.assertEqual({h.broker for h in t212.get_holdings()}, {"T212 Invest"})
+        self.assertEqual(len(t212.get_holdings()), len(POSITIONS))
+
+    def test_label_clash_with_a_plain_live_key(self):
+        plain = t212.Account("Trading212", "k", "s")
+        with mock.patch.object(t212, "accounts", return_value=[plain]):
+            self.assertEqual(set(t212.trade_sources()), {"Trading212", "Trading212 (statement)"})
 
 
 if __name__ == "__main__":
