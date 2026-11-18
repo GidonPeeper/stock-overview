@@ -450,12 +450,15 @@ async def upload_statement(kind: str, file: UploadFile = File(...)) -> dict:
     """Upload a broker export from the browser/phone — takes effect immediately.
     Accepts the files brokers actually hand out and converts them server-side:
       degiro          account statement PDF, or the CSV export
-      trade_republic  the app's "Transaction export" CSV (fills trades AND
-                      dividends/interest), or the trades JSON
+      trade_republic  the app's "Transaction export" CSV or the account statement
+                      PDF (both fill trades AND dividends/interest), or the trades JSON
       tr_income       dividends/interest JSON (only needed for hand-transcribed data)
-      t212_statement  Trading 212 activity-statement PDF, or its converted JSON
+      t212_statement  Trading 212 activity-statement PDF, its converted JSON, or
+                      a History CSV export (added to the statement already
+                      uploaded when it continues it)
     Light validation so a wrong file fails loudly, not silently."""
-    from .importers import degiro_pdf, traderepublic_csv, trading212_pdf
+    from .importers import (degiro_pdf, traderepublic_csv, traderepublic_pdf, trading212_csv,
+                            trading212_pdf)
     import json as _json
 
     content = await file.read()
@@ -476,7 +479,13 @@ async def upload_statement(kind: str, file: UploadFile = File(...)) -> dict:
                                          "(no Koop/Verkoop rows). Export: Activity → Account statement (PDF or CSV), all dates.")
             datafiles.save_upload("degiro", content)
         elif kind == "trade_republic":
-            if traderepublic_csv.looks_like(text):
+            if is_pdf:
+                trades, income_, report = traderepublic_pdf.convert(content)
+                if not trades["trades"] and not income_["income"]:
+                    raise HTTPException(400, "No trades or payouts found — is this the Trade Republic account statement?")
+                datafiles.save_file("trades_trade_republic.json", _json.dumps(trades, indent=1).encode())
+                datafiles.save_file("income_trade_republic.json", _json.dumps(income_, indent=1).encode())
+            elif traderepublic_csv.looks_like(text):
                 trades, income_, report = traderepublic_csv.convert(text)
                 datafiles.save_file("trades_trade_republic.json", _json.dumps(trades, indent=1).encode())
                 datafiles.save_file("income_trade_republic.json", _json.dumps(income_, indent=1).encode())
@@ -489,6 +498,16 @@ async def upload_statement(kind: str, file: UploadFile = File(...)) -> dict:
             if "income" not in _loads_or_400(text):
                 raise HTTPException(400, 'JSON must contain an "income" list — see the .sample file.')
             datafiles.save_upload("tr_income", content)
+        elif kind == "t212_statement" and not is_pdf and trading212_csv.looks_like(text):
+            st, report = trading212_csv.convert(text)
+            path, real = datafiles.resolve("trading212_statement.json")
+            base = _json.loads(path.read_text()) if real else None
+            base_end = ((base or {}).get("overview") or {}).get("period", [None, None])[1]
+            if base_end and base_end < st["overview"]["period"][1]:
+                # a later export: add it to the statement already uploaded
+                st, report = trading212_csv.merge(base, st)
+            datafiles.save_upload("t212_statement",
+                                  _json.dumps(st, indent=1, ensure_ascii=False).encode())
         elif kind == "t212_statement":
             if is_pdf:
                 st, report = trading212_pdf.convert(content)
@@ -496,7 +515,7 @@ async def upload_statement(kind: str, file: UploadFile = File(...)) -> dict:
                     raise HTTPException(400, "No trades or positions found — is this the Trading 212 activity statement (Invest account)?")
                 content = _json.dumps(st, indent=1, ensure_ascii=False).encode()
             elif not {"positions", "trades"} & set(_loads_or_400(text)):
-                raise HTTPException(400, 'Expected the Trading 212 activity-statement PDF or its converted JSON.')
+                raise HTTPException(400, 'Expected the Trading 212 activity-statement PDF, its History CSV export, or the converted JSON.')
             datafiles.save_upload("t212_statement", content)
         else:
             raise HTTPException(404, "Unknown upload kind")

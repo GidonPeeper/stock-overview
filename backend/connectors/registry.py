@@ -141,8 +141,8 @@ CONNECTORS: dict[str, Spec] = {
 
 # Upload importers handled by the existing /api/upload/{kind} endpoint, with
 # the file types each one reads.
-UPLOAD_KINDS = {"degiro": {"pdf", "csv"}, "trade_republic": {"csv", "json"},
-                "t212_statement": {"pdf", "json"}}
+UPLOAD_KINDS = {"degiro": {"pdf", "csv"}, "trade_republic": {"csv", "pdf", "json"},
+                "t212_statement": {"pdf", "csv", "json"}}
 GENERIC_CSV = "generic_csv"
 _TEXT_FORMATS = {"csv", "txt", "tsv"}
 
@@ -152,12 +152,13 @@ _TEXT_FORMATS = {"csv", "txt", "tsv"}
 # "format" (set of file formats). The first matching rule gives "connector"
 # (live) or "importer" (upload kind). Several ids can share one rule list.
 _T212 = [{"type": "api", "auth": "api_key_secret", "connector": "trading212"},
-         {"type": "upload", "report": r"activity statement", "format": {"pdf", "json"},
+         {"type": "upload", "report": r"activity statement|history export",
           "importer": "t212_statement"}]
 _IBKR = [{"type": "api", "auth": "flex_token_query", "connector": "ibkr_flex"}]
 _DEGIRO = [{"type": "upload", "report": r"account (statement|overview)|rekeningoverzicht",
             "importer": "degiro"}]
-_TR = [{"type": "upload", "report": r"transa[ck]tions?[ -]?export", "importer": "trade_republic"}]
+_TR = [{"type": "upload", "report": r"transa[ck]tions?[ -]?export|account statement|rekeningoverzicht|kontoauszug",
+        "importer": "trade_republic"}]
 _STARLING = [{"type": "api", "auth": "token", "connector": "starling"}]
 _WISE = [{"type": "api", "auth": "token", "connector": "wise"}]
 _ETORO = [{"type": "api", "auth": "api_key_secret", "connector": "etoro"}]
