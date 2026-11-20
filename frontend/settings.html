@@ -498,7 +498,7 @@
     async function up(kind){
       const inp=document.getElementById("f-"+kind), msg=document.getElementById("m-"+kind);
       if(!inp.files.length){ msg.textContent="Choose a file first."; msg.className="msg err"; return; }
-      msg.textContent="Uploading…"; msg.className="msg";
+      msg.textContent="Uploading… a long statement can take a minute or two on the free server. Keep this page open."; msg.className="msg";
       const fd=new FormData(); fd.append("file", inp.files[0]);
       const r=await fetch("/api/upload/"+kind,{method:"POST",body:fd});
       if(r.ok){

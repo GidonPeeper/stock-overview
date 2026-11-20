@@ -134,7 +134,11 @@ def parse(source) -> list[Row]:
     with opened as pdf:
         for pno, page in enumerate(pdf.pages, start=1):
             prev: Row | None = None
-            for words in _lines(page):
+            lines = _lines(page)
+            # Free the parsed page at once: kept, a 300-page statement needs
+            # ~900 MB, more than a free server has (the upload then dies).
+            page.close()
+            for words in lines:
                 texts = [w["text"] for w in words]
                 if texts[:2] == ["Date", "Time"] and "Balance" in texts:
                     cols = _Columns(words)

@@ -137,8 +137,9 @@ app.add_middleware(GZipMiddleware, minimum_size=1024, compresslevel=6)
 
 @app.api_route("/healthz", methods=["GET", "HEAD"], include_in_schema=False)
 async def healthz():
-    """Cheap liveness check for keep-alive pings: no auth, no data, no work."""
-    return {"ok": True}
+    """Cheap liveness check for keep-alive pings: no auth, no data, no work.
+    `version` is the deployed commit (Render sets RENDER_GIT_COMMIT; the repo is public)."""
+    return {"ok": True, "version": (os.getenv("RENDER_GIT_COMMIT") or "")[:7]}
 
 
 @app.get("/login", include_in_schema=False)
