@@ -154,17 +154,22 @@ def _apply_tax(income: list[dict], sample: bool) -> dict:
     gbp = lambda eur: from_eur(eur, "GBP")
     calc = paye.annual([{"gross": gbp(i["monthly_eur"]) * 12,
                          "pension_pct": float(i.get("pension_pct", 0) or 0),
-                         "pension_type": i.get("pension_type") or "sacrifice"} for i in order])
+                         "pension_type": i.get("pension_type") or "sacrifice",
+                         "employer_pct": float(i.get("employer_pct", 0) or 0)} for i in order])
     eur = lambda gbp_year: round(to_eur(gbp_year / 12, "GBP"), 2)
     for row, r in zip(order, calc["items"]):
         row["net_monthly_eur"] = eur(r["net"])
         row["tax_monthly_eur"] = eur(r["income_tax"])
         row["ni_monthly_eur"] = eur(r["ni"])
         row["pension_monthly_eur"] = eur(r["pension"])
+        row["pension_relief_monthly_eur"] = eur(r["pension_relief"])
+        row["employer_pension_monthly_eur"] = eur(r["employer_pension"])
+        row["pension_pot_monthly_eur"] = eur(r["pension_into_pot"])
         row["top_rate_pct"] = r["top_rate"]
         slips = paye.payslips(gbp(row["monthly_eur"]) * 12, row.get("started"),
                               float(row.get("pension_pct", 0) or 0),
-                              row.get("pension_type") or "sacrifice")
+                              row.get("pension_type") or "sacrifice",
+                              employer_pct=float(row.get("employer_pct", 0) or 0))
         if slips and row is order[0]:
             row["payslips"] = [{**p, "net_eur": round(to_eur(p["net"], "GBP"), 2)} for p in slips]
     t = calc["total"]

@@ -33,10 +33,20 @@ class AnnualTest(unittest.TestCase):
         self.assertAlmostEqual(t["ni"], 3_210.60, places=2)
         self.assertAlmostEqual(t["income_tax"], 11_432 - 6_000 * 0.4, places=2)
 
-    def test_relief_at_source_comes_off_take_home_at_80pct(self):
-        t = paye.annual([{"gross": 30_000, "pension_pct": 5, "pension_type": "relief_at_source"}])["total"]
+    def test_relief_at_source_comes_off_take_home(self):
+        r = paye.annual([{"gross": 30_000, "pension_pct": 4, "pension_type": "relief_at_source",
+                          "employer_pct": 3}])
         plain = paye.annual([{"gross": 30_000}])["total"]
-        self.assertAlmostEqual(plain["net"] - t["net"], 1_500 * 0.8, places=2)
+        self.assertAlmostEqual(plain["net"] - r["total"]["net"], 1_200, places=2)  # as on the payslip
+        self.assertEqual(r["total"]["income_tax"], plain["income_tax"])             # no relief in pay
+        item = r["items"][0]
+        self.assertAlmostEqual(item["pension_relief"], 300, places=2)               # provider adds 25%
+        self.assertAlmostEqual(item["employer_pension"], 900, places=2)
+        self.assertAlmostEqual(item["pension_into_pot"], 2_400, places=2)
+
+    def test_monthly_ni_uses_payroll_thresholds(self):
+        # (4,189 - 1,048) x 8% + (5,000 - 4,189) x 2%
+        self.assertAlmostEqual(paye.national_insurance(5_000, periods=12), 267.50, places=2)
 
     def test_commission_is_taxed_on_top_of_salary(self):
         items = paye.annual([{"gross": 60_000}, {"gross": 50_000}])["items"]
@@ -57,9 +67,15 @@ class PayslipTest(unittest.TestCase):
         self.assertEqual([s["month"] for s in slips],
                          ["2026-10", "2026-11", "2026-12", "2027-01", "2027-02", "2027-03"])
         self.assertEqual(slips[0]["income_tax"], 0)              # allowance for Apr-Oct unused
-        self.assertAlmostEqual(slips[0]["net"], 4_732.45, places=2)
-        self.assertAlmostEqual(slips[1]["net"], 4_408.45, places=2)
-        self.assertAlmostEqual(slips[-1]["net"], 3_941.95, places=2)
+        self.assertAlmostEqual(slips[0]["net"], 4_732.50, places=2)
+        self.assertAlmostEqual(slips[1]["net"], 4_408.50, places=2)
+        self.assertAlmostEqual(slips[-1]["net"], 3_942.00, places=2)
+
+    def test_payslip_with_pension_after_tax(self):
+        slips = paye.payslips(60_000, "2026-10", 4, "relief_at_source", today=date(2026, 11, 20),
+                              employer_pct=4)
+        self.assertAlmostEqual(slips[0]["pension"], 200, places=2)
+        self.assertAlmostEqual(slips[0]["net"], 4_532.50, places=2)
 
     def test_nothing_special_for_a_full_year(self):
         self.assertIsNone(paye.payslips(60_000, "2026-04", today=date(2026, 11, 20)))
@@ -122,7 +138,7 @@ class FinancesTest(unittest.TestCase):
             d.today.return_value = date(2026, 11, 20)
             d.side_effect = lambda *a, **k: date(*a, **k)
             row = finances.load()["income"][0]
-        self.assertAlmostEqual(row["payslips"][0]["net"], 4_732.45, places=2)
+        self.assertAlmostEqual(row["payslips"][0]["net"], 4_732.50, places=2)
 
     def test_assets_count_and_show_change(self):
         finances.upsert("assets", "Watch", {"value": 4000, "currency": "GBP", "category": "watch",
