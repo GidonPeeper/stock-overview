@@ -156,6 +156,7 @@ def extract_pages(source, table: tuple[dict, dict] | None = None,
                                           "top": round(w["top"], 1), "bottom": round(w["bottom"], 1)})
                     lines.append({"top": top, "words": out_words})
                 pages.append({"page": pno, "width": page.width, "height": page.height, "lines": lines})
+                page.close()   # free the parsed page: keeps a long statement within a small server's memory
     return pages, report
 
 
