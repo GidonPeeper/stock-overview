@@ -237,17 +237,19 @@
         <select id="i-tax" class="ipt" style="width:118px" title="Salary and commission: before tax"><option value="before">Before tax</option><option value="after">After tax</option></select>
       </div>
       <div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center;margin:0 0 14px">
-        <input id="i-pen" placeholder="Pension %" type="number" step="0.1" min="0" max="100" class="ipt" style="width:96px" title="Your own pension contribution, % of this pay" />
+        <input id="i-pen" placeholder="Pension %" type="number" step="0.1" min="0" max="100" class="ipt" style="width:96px" title="% of pay deducted for your pension on the payslip" />
         <select id="i-pentype" class="ipt" style="width:150px" title="How your pension is paid (see your payslip)">
+          <option value="relief_at_source">After tax (relief at source, e.g. NEST)</option>
           <option value="sacrifice">Salary sacrifice</option>
           <option value="net_pay">Before tax (net pay)</option>
-          <option value="relief_at_source">After tax (relief at source)</option>
         </select>
+        <input id="i-emp" placeholder="Employer %" type="number" step="0.1" min="0" max="100" class="ipt" style="width:104px" title="What your employer pays into your pension, % of pay" />
         <label class="sub" style="margin:0;font-size:12.5px">Started <input id="i-start" type="month" class="ipt" style="width:150px" title="First payslip month. Only matters in your first tax year." /></label>
         <button class="btn" onclick="addFin('income')">Add</button>
       </div>
       <div class="sub" style="margin:-8px 0 14px;font-size:12px">"Before tax" amounts get UK income tax and National Insurance taken off, so totals show your take-home pay.
-        Pension % is your own contribution (see your payslip). Started: the month of your first payslip, if it was this tax year.</div>
+        Pension %: the share of pay your payslip deducts for the pension. If "Gross for Tax" on the payslip equals your pay, it's taken after tax.
+        Employer %: what your employer adds. Started: the month of your first payslip, if it was this tax year.</div>
 
       <div style="font-size:11.5px;text-transform:uppercase;letter-spacing:.05em;color:var(--muted);margin:8px 0 2px">Monthly payments</div>
       <div id="fin-expenses"><span style="color:var(--faint)">Loading…</span></div>
@@ -386,9 +388,13 @@
           <button class="del" onclick="delFin('income','${E(x.name)}')">✕</button></span></div>`;
         const parts=f.tax&&f.tax.applied?[`income tax ${money0(x.tax_monthly_eur)}`,`NI ${money0(x.ni_monthly_eur)}`]
           .concat(x.pension_monthly_eur?[`pension ${money0(x.pension_monthly_eur)} (${x.pension_pct}%, ${PEN[x.pension_type]||""})`]:[]):[];
+        const pot=x.pension_pot_monthly_eur?[`you ${money0(x.pension_monthly_eur)}`]
+          .concat(x.pension_relief_monthly_eur?[`tax relief ${money0(x.pension_relief_monthly_eur)}`]:[])
+          .concat(x.employer_pension_monthly_eur?[`employer ${money0(x.employer_pension_monthly_eur)}`]:[]):[];
         const slips=(x.payslips||[]).map(p=>`${new Date(p.month+"-01").toLocaleDateString("en-GB",{month:"short"})} ${money0(p.net_eur)}`).join(" · ");
         return `<div class="row"><span>${x.name}${x.fixed===false?' <span class="pill" style="background:var(--panel2);color:var(--muted)">variable</span>':''}
             <br><span style="font-size:11px;color:var(--faint)">${own0(x.amount,x.currency)}/mo before tax${parts.length?" − "+parts.join(" − "):""}${x.top_rate_pct?` · next £1 taxed ${x.top_rate_pct}%`:""}</span>
+            ${pot.length?`<br><span style="font-size:11px;color:var(--faint)">Into your pension: ${money0(x.pension_pot_monthly_eur)}/mo (${pot.join(" + ")})${x.pension_type==="relief_at_source"&&x.top_rate_pct>=40?" · claim the extra higher-rate relief on your tax return":""}</span>`:""}
             ${slips?`<br><span style="font-size:11px;color:var(--faint)">This tax year's payslips (started mid-year, so less tax): ${slips}</span>`:""}
             ${f.tax&&f.tax.note?`<br><span style="font-size:11px;color:#e3b341">${f.tax.note}</span>`:""}</span>
           <span style="display:flex;gap:8px;align-items:center;text-align:right"><span><b>${money0(x.net_monthly_eur)}/mo</b><br><span style="font-size:11px;color:var(--faint)">take-home</span></span>
@@ -407,7 +413,7 @@
       const set=(id,v)=>{ document.getElementById(id).value=v; };
       set("i-name",x.name); set("i-amt",x.amount); set("i-cur",x.currency||"GBP");
       set("i-fixed",x.fixed===false?"0":"1"); set("i-tax",x.tax||"before");
-      set("i-pen",x.pension_pct||""); set("i-pentype",x.pension_type||"sacrifice"); set("i-start",x.started||"");
+      set("i-pen",x.pension_pct||""); set("i-pentype",x.pension_type||"relief_at_source"); set("i-emp",x.employer_pct||""); set("i-start",x.started||"");
       const m=document.getElementById("m-fin"); m.textContent="Change the fields and press Add to save."; m.className="msg";
       document.getElementById("i-name").scrollIntoView({behavior:"smooth",block:"center"});
     }
@@ -475,8 +481,9 @@
           fd.append("tax",document.getElementById("i-tax").value);
           fd.append("pension_pct",document.getElementById("i-pen").value||0);
           fd.append("pension_type",document.getElementById("i-pentype").value);
+          fd.append("employer_pct",document.getElementById("i-emp").value||0);
           fd.append("started",document.getElementById("i-start").value||"");
-          ["i-pen","i-start"].forEach(id=>document.getElementById(id).value="");
+          ["i-pen","i-emp","i-start"].forEach(id=>document.getElementById(id).value="");
         }
         [p+"-name",p+"-amt"].forEach(id=>document.getElementById(id).value="");
       }

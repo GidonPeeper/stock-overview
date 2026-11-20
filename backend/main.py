@@ -696,6 +696,7 @@ def finances_upsert(kind: str, name: str = Form(...), balance: float = Form(0),
                     monthly_eur: float = Form(0), currency: str = Form("EUR"),
                     fixed: bool = Form(True), tax: str = Form(""),
                     pension_pct: float = Form(0), pension_type: str = Form("sacrifice"),
+                    employer_pct: float = Form(0),
                     started: str = Form(""), value: float = Form(0),
                     category: str = Form("other"), paid: float = Form(0),
                     bought: str = Form("")) -> dict:
@@ -718,6 +719,7 @@ def finances_upsert(kind: str, name: str = Form(...), balance: float = Form(0),
                 fields["tax"] = tax
             fields["pension_pct"] = max(min(pension_pct, 100.0), 0.0)
             fields["pension_type"] = pension_type
+            fields["employer_pct"] = max(min(employer_pct, 100.0), 0.0)
             fields["started"] = started.strip()[:7]
     out = finances.upsert(kind, name, fields)
     github_sync.push_vault_async()

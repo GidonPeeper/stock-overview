@@ -9,11 +9,13 @@ Rules for England, Wales and Northern Ireland, tax years 2026/27 onwards
   https://www.gov.uk/income-tax-rates/income-over-100000
   https://www.gov.uk/national-insurance-rates-letters  (employee, category A)
 
-Pension contributions, as a % of each item's gross pay:
+Pension: `pension_pct` is the % of gross pay deducted on the payslip.
   sacrifice         salary sacrifice: lowers pay before tax and NI
   net_pay           taken before income tax, not before NI
-  relief_at_source  taken from take-home pay at 80% (the provider adds 20%;
-                    higher-rate relief is claimed on the tax return)
+  relief_at_source  taken from pay after tax (NEST and most auto-enrolment
+                    schemes); the provider adds 25% on top (basic-rate relief),
+                    higher-rate relief is claimed on the tax return
+`employer_pct` is what the employer pays in; it is shown, not deducted.
 
 Not covered: Scottish rates, student loans, benefits in kind, other tax codes.
 """
@@ -31,6 +33,7 @@ RATES = (0.20, 0.40, 0.45)
 NI_PRIMARY = 12_570            # employee NI starts here (per year)
 NI_UPPER = 50_270              # 8% below, 2% above
 NI_MAIN, NI_ABOVE = 0.08, 0.02
+NI_MONTHLY = (1_048, 4_189)    # HMRC's monthly thresholds (rounded), as payroll uses
 
 PENSION_TYPES = ("sacrifice", "net_pay", "relief_at_source")
 RULES_NOTE = ("UK income tax and National Insurance, 2026/27 rates (England, Wales and "
@@ -52,26 +55,30 @@ def income_tax(taxable_pay: float, allowance_income: float | None = None) -> flo
 def national_insurance(ni_pay: float, periods: int = 1) -> float:
     """Employee NI on pay for `periods` equal pay periods per year. NI is worked
     out per pay period, so pass the per-period pay and periods=12 for a month."""
-    lower, upper = NI_PRIMARY / periods, NI_UPPER / periods
+    lower, upper = NI_MONTHLY if periods == 12 else (NI_PRIMARY / periods, NI_UPPER / periods)
     return (max(min(ni_pay, upper) - lower, 0.0) * NI_MAIN
             + max(ni_pay - upper, 0.0) * NI_ABOVE)
 
 
-def _split(gross: float, pct: float, kind: str) -> dict:
-    """Pension amounts for one item: what comes off before tax, before NI, and after."""
-    c = max(gross * max(pct, 0.0) / 100, 0.0)
+def _split(gross: float, pct: float, kind: str, employer_pct: float = 0.0) -> dict:
+    """Pension amounts for one item: what comes off before tax, before NI, and
+    after tax, and what reaches the pension pot (yours incl. relief, employer's)."""
+    d = max(gross * max(pct, 0.0) / 100, 0.0)          # deducted on the payslip
     kind = kind if kind in PENSION_TYPES else "sacrifice"
-    return {"contribution": c,
-            "pre_tax": c if kind in ("sacrifice", "net_pay") else 0.0,
-            "pre_ni": c if kind == "sacrifice" else 0.0,
-            "from_net": c * 0.8 if kind == "relief_at_source" else 0.0,
-            "ras_gross": c if kind == "relief_at_source" else 0.0}
+    ras = kind == "relief_at_source"
+    return {"deducted": d,
+            "pre_tax": 0.0 if ras else d,
+            "pre_ni": d if kind == "sacrifice" else 0.0,
+            "from_net": d if ras else 0.0,
+            "relief": d / 0.8 - d if ras else 0.0,     # basic-rate relief the provider claims
+            "ras_gross": d / 0.8 if ras else 0.0,
+            "employer": max(gross * max(employer_pct, 0.0) / 100, 0.0)}
 
 
 def annual(items: list[dict]) -> dict:
     """Yearly take-home for a stack of gross incomes, all from employment.
 
-    items: [{"gross": yearly £, "pension_pct": %, "pension_type": ...}, ...]
+    items: [{"gross": yearly £, "pension_pct": %, "pension_type": ..., "employer_pct": %}, ...]
     Tax is worked out on the total; each item's share is what it adds on top
     of the items before it, so list the salary first: a bonus or commission
     then shows its tax at your top rate."""
@@ -80,7 +87,8 @@ def annual(items: list[dict]) -> dict:
     tax_before = ni_before = 0.0
     for it in items:
         g = max(float(it.get("gross") or 0), 0.0)
-        p = _split(g, float(it.get("pension_pct") or 0), it.get("pension_type") or "sacrifice")
+        p = _split(g, float(it.get("pension_pct") or 0), it.get("pension_type") or "sacrifice",
+                   float(it.get("employer_pct") or 0))
         gross += g
         pre_tax += p["pre_tax"]
         pre_ni += p["pre_ni"]
@@ -91,11 +99,12 @@ def annual(items: list[dict]) -> dict:
         ni = national_insurance(gross - pre_ni)
         it_tax, it_ni = tax - tax_before, ni - ni_before
         tax_before, ni_before = tax, ni
-        pension_cut = p["pre_tax"] + p["from_net"]   # what leaves your pay for the pension
-        net = g - it_tax - it_ni - pension_cut
+        net = g - it_tax - it_ni - p["deducted"]
         out_items.append({"gross": round(g, 2), "income_tax": round(it_tax, 2),
-                          "ni": round(it_ni, 2), "pension": round(pension_cut, 2),
-                          "pension_into_pot": round(p["contribution"], 2),
+                          "ni": round(it_ni, 2), "pension": round(p["deducted"], 2),
+                          "pension_relief": round(p["relief"], 2),
+                          "employer_pension": round(p["employer"], 2),
+                          "pension_into_pot": round(p["deducted"] + p["relief"] + p["employer"], 2),
                           "net": round(net, 2),
                           "top_rate": round(marginal_rate(gross - pre_tax, gross - pre_ni,
                                                           taxable - ras) * 100, 1)})
@@ -130,7 +139,8 @@ def _month_no(ym: str, start: date) -> int | None:
 
 
 def payslips(gross_year: float, started: str | None, pension_pct: float = 0.0,
-             pension_type: str = "sacrifice", today: date | None = None) -> list[dict] | None:
+             pension_type: str = "sacrifice", today: date | None = None,
+             employer_pct: float = 0.0) -> list[dict] | None:
     """Monthly take-home for this tax year when the job started after April.
 
     PAYE is cumulative: with tax code 1257L the tax-free allowance for the
@@ -143,7 +153,7 @@ def payslips(gross_year: float, started: str | None, pension_pct: float = 0.0,
     if first is None or first == 1:
         return None
     monthly = gross_year / 12
-    p = _split(monthly, pension_pct, pension_type)
+    p = _split(monthly, pension_pct, pension_type, employer_pct)
     taxable_month = monthly - p["pre_tax"]
     ni_month = national_insurance(monthly - p["pre_ni"], periods=12)
     out, tax_paid, pay_to_date = [], 0.0, 0.0
@@ -161,6 +171,6 @@ def payslips(gross_year: float, started: str | None, pension_pct: float = 0.0,
         y = start.year + (n + 2) // 12
         m = (n + 2) % 12 + 1
         out.append({"month": f"{y}-{m:02d}", "income_tax": round(tax, 2),
-                    "ni": round(ni_month, 2), "pension": round(p["pre_tax"] + p["from_net"], 2),
-                    "net": round(monthly - tax - ni_month - p["pre_tax"] - p["from_net"], 2)})
+                    "ni": round(ni_month, 2), "pension": round(p["deducted"], 2),
+                    "net": round(monthly - tax - ni_month - p["deducted"], 2)})
     return out
