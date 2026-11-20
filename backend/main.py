@@ -694,15 +694,31 @@ def finances_get() -> dict:
 def finances_upsert(kind: str, name: str = Form(...), balance: float = Form(0),
                     rate: float = Form(0), monthly_payment: float = Form(0),
                     monthly_eur: float = Form(0), currency: str = Form("EUR"),
-                    fixed: bool = Form(True)) -> dict:
+                    fixed: bool = Form(True), tax: str = Form(""),
+                    pension_pct: float = Form(0), pension_type: str = Form("sacrifice"),
+                    started: str = Form(""), value: float = Form(0),
+                    category: str = Form("other"), paid: float = Form(0),
+                    bought: str = Form("")) -> dict:
     if kind not in finances.KINDS:
         raise HTTPException(404, "Unknown kind")
     if not name.strip():
         raise HTTPException(400, "Name is required")
-    # `monthly_eur` is the form field's historical name; the amount is in `currency`.
-    fields = {"balance": balance, "rate": rate, "monthly_payment": monthly_payment,
-              "currency": currency.upper()} if kind == "loans" else {
-              "amount": monthly_eur, "currency": currency.upper(), "fixed": fixed}
+    ccy = currency.upper()
+    if kind == "loans":
+        fields = {"balance": balance, "rate": rate, "monthly_payment": monthly_payment,
+                  "currency": ccy}
+    elif kind == "assets":
+        fields = {"value": value, "currency": ccy, "category": category.strip().lower(),
+                  "paid": paid, "bought": bought.strip()[:10]}
+    else:
+        # `monthly_eur` is the form field's historical name; the amount is in `currency`.
+        fields = {"amount": monthly_eur, "currency": ccy, "fixed": fixed}
+        if kind == "income":
+            if tax in ("before", "after"):
+                fields["tax"] = tax
+            fields["pension_pct"] = max(min(pension_pct, 100.0), 0.0)
+            fields["pension_type"] = pension_type
+            fields["started"] = started.strip()[:7]
     out = finances.upsert(kind, name, fields)
     github_sync.push_vault_async()
     return out

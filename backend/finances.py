@@ -1,9 +1,18 @@
-"""Loans, income & recurring payments — the cash-flow side of your finances.
+"""Loans, income, recurring payments and things you own.
 
-Three small collections edited in-app (Settings) and stored like the bank
+Four small collections edited in-app (Settings) and stored like the bank
 accounts: git-ignored JSON, bundled into the encrypted vault, and synced to
 the data-sync branch when a GITHUB_TOKEN is set — so entries persist across
 restarts and deploys.
+
+Income is entered before tax (the default for UK residents) or after tax.
+Before-tax items go through `paye.py` (income tax, National Insurance,
+pension), and every cash-flow total uses the take-home amount. Each item's
+`monthly_eur` stays the amount as entered, so the tax advisors keep reading
+gross income.
+
+Assets ("things you own": a watch, a car, art) count toward net worth at the
+value you enter, but not toward the liquid money used for Freedom Day.
 
 Income and expense items carry a `fixed` flag (default True). The "fixed
 monthly" view sums only the recurring, unchanging items — salary, allowance,
@@ -21,7 +30,8 @@ from .datafiles import DATA_DIR, resolve
 from .fx import to_eur
 
 _FILE = "finances.json"
-KINDS = ("loans", "income", "expenses")
+KINDS = ("loans", "income", "expenses", "assets")
+ASSET_CATEGORIES = ("watch", "jewellery", "car", "art", "collectible", "property", "other")
 
 
 def _load_raw() -> tuple[dict, bool]:
@@ -73,24 +83,93 @@ def load(liquid_assets_eur: float | None = None) -> dict:
             loan["payoff"] = f"{y}-{m + 1:02d}"
             loan["payoff_months"] = months
 
-    monthly_income = round(sum(float(i.get("monthly_eur", 0)) for i in data["income"]), 2)
+    tax_info = _apply_tax(data["income"], sample)
+    monthly_income = round(sum(float(i["net_monthly_eur"]) for i in data["income"]), 2)
+    monthly_gross = round(sum(float(i.get("monthly_eur", 0)) for i in data["income"]), 2)
     loan_payments = sum(l["monthly_payment_eur"] for l in data["loans"])
     other_payments = sum(float(e.get("monthly_eur", 0)) for e in data["expenses"])
     monthly_payments = round(loan_payments + other_payments, 2)
     free_cashflow = round(monthly_income - monthly_payments, 2)
 
+    assets_total = 0.0
+    for a in data["assets"]:
+        ccy = a.get("currency") or "EUR"
+        a["currency"] = ccy
+        a["category"] = a.get("category") if a.get("category") in ASSET_CATEGORIES else "other"
+        a["value_eur"] = round(to_eur(float(a.get("value", 0) or 0), ccy), 2)
+        paid = float(a.get("paid", 0) or 0)
+        if paid:
+            a["paid_eur"] = round(to_eur(paid, ccy), 2)
+            a["change_eur"] = round(a["value_eur"] - a["paid_eur"], 2)
+        assets_total += a["value_eur"]
+
     out = {"loans": data["loans"], "income": data["income"],
-           "expenses": data["expenses"], "sample": sample,
+           "expenses": data["expenses"], "assets": data["assets"], "sample": sample,
            "totals": {"debt_eur": round(total_debt, 2),
+                      "assets_eur": round(assets_total, 2),
                       "monthly_income": monthly_income,
+                      "monthly_income_gross": monthly_gross,
                       "monthly_payments": monthly_payments,
                       "free_cashflow": free_cashflow},
+           "tax": tax_info,
            "fixed": _fixed_flow(data)}
 
     if liquid_assets_eur is not None and monthly_payments > 0:
         out["freedom"] = _freedom(liquid_assets_eur - total_debt,
                                   monthly_payments, free_cashflow)
     return out
+
+
+def _residence() -> str:
+    try:
+        from .harvest import residence
+        return residence()
+    except Exception:
+        return "UK"
+
+
+def _apply_tax(income: list[dict], sample: bool) -> dict:
+    """Fill each income row's take-home (`net_monthly_eur`) and tax breakdown.
+
+    Before-tax rows are taxed together, fixed items first, so a bonus or
+    commission carries the tax at your top rate. Rows without a `tax` field
+    count as before tax for UK residents (salaries are quoted gross)."""
+    uk = _residence() == "UK"
+    for i in income:
+        if i.get("tax") not in ("before", "after"):
+            i["tax"] = "before" if uk and not sample else "after"
+        i["net_monthly_eur"] = float(i.get("monthly_eur", 0) or 0)
+    gross_rows = [i for i in income if i["tax"] == "before"]
+    if not gross_rows:
+        return {"applied": False, "uk": uk}
+    if not uk:
+        return {"applied": False, "uk": False,
+                "note": "Tax is only worked out for UK residents (TAX_RESIDENCE=UK). "
+                        "Enter take-home amounts as after tax."}
+    from . import paye
+    from .fx import from_eur
+
+    order = ([i for i in gross_rows if i.get("fixed", True) is not False]
+             + [i for i in gross_rows if i.get("fixed", True) is False])
+    gbp = lambda eur: from_eur(eur, "GBP")
+    calc = paye.annual([{"gross": gbp(i["monthly_eur"]) * 12,
+                         "pension_pct": float(i.get("pension_pct", 0) or 0),
+                         "pension_type": i.get("pension_type") or "sacrifice"} for i in order])
+    eur = lambda gbp_year: round(to_eur(gbp_year / 12, "GBP"), 2)
+    for row, r in zip(order, calc["items"]):
+        row["net_monthly_eur"] = eur(r["net"])
+        row["tax_monthly_eur"] = eur(r["income_tax"])
+        row["ni_monthly_eur"] = eur(r["ni"])
+        row["pension_monthly_eur"] = eur(r["pension"])
+        row["top_rate_pct"] = r["top_rate"]
+        slips = paye.payslips(gbp(row["monthly_eur"]) * 12, row.get("started"),
+                              float(row.get("pension_pct", 0) or 0),
+                              row.get("pension_type") or "sacrifice")
+        if slips and row is order[0]:
+            row["payslips"] = [{**p, "net_eur": round(to_eur(p["net"], "GBP"), 2)} for p in slips]
+    t = calc["total"]
+    return {"applied": True, "uk": True, "rules": paye.RULES_NOTE,
+            "yearly_eur": {k: round(to_eur(v, "GBP"), 2) for k, v in t.items()}}
 
 
 def _fixed_flow(data: dict) -> dict:
@@ -100,7 +179,9 @@ def _fixed_flow(data: dict) -> dict:
     def keep(x) -> bool:
         return x.get("fixed", True) is not False
 
-    income = [{"name": i["name"], "monthly_eur": round(float(i.get("monthly_eur", 0)), 2)}
+    income = [{"name": i["name"], "monthly_eur": round(float(i["net_monthly_eur"]), 2),
+               "gross_monthly_eur": round(float(i.get("monthly_eur", 0)), 2),
+               "taxed": i.get("tax") == "before"}
               for i in data["income"] if keep(i)]
     outgoings = [{"name": e["name"], "monthly_eur": round(float(e.get("monthly_eur", 0)), 2),
                   "kind": "expense"}

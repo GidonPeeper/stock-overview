@@ -203,7 +203,7 @@
           <option value="cash">Cash</option>
           <option value="savings">Savings</option>
           <option value="retirement">Retirement / 401(k)</option>
-          <option value="other">Other asset</option>
+          <option value="other">Other account</option>
         </select>
         <button class="btn" onclick="addAccount()">Add</button>
       </div>
@@ -229,13 +229,25 @@
 
       <div style="font-size:11.5px;text-transform:uppercase;letter-spacing:.05em;color:var(--muted);margin:8px 0 2px">Expected income</div>
       <div id="fin-income"><span style="color:var(--faint)">Loading…</span></div>
-      <div style="display:flex;gap:6px;flex-wrap:wrap;margin:8px 0 14px">
+      <div style="display:flex;gap:6px;flex-wrap:wrap;margin:8px 0 6px">
         <input id="i-name" placeholder="Source (e.g. Salary)" class="ipt" style="flex:2;min-width:130px" />
         <input id="i-amt" placeholder="Per month" type="number" step="0.01" class="ipt" style="width:100px" />
         <select id="i-cur" class="ipt ccy-default" style="width:74px"><option>GBP</option><option>EUR</option><option>USD</option></select>
         <select id="i-fixed" class="ipt" style="width:112px"><option value="1">Fixed</option><option value="0">Variable</option></select>
+        <select id="i-tax" class="ipt" style="width:118px" title="Salary and commission: before tax"><option value="before">Before tax</option><option value="after">After tax</option></select>
+      </div>
+      <div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center;margin:0 0 14px">
+        <input id="i-pen" placeholder="Pension %" type="number" step="0.1" min="0" max="100" class="ipt" style="width:96px" title="Your own pension contribution, % of this pay" />
+        <select id="i-pentype" class="ipt" style="width:150px" title="How your pension is paid (see your payslip)">
+          <option value="sacrifice">Salary sacrifice</option>
+          <option value="net_pay">Before tax (net pay)</option>
+          <option value="relief_at_source">After tax (relief at source)</option>
+        </select>
+        <label class="sub" style="margin:0;font-size:12.5px">Started <input id="i-start" type="month" class="ipt" style="width:150px" title="First payslip month. Only matters in your first tax year." /></label>
         <button class="btn" onclick="addFin('income')">Add</button>
       </div>
+      <div class="sub" style="margin:-8px 0 14px;font-size:12px">"Before tax" amounts get UK income tax and National Insurance taken off, so totals show your take-home pay.
+        Pension % is your own contribution (see your payslip). Started: the month of your first payslip, if it was this tax year.</div>
 
       <div style="font-size:11.5px;text-transform:uppercase;letter-spacing:.05em;color:var(--muted);margin:8px 0 2px">Monthly payments</div>
       <div id="fin-expenses"><span style="color:var(--faint)">Loading…</span></div>
@@ -248,6 +260,27 @@
       </div>
       <div class="msg" id="m-fin"></div>
       <div id="fin-totals" class="sub" style="margin-top:8px"></div>
+    </div>
+
+    <div class="card" id="assets">
+      <h2>Things you own</h2>
+      <div class="sub" style="margin-bottom:10px">A watch, a car, art, jewellery. Counted in your net worth at the
+        value you enter (what you could sell it for), not in your savings or Freedom Day. Update the value now and then.</div>
+      <div id="asset-list"><span style="color:var(--faint)">Loading…</span></div>
+      <div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:14px;align-items:center">
+        <input id="a-name" placeholder="What (e.g. Omega watch)" class="ipt" style="flex:2;min-width:140px" />
+        <select id="a-cat" class="ipt" style="width:120px">
+          <option value="watch">Watch</option><option value="jewellery">Jewellery</option><option value="car">Car</option>
+          <option value="art">Art</option><option value="collectible">Collectible</option><option value="property">Property</option>
+          <option value="other" selected>Other</option>
+        </select>
+        <input id="a-val" placeholder="Worth now" type="number" step="0.01" class="ipt" style="width:100px" />
+        <input id="a-paid" placeholder="Price paid" type="number" step="0.01" class="ipt" style="width:100px" />
+        <input id="a-bought" type="date" class="ipt" style="width:140px" title="Date bought (optional)" />
+        <select id="a-cur" class="ipt ccy-default" style="width:74px"><option>GBP</option><option>EUR</option><option>USD</option></select>
+        <button class="btn" onclick="addAsset()">Add</button>
+      </div>
+      <div class="msg" id="m-assets"></div>
     </div>
   </div>
 
@@ -344,11 +377,75 @@
          <button class="del" onclick="delFin('loans','${E(l.name)}')">✕</button></span></div>`).join("")||'<span style="color:var(--faint)">None</span>');
       const li=(x,k)=>`<div class="row"><span>${x.name}${x.fixed===false?' <span class="pill" style="background:var(--panel2);color:var(--muted)">variable</span>':''}</span><span style="display:flex;gap:8px;align-items:center"><b>${own0(x.amount,x.currency)}/mo</b>
          <button class="del" onclick="delFin('${k}','${E(x.name)}')">✕</button></span></div>`;
-      document.getElementById("fin-income").innerHTML=f.income.map(x=>li(x,"income")).join("")||'<span style="color:var(--faint)">None</span>';
+      const PEN={sacrifice:"salary sacrifice",net_pay:"before tax",relief_at_source:"after tax"};
+      const inc=x=>{
+        if(x.tax!=="before") return `<div class="row"><span>${x.name}${x.fixed===false?' <span class="pill" style="background:var(--panel2);color:var(--muted)">variable</span>':''}
+            <br><span style="font-size:11px;color:var(--faint)">after tax · ${own0(x.amount,x.currency)}/mo lands in your account</span></span>
+          <span style="display:flex;gap:8px;align-items:center"><b>${own0(x.amount,x.currency)}/mo</b>
+          <button class="del" title="Edit" onclick='editIncome(${JSON.stringify(x).replace(/'/g,"&#39;")})'>✎</button>
+          <button class="del" onclick="delFin('income','${E(x.name)}')">✕</button></span></div>`;
+        const parts=f.tax&&f.tax.applied?[`income tax ${money0(x.tax_monthly_eur)}`,`NI ${money0(x.ni_monthly_eur)}`]
+          .concat(x.pension_monthly_eur?[`pension ${money0(x.pension_monthly_eur)} (${x.pension_pct}%, ${PEN[x.pension_type]||""})`]:[]):[];
+        const slips=(x.payslips||[]).map(p=>`${new Date(p.month+"-01").toLocaleDateString("en-GB",{month:"short"})} ${money0(p.net_eur)}`).join(" · ");
+        return `<div class="row"><span>${x.name}${x.fixed===false?' <span class="pill" style="background:var(--panel2);color:var(--muted)">variable</span>':''}
+            <br><span style="font-size:11px;color:var(--faint)">${own0(x.amount,x.currency)}/mo before tax${parts.length?" − "+parts.join(" − "):""}${x.top_rate_pct?` · next £1 taxed ${x.top_rate_pct}%`:""}</span>
+            ${slips?`<br><span style="font-size:11px;color:var(--faint)">This tax year's payslips (started mid-year, so less tax): ${slips}</span>`:""}
+            ${f.tax&&f.tax.note?`<br><span style="font-size:11px;color:#e3b341">${f.tax.note}</span>`:""}</span>
+          <span style="display:flex;gap:8px;align-items:center;text-align:right"><span><b>${money0(x.net_monthly_eur)}/mo</b><br><span style="font-size:11px;color:var(--faint)">take-home</span></span>
+          <button class="del" title="Edit" onclick='editIncome(${JSON.stringify(x).replace(/'/g,"&#39;")})'>✎</button>
+          <button class="del" onclick="delFin('income','${E(x.name)}')">✕</button></span></div>`;
+      };
+      document.getElementById("fin-income").innerHTML=f.income.map(inc).join("")||'<span style="color:var(--faint)">None</span>';
       document.getElementById("fin-expenses").innerHTML=f.expenses.map(x=>li(x,"expenses")).join("")||'<span style="color:var(--faint)">None</span>';
       const t=f.totals;
       document.getElementById("fin-totals").innerHTML=
-        `Debt <b>${money0(t.debt_eur)}</b> · income <b>${money0(t.monthly_income)}/mo</b> · payments <b>${money0(t.monthly_payments)}/mo</b> · free cash flow <b style="color:${t.free_cashflow>=0?'var(--green)':'var(--red)'}">${money0(t.free_cashflow)}/mo</b>`;
+        `Debt <b>${money0(t.debt_eur)}</b> · income after tax <b>${money0(t.monthly_income)}/mo</b> · payments <b>${money0(t.monthly_payments)}/mo</b> · free cash flow <b style="color:${t.free_cashflow>=0?'var(--green)':'var(--red)'}">${money0(t.free_cashflow)}/mo</b>`+
+        (f.tax&&f.tax.applied?`<br><span style="font-size:11.5px">${f.tax.rules} Your payslip is the final word.</span>`:"");
+      renderAssets(f);
+    }
+    function editIncome(x){
+      const set=(id,v)=>{ document.getElementById(id).value=v; };
+      set("i-name",x.name); set("i-amt",x.amount); set("i-cur",x.currency||"GBP");
+      set("i-fixed",x.fixed===false?"0":"1"); set("i-tax",x.tax||"before");
+      set("i-pen",x.pension_pct||""); set("i-pentype",x.pension_type||"sacrifice"); set("i-start",x.started||"");
+      const m=document.getElementById("m-fin"); m.textContent="Change the fields and press Add to save."; m.className="msg";
+      document.getElementById("i-name").scrollIntoView({behavior:"smooth",block:"center"});
+    }
+    /* ---- things you own ---- */
+    const CAT={watch:"Watch",jewellery:"Jewellery",car:"Car",art:"Art",collectible:"Collectible",property:"Property",other:"Other"};
+    function renderAssets(f){
+      const el=document.getElementById("asset-list"), a=f.assets||[];
+      if(!a.length){ el.innerHTML='<span style="color:var(--faint)">Nothing yet. Add something you own below.</span>'; return; }
+      el.innerHTML=a.map(x=>{
+        const id="av-"+btoa(unescape(encodeURIComponent(x.name))).replace(/[=+/]/g,"");
+        const ch=x.change_eur!=null?` · paid ${own0(x.paid,x.currency)} (<span style="color:${x.change_eur>=0?'var(--green)':'var(--red)'}">${x.change_eur>=0?"+":"−"}${money0(Math.abs(x.change_eur))}</span>)`:"";
+        return `<div class="row"><span>${x.name} <span class="pill" style="background:var(--panel2);color:var(--muted);margin-left:4px">${CAT[x.category]||"Other"}</span><br>
+            <span style="font-size:11px;color:var(--faint)">${x.currency}${x.bought?` · bought ${x.bought}`:""}${ch}</span></span>
+          <span style="display:flex;gap:6px;align-items:center">
+            <input class="ipt bal" type="number" step="0.01" value="${x.value}" id="${id}" />
+            <button class="btn" style="padding:7px 11px" onclick="saveAsset('${E(x.name)}','${id}','${x.category}','${x.currency}',${x.paid||0},'${x.bought||""}')">Save</button>
+            <button class="del" title="Remove" onclick="delFin('assets','${E(x.name)}')">✕</button></span></div>`;
+      }).join("")+`<div class="row"><span style="font-weight:650">Total</span><span style="font-weight:650">${money0(f.totals.assets_eur)}</span></div>`;
+    }
+    function assetForm(name,value,cat,cur,paid,bought){
+      const fd=new FormData(); fd.append("name",name); fd.append("value",value); fd.append("category",cat);
+      fd.append("currency",cur); fd.append("paid",paid||0); fd.append("bought",bought||""); return fd;
+    }
+    async function postAsset(fd){
+      const msg=document.getElementById("m-assets");
+      const r=await fetch("/api/finances/assets",{method:"POST",body:fd});
+      if(r.ok){ msg.textContent=savedMsg(); msg.className="msg ok"; renderFin(await r.json()); }
+      else{ const e=await r.json().catch(()=>({detail:"Failed"})); msg.textContent="✗ "+e.detail; msg.className="msg err"; }
+    }
+    function addAsset(){
+      const n=document.getElementById("a-name").value, v=document.getElementById("a-val").value;
+      if(!n||!v){ const m=document.getElementById("m-assets"); m.textContent="Name and value required."; m.className="msg err"; return; }
+      postAsset(assetForm(n,v,document.getElementById("a-cat").value,document.getElementById("a-cur").value,
+        document.getElementById("a-paid").value,document.getElementById("a-bought").value));
+      ["a-name","a-val","a-paid","a-bought"].forEach(id=>document.getElementById(id).value="");
+    }
+    function saveAsset(name,id,cat,cur,paid,bought){
+      postAsset(assetForm(name,document.getElementById(id).value,cat,cur,paid,bought));
     }
     function loadFin(){ fxReady.then(()=>fetch("/api/finances")).then(r=>r.json()).then(renderFin); }
     async function postFin(kind, fd, ok){
@@ -374,6 +471,13 @@
         fd.append("name",n); fd.append("monthly_eur",a);
         fd.append("fixed",document.getElementById(p+"-fixed").value);
         fd.append("currency",document.getElementById(p+"-cur").value);
+        if(kind==="income"){
+          fd.append("tax",document.getElementById("i-tax").value);
+          fd.append("pension_pct",document.getElementById("i-pen").value||0);
+          fd.append("pension_type",document.getElementById("i-pentype").value);
+          fd.append("started",document.getElementById("i-start").value||"");
+          ["i-pen","i-start"].forEach(id=>document.getElementById(id).value="");
+        }
         [p+"-name",p+"-amt"].forEach(id=>document.getElementById(id).value="");
       }
       postFin(kind, fd, savedMsg());
