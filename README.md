@@ -40,6 +40,8 @@ python3 -m venv .venv && .venv/bin/pip install -r requirements.txt
 | 📉 **Performance since inception** | Portfolio value & profit reconstructed from full trade history, with a money-weighted S&P 500 benchmark overlay |
 | 📱 **Installable PWA** | Home-screen app with login (Face ID via Keychain), auto-refresh, offline-tolerant loading |
 | 🏦 **Net worth view** | Bank/cash accounts (e.g. Rabobank, Revolut) alongside investments — balances edited in-app in seconds, "where your money is" breakdown |
+| 💷 **Take-home pay** | Salary and commission entered before tax get UK income tax, National Insurance and your pension contribution taken off (salary sacrifice, net pay or relief at source), so cash flow uses what reaches your bank. Shows your top rate, and the higher first payslips when you start a job mid-year |
+| ⌚ **Things you own** | A watch, car or art at the value you enter, with the change against the price paid; counted in net worth, not in liquid savings |
 | ⚙️ **Self-service data** | Upload the broker's own exports (DeGiro PDF, Trade Republic CSV, Trading 212 PDF) in-app; each is converted, validated against the statement's own totals, and shown live/sample per source |
 
 ## 🏗 Architecture

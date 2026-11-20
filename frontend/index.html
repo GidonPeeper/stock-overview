@@ -577,11 +577,13 @@
       cash:{label:"Cash", color:"#e3b341"},
       savings:{label:"Savings", color:"#3fb950"},
       retirement:{label:"Retirement · 401(k) / pension", color:"#a371f7"},
-      other:{label:"Other assets", color:"#8b98a9"},
+      other:{label:"Other accounts", color:"#8b98a9"},
+      things:{label:"Things you own", color:"#d4a373"},
     };
     function renderMoney(){
       if(!PORT||!CASH) return;
-      const inv=PORT.totals.value, assets=inv+(CASH.total_eur||0);
+      const owned=FIN?(FIN.assets||[]):[], ownedTotal=FIN?(FIN.totals.assets_eur||0):0;
+      const inv=PORT.totals.value, assets=inv+(CASH.total_eur||0)+ownedTotal;
       const debt=FIN?FIN.totals.debt_eur:0, net=assets-debt;
       const groups=[{type:"invest", total:inv,
         rows:[{label:"Brokers", sub:PORT.by_broker.map(b=>b.broker).join(" · "), value:inv}]}];
@@ -590,6 +592,8 @@
         if(accs.length) groups.push({type:t, total:accs.reduce((s,a)=>s+a.balance_eur,0),
           rows:accs.map(a=>({label:a.name, sub:(a.institution||"")+(a.rate?` · ${a.rate}%`:""), value:a.balance_eur}))});
       });
+      if(owned.length) groups.push({type:"things", total:ownedTotal,
+        rows:owned.map(a=>({label:a.name, sub:a.category+(a.change_eur!=null?` · ${a.change_eur>=0?"+":"−"}${money0(Math.abs(a.change_eur))} vs price paid`:""), value:a.value_eur}))});
       const el=document.getElementById("money"); el.className="";
       const loans=FIN?FIN.loans:[];
       el.innerHTML=`
@@ -689,7 +693,7 @@
       }
       const net=f.net, netCls=net>=0?"pos":"neg";
       const row=(x,sign,color)=>`<div class="closed-row" style="padding:7px 0">
-          <span><span style="color:${color}">●</span> ${x.name}${x.kind==="loan"?' <span style="font-size:10px;color:var(--faint)">loan</span>':''}</span>
+          <span><span style="color:${color}">●</span> ${x.name}${x.kind==="loan"?' <span style="font-size:10px;color:var(--faint)">loan</span>':''}${x.taxed?` <span style="font-size:10px;color:var(--faint)">after tax · ${money0(x.gross_monthly_eur)} before</span>`:''}</span>
           <span class="num" style="font-weight:600;color:${color}">${sign}${money0(x.monthly_eur)}</span></div>`;
       el.innerHTML=`
         <div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:12px">
@@ -708,7 +712,7 @@
         ${f.income.map(x=>row(x,"+","var(--green)")).join("")||'<div class="muted" style="font-size:12px">None</div>'}
         <div style="font-size:11px;text-transform:uppercase;letter-spacing:.05em;color:var(--muted);margin:12px 0 2px">Going out</div>
         ${f.outgoings.map(x=>row(x,"−","var(--red)")).join("")||'<div class="muted" style="font-size:12px">None</div>'}
-        <div class="muted" style="font-size:11px;margin-top:10px">Recurring items only — variable spending like groceries is excluded. Mark items variable in Settings.</div>`;
+        <div class="muted" style="font-size:11px;margin-top:10px">Recurring items only — variable spending like groceries is excluded. Mark items variable in Settings.${f.income.some(x=>x.taxed)?" Pay entered before tax is shown after UK income tax, National Insurance and pension.":""}</div>`;
     }
 
     /* ---- health score ---- */
