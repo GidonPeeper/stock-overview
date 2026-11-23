@@ -14,8 +14,8 @@ from __future__ import annotations
 
 import os
 import threading
+import time
 from contextlib import asynccontextmanager
-from datetime import date
 from pathlib import Path
 
 from fastapi import FastAPI, File, Form, HTTPException, Request, UploadFile
@@ -43,26 +43,50 @@ from .connectors import trading212
 from .fx import BASE_CURRENCY, display_rates, to_eur
 from .prices import fetch_quotes, quotes_status
 from . import (analytics, cache, cash, datafiles, finances, income, insights, market,
-               periods, realized, reports, sectors, sources, store, uktax, watch)
+               periods, realized, reports, sectors, sources, store, trend, uktax, watch)
 
 # Demo mode = no real data source at all (no broker key, no imported statement):
 # only then do sample holdings and a synthetic trendline make sense.
 DEMO_MODE = not any(v.get("real") for k, v in datafiles.status().items() if not k.startswith("_"))
 FRONTEND_DIR = Path(__file__).resolve().parents[1] / "frontend"
 
-# Set once the warm-up has computed the main dashboard; the trendline backfill
-# (heavy) waits for it so it doesn't compete with the first page load.
+# Set once the warm-up has computed the main dashboard.
 _WARM_FIRST = threading.Event()
 
 
 def _warm_tasks() -> list:
-    """What the background warmer computes at start-up and keeps fresh while
-    someone uses the app (backend/cache.py), most important first: what the
-    first screen asks for, plus cheap file-based reports. The Performance and
-    Insights tabs' Yahoo-heavy extras are left to their first visit, so a
-    start-up does not fire a burst of requests at Yahoo."""
-    return [portfolio, profit, sparklines, indices, closed, health, cash_get,
-            finances_get, analytics_endpoint, uk_tax, annual_report]
+    """What the background warmer computes at start-up and keeps fresh (see
+    backend/cache.py), most important first: what the first screen asks for,
+    then the Performance chart (one big price download), then the reports the
+    other tabs show. Insights' market screens are left to their first visit,
+    so a start-up does not fire a burst of requests at Yahoo."""
+    return [portfolio, profit, sparklines, indices, closed, cash_get, finances_get,
+            trend.series, health, analytics_endpoint, harvest_endpoint, savings,
+            uk_tax, annual_report, income_projection, projection_endpoint]
+
+
+_STARTED = time.time()
+
+
+def _keep_awake() -> None:
+    """Render's free plan puts a service to sleep after 15 minutes without
+    requests, and waking it takes about a minute. On Render the app pings its
+    own public address every 10 minutes so it stays awake (one service uses
+    about 744 of the 750 free hours a month). KEEPALIVE_SELF=0 turns it off."""
+    url = os.getenv("RENDER_EXTERNAL_URL")
+    if not url or os.getenv("KEEPALIVE_SELF", "1") == "0":
+        return
+
+    def loop() -> None:
+        import requests
+        while True:
+            time.sleep(600)
+            try:
+                requests.get(url.rstrip("/") + "/healthz", timeout=30)
+            except Exception:
+                pass
+
+    threading.Thread(target=loop, name="keep-awake", daemon=True).start()
 
 
 @asynccontextmanager
@@ -71,6 +95,7 @@ async def _lifespan(_app):
         cache.start_warmer(_warm_tasks, first=_WARM_FIRST)
     else:
         _WARM_FIRST.set()
+    _keep_awake()
     yield
 
 
@@ -139,7 +164,8 @@ app.add_middleware(GZipMiddleware, minimum_size=1024, compresslevel=6)
 async def healthz():
     """Cheap liveness check for keep-alive pings: no auth, no data, no work.
     `version` is the deployed commit (Render sets RENDER_GIT_COMMIT; the repo is public)."""
-    return {"ok": True, "version": (os.getenv("RENDER_GIT_COMMIT") or "")[:7]}
+    return {"ok": True, "version": (os.getenv("RENDER_GIT_COMMIT") or "")[:7],
+            "up_minutes": round((time.time() - _STARTED) / 60)}
 
 
 @app.get("/login", include_in_schema=False)
@@ -162,34 +188,23 @@ def logout(request: Request):
     request.session.clear()
     return RedirectResponse("/login", status_code=303)
 
-_backfill_started = False
-_backfill_lock = threading.Lock()
+def _move_eur(value_eur: float, price: float, h, q: dict, ref: float | None) -> float | None:
+    """EUR change in a holding's value since the market price `ref`.
 
-
-def _ensure_backfill() -> None:
-    """If the trendline lacks historical (pre-current-month) points, reconstruct
-    them from trade history once, in the background. Self-heals a deleted DB."""
-    global _backfill_started
-    if DEMO_MODE:
-        return
-    with _backfill_lock:
-        if _backfill_started:
-            return
-        _backfill_started = True
-        cur_month = date.today().isoformat()[:7]
-        historical = [s for s in store.get_history() if s["day"][:7] < cur_month]
-        if len(historical) >= 12:
-            return  # already backfilled
-
-    def task():
-        _WARM_FIRST.wait(timeout=60)  # let the first page load go first
-        try:
-            from . import backfill
-            backfill.run()
-        except Exception:
-            pass
-
-    threading.Thread(target=task, daemon=True).start()
+    When the price comes from the market data itself, or the broker quotes the
+    same currency, it is (price - ref) x quantity. When the broker quotes
+    another listing in another currency (e.g. a euro line of a US share), the
+    market's % move is applied to the holding's value instead, so the two
+    currencies are never mixed."""
+    if not ref:
+        return None
+    mkt, ccy = q.get("price"), q.get("currency") or ""
+    if h.price is None or not ccy or ccy == h.currency:
+        return to_eur((price - ref) * h.quantity, h.currency)
+    if not mkt:
+        return None
+    pct = mkt / ref - 1
+    return value_eur * pct / (1 + pct)
 
 
 @cache.cached(ttl=10, copy=True)
@@ -220,9 +235,9 @@ def _open_holdings_rows() -> tuple[list[dict], float, float, dict]:
             cost_eur = to_eur(h.buy_price * h.quantity, h.cost_currency())
             profit_eur = value_eur - cost_eur
 
-        # Today's change: (price - previous close) x quantity, in EUR.
-        prev = q.get("prev_close")
-        daily_eur = to_eur((price - prev) * h.quantity, h.currency) if prev else None
+        # Today's change: value now minus value at the last close before today
+        # (calendar day: zero until the market trades today), in EUR.
+        daily_eur = _move_eur(value_eur, price, h, q, q.get("prev_close"))
 
         total_value += value_eur
         total_cost += cost_eur
@@ -245,6 +260,9 @@ def _open_holdings_rows() -> tuple[list[dict], float, float, dict]:
                 "daily_eur": round(daily_eur, 2) if daily_eur is not None else None,
                 "priced_live": h.ticker in quotes or (h.price is not None and h.price > 0),
                 "wrapper": h.wrapper,
+                # market quote behind the "today" and period changes (periods.py)
+                "_mkt": {"price": q.get("price"), "currency": q.get("currency") or "",
+                         "own_price": h.price is not None},
             }
         )
 
@@ -318,9 +336,9 @@ def portfolio() -> dict:
     daily = round(sum(h["daily_eur"] for h in holdings if h["daily_eur"] is not None), 2)
     prev_value = total_value - daily
 
-    if DEMO_MODE:
+    if DEMO_MODE:  # sample data: a synthetic trendline (real data: trend.py)
         store.seed_demo_history(total_value, total_cost)
-    store.record_snapshot(total_value, total_cost, realized=realized_total)
+        store.record_snapshot(total_value, total_cost, realized=realized_total)
 
     return {
         "base_currency": BASE_CURRENCY,
@@ -375,10 +393,18 @@ def profit() -> dict:
     }
 
 
+def _history() -> list[dict]:
+    """Value and profit per day since the first trade, ending with today's
+    live totals (trend.py)."""
+    if DEMO_MODE:
+        return store.get_history()
+    _, total_value, total_cost, _ = _open_holdings_rows()
+    return trend.history(total_value, total_cost, realized.summary()["total_realized_eur"])
+
+
 @app.get("/api/history")
 def history() -> list[dict]:
-    _ensure_backfill()
-    return store.get_history()
+    return _history()
 
 
 @app.get("/api/indices")
@@ -412,6 +438,7 @@ def datastatus() -> dict:
     out = datafiles.status()
     out["_t212_accounts"] = trading212.status()
     out["_vault"] = _VAULT_STATE
+    out["_trend"] = trend.last_build
     out["_sync"] = {**github_sync.last_result, "pending": github_sync.pending(),
                     "token": bool(os.getenv("GITHUB_TOKEN"))}
     return out
@@ -524,14 +551,7 @@ async def upload_statement(kind: str, file: UploadFile = File(...)) -> dict:
         raise
     except ValueError as e:
         raise HTTPException(400, str(e))
-    # the trendline was built from the old data — rebuild it from the new
-    global _backfill_started
-    try:
-        store.DB_PATH.unlink(missing_ok=True)
-    except OSError:
-        pass
-    with _backfill_lock:
-        _backfill_started = False
+    # (the trendline rebuilds itself: trend.py notices the new trades)
     github_sync.push_vault_async()
     out = datafiles.status()
     out["_report"] = report
@@ -556,17 +576,10 @@ app.include_router(banklink_api.router)
 
 
 def _connections_changed(trades_changed: bool) -> None:
-    """A connection was added/removed: leave demo mode, and rebuild the
-    trendline from the new trade history (as an upload does)."""
-    global DEMO_MODE, _backfill_started
+    """A connection was added/removed: leave demo mode. (The trendline
+    rebuilds itself when the trade history changes, see trend.py.)"""
+    global DEMO_MODE
     DEMO_MODE = not any(v.get("real") for k, v in datafiles.status().items() if not k.startswith("_"))
-    if trades_changed:
-        try:
-            store.DB_PATH.unlink(missing_ok=True)
-        except OSError:
-            pass
-        with _backfill_lock:
-            _backfill_started = False
 
 
 connections_api.after_change.append(_connections_changed)
@@ -679,9 +692,11 @@ def annual_report() -> dict:
 
 
 def _liquid_assets() -> float:
-    """Investments (latest snapshot) + cash — cheap, no live pricing needed."""
-    hist = store.get_history()
-    invest = hist[-1]["total_value"] if hist else 0.0
+    """Investments + cash (the holdings are cached for the dashboard anyway)."""
+    try:
+        invest = _open_holdings_rows()[1]
+    except Exception:
+        invest = 0.0
     return invest + (cash.load().get("total_eur") or 0.0)
 
 
@@ -788,39 +803,10 @@ def export_holdings():
 def benchmark() -> dict[str, float]:
     """Money-weighted S&P 500 comparison: what the portfolio would be worth today
     if every euro put in (or taken out) had gone into the S&P 500 instead, valued
-    at each snapshot month. Directly comparable to the portfolio value curve."""
-    hist = store.get_history()
-    if not hist:
+    on each day of the chart. Directly comparable to the portfolio value curve."""
+    if DEMO_MODE:
         return {}
-    sp = market.benchmark(hist[0]["day"][:7] + "-01")  # {YYYY-MM: close}
-    if not sp:
-        return {}
-    months = sorted(sp)
-
-    def sp_at(ym: str):
-        if ym in sp:
-            return sp[ym]
-        earlier = [m for m in months if m <= ym]
-        return sp[earlier[-1]] if earlier else None
-
-    trades = sources.all_trades_eur()
-    events = sorted((t.when[:7], (1 if t.side == "BUY" else -1) * t.amount) for t in trades)
-
-    out: dict[str, float] = {}
-    units = 0.0
-    i = 0
-    for snap in hist:
-        ym = snap["day"][:7]
-        while i < len(events) and events[i][0] <= ym:
-            m, amt = events[i]
-            px = sp_at(m)
-            if px:
-                units += amt / px
-            i += 1
-        px = sp_at(ym)
-        if px is not None:
-            out[snap["day"]] = round(units * px, 2)
-    return out
+    return trend.benchmark(_history())
 
 
 # Serve the dashboard explicitly at "/" (same reliable FileResponse the login

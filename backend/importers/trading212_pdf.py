@@ -4,7 +4,7 @@ The statement (Invest account) has fixed sections: Overview, executed trades,
 open positions, cash breakdown, transactions (deposits / withdrawals / daily
 interest / card purchases) and dividends. This module turns the *decoded text
 lines* of those pages into one JSON document the Trading 212 connector can use
-as a fallback whenever the live API key is absent, and that the backfill and
+as a fallback whenever the live API key is absent, and that the trendline and
 income modules can use for exact history.
 
 Why "decoded"? Trading 212 embeds Type3 fonts whose ToUnicode table maps every

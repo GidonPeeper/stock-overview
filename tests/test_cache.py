@@ -172,27 +172,41 @@ class WriteHookTest(unittest.TestCase):
 
 
 # ------------------------------------------------------------ quotes
-class FakeInfo:
-    def __init__(self, sym, quotes, delay):
-        self.sym, self.quotes, self.delay = sym, quotes, delay
+def fake_yf(quotes, delay=0.0, calls=None, traded_today=True):
+    """quotes: {symbol: (price now, last close before today, currency) or an
+    Exception}. Yesterday's bar closes at the second value; when the market
+    traded today there is a bar for today at the first value."""
+    import pandas as pd
+    from datetime import datetime, timedelta
 
-    def get(self, key, default=None):
-        q = self.quotes[self.sym]
-        if isinstance(q, Exception):
-            raise q
-        if key in ("lastPrice", "previousClose"):
-            time.sleep(self.delay)
-        return {"lastPrice": q[0], "previousClose": q[1], "currency": q[2]}.get(key, default)
+    from backend import clock
 
-
-def fake_yf(quotes, delay=0.0, calls=None):
     mod = types.ModuleType("yfinance")
 
     class Ticker:
         def __init__(self, sym):
             if calls is not None:
                 calls.append(sym)
-            self.fast_info = FakeInfo(sym, quotes, delay)
+            self.sym = sym
+            self.history_metadata = {}
+
+        def history(self, **kw):
+            time.sleep(delay)
+            q = quotes[self.sym]
+            if isinstance(q, Exception):
+                raise q
+            last, prev, ccy = q
+            today = clock.today()
+            days = [today - timedelta(days=1)] + ([today] if traded_today else [])
+            closes = [prev] + ([last] if traded_today else [])
+            index = pd.DatetimeIndex([datetime(d.year, d.month, d.day) for d in days]).tz_localize(clock.tz())
+            when = datetime.now(clock.tz()) if traded_today else datetime.now(clock.tz()) - timedelta(days=1)
+            self.history_metadata = {"regularMarketPrice": last, "currency": ccy,
+                                     "regularMarketTime": pd.Timestamp(when)}
+            if last is None:
+                self.history_metadata = {}
+                return pd.DataFrame({"Close": []})
+            return pd.DataFrame({"Close": closes}, index=index)
 
     mod.Ticker = Ticker
     return mod
@@ -212,7 +226,7 @@ class QuotesTest(unittest.TestCase):
             out = prices.fetch_quotes(list(quotes))
             took = time.perf_counter() - t
         self.assertLess(took, 0.6)  # 9 tickers x 0.2 s each would be 1.8 s one by one
-        self.assertEqual(out["RMV.L"], {"price": 6.0, "prev_close": 5.9})
+        self.assertEqual(out["RMV.L"], {"price": 6.0, "prev_close": 5.9, "currency": "GBP"})
         self.assertEqual(out["T3"]["price"], 13.0)
         self.assertEqual(prices.quote_scale("RMV.L"), 0.01)
 
@@ -220,8 +234,8 @@ class QuotesTest(unittest.TestCase):
         quotes = {"AAA": (100.0, 99.0, "USD")}
         with mock.patch.dict(sys.modules, {"yfinance": fake_yf(quotes, delay=0.1)}):
             prices.fetch_quotes(["AAA"])
-            p, pc, at = prices._CACHE["AAA"]
-            prices._CACHE["AAA"] = (p, pc, at - prices._TTL - 1)  # a minute old
+            p, pc, at, *rest = prices._CACHE["AAA"]
+            prices._CACHE["AAA"] = (p, pc, at - prices._TTL - 1, *rest)  # a minute old
             quotes["AAA"] = (105.0, 99.0, "USD")
             t = time.perf_counter()
             self.assertEqual(prices.fetch_quotes(["AAA"])["AAA"]["price"], 100.0)
@@ -234,8 +248,8 @@ class QuotesTest(unittest.TestCase):
         quotes = {"AAA": (100.0, 99.0, "USD")}
         with mock.patch.dict(sys.modules, {"yfinance": fake_yf(quotes)}):
             prices.fetch_quotes(["AAA"])
-            p, pc, at = prices._CACHE["AAA"]
-            prices._CACHE["AAA"] = (p, pc, at - prices._TTL - prices._STALE - 1)  # too old to show
+            p, pc, at, *rest = prices._CACHE["AAA"]
+            prices._CACHE["AAA"] = (p, pc, at - prices._TTL - prices._STALE - 1, *rest)  # too old to show
             quotes["AAA"] = RuntimeError("rate limited")
             self.assertEqual(prices.fetch_quotes(["AAA"])["AAA"]["price"], 100.0)
 
@@ -247,6 +261,29 @@ class QuotesTest(unittest.TestCase):
             prices.fetch_quotes(["GONE", "AAA"])
             prices.fetch_quotes(["GONE"])
         self.assertEqual(calls.count("GONE"), 1)
+
+    def test_today_is_the_calendar_day(self):
+        """A market that has not traded yet today shows no change today,
+        instead of the previous session's move."""
+        quotes = {"NVDA": (125.0, 146.0, "USD")}  # last session fell 14%
+        with mock.patch.dict(sys.modules, {"yfinance": fake_yf(quotes, traded_today=False)}):
+            out = prices.fetch_quotes(["NVDA"])
+        self.assertEqual(out["NVDA"]["price"], 125.0)
+        self.assertEqual(out["NVDA"]["prev_close"], 125.0)
+        for d in (prices._CACHE, prices._FAILED):
+            d.clear()
+        with mock.patch.dict(sys.modules, {"yfinance": fake_yf(quotes, traded_today=True)}):
+            out = prices.fetch_quotes(["NVDA"])
+        self.assertEqual(out["NVDA"]["prev_close"], 146.0)
+
+    def test_yesterdays_quote_is_fetched_again(self):
+        quotes = {"AAA": (100.0, 99.0, "USD")}
+        with mock.patch.dict(sys.modules, {"yfinance": fake_yf(quotes)}):
+            prices.fetch_quotes(["AAA"])
+            p, pc, at, ccy, day = prices._CACHE["AAA"]
+            prices._CACHE["AAA"] = (p, pc, at, ccy, day.replace(year=day.year - 1))
+            quotes["AAA"] = (101.0, 100.0, "USD")
+            self.assertEqual(prices.fetch_quotes(["AAA"])["AAA"]["price"], 101.0)
 
 
 class FxTest(unittest.TestCase):

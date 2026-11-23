@@ -227,7 +227,7 @@ HINDSIGHT_METHOD = (
 
 
 def hindsight() -> dict:
-    from .backfill import HIST_TICKER
+    from .instruments import TICKERS as HIST_TICKER
     from .instruments import price_currency
     from .prices import fetch_quotes
 
@@ -274,9 +274,9 @@ def hindsight() -> dict:
 def projection() -> dict:
     """Project net worth 10 years out under three return scenarios, using the
     portfolio's real average monthly contribution."""
-    from . import store as _store
+    from . import trend
 
-    hist = _store.get_history()
+    hist = trend.series()
     if not hist:
         return {"scenarios": {}}
     start = hist[-1]["total_value"]

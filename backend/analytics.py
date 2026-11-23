@@ -1,49 +1,71 @@
-"""Portfolio analytics computed from the snapshot history and current holdings.
+"""Portfolio analytics computed from the value history and current holdings.
 
-Everything is derived from data the app already has (monthly value history,
-holdings, S&P benchmark), so it works offline and in demo mode. Metrics:
+Everything is derived from data the app already has (the daily value and
+profit history in trend.py, holdings, S&P benchmark). Metrics:
 
   * volatility  — annualized std-dev of monthly returns
   * beta        — regression slope of portfolio vs S&P 500 monthly returns
   * sharpe      — annualized mean excess return / volatility (rf ~ 2%)
-  * max_drawdown — worst peak-to-trough of the value curve
+  * max_drawdown — worst peak-to-trough of the return index (below)
   * concentration — top-3 holdings weight + effective number of positions (1/HHI)
   * currency / sector exposure — value-weighted breakdown
 
-Monthly returns are computed flow-adjusted: r = (V_t - V_{t-1} - net_flow) / V_{t-1},
-using cost-basis deltas as the flow proxy, so deposits don't masquerade as gains.
+Returns are flow-adjusted (time-weighted): between two points the gain is the
+change in total profit (unrealized + realized), divided by the value at the
+start. Deposits, withdrawals and moving money between brokers change the value
+but not the profit, so they never show up as gains or losses.
 """
 
 from __future__ import annotations
 
 import math
 
-from . import market, store
+from . import market, trend
 
 _RF_ANNUAL = 0.02  # assumed risk-free rate
 
 
-def _monthly_returns(hist: list[dict]) -> list[tuple[str, float]]:
-    """Flow-adjusted monthly returns from the snapshot history."""
-    # last snapshot of each month
-    by_month: dict[str, dict] = {}
-    for s in hist:
-        by_month[s["day"][:7]] = s
-    months = sorted(by_month)
-    out: list[tuple[str, float]] = []
-    for prev, cur in zip(months, months[1:]):
-        a, b = by_month[prev], by_month[cur]
-        flow = b["total_cost"] - a["total_cost"]  # new money in (or out)
+def _step_returns(hist: list[dict], min_value: float = 500.0) -> list[tuple[str, float]]:
+    """(day, return since the previous point) for every point after the first."""
+    out = []
+    for a, b in zip(hist, hist[1:]):
         base = a["total_value"]
-        if base > 5000:  # skip the tiny-portfolio start, where flows dwarf value
-            r = (b["total_value"] - a["total_value"] - flow) / base
-            out.append((cur, max(-0.4, min(r, 0.4))))  # winsorize residual flow noise
+        r = (b["total_profit"] - a["total_profit"]) / base if base > min_value else 0.0
+        out.append((b["day"], max(-0.4, min(r, 0.4))))  # clip leftover data noise
     return out
 
 
-def summary(holdings: list[dict]) -> dict:
-    hist = store.get_history()
-    rets = _monthly_returns(hist)
+def _monthly_returns(hist: list[dict]) -> list[tuple[str, float]]:
+    """Time-weighted monthly returns (compounded from the points in between).
+    Months that start below 5,000 are skipped: there a single trade dwarfs
+    the market move."""
+    start_value: dict[str, float] = {}
+    growth: dict[str, float] = {}
+    for (day, r), a in zip(_step_returns(hist), hist):
+        m = day[:7]
+        if m not in start_value:
+            start_value[m] = a["total_value"]
+        growth[m] = growth.get(m, 1.0) * (1 + r)
+    months = sorted(growth)
+    if months and months[-1] == hist[-1]["day"][:7] and len(months) > 1:
+        months = months[:-1]  # the current month is not complete yet
+    return [(m, growth[m] - 1) for m in months if start_value[m] > 5000]
+
+
+def max_drawdown(hist: list[dict]) -> float:
+    """Worst fall from a peak of the time-weighted return index (0 to -1)."""
+    index = peak = 1.0
+    mdd = 0.0
+    for _, r in _step_returns(hist):
+        index *= 1 + r
+        peak = max(peak, index)
+        mdd = min(mdd, index / peak - 1)
+    return mdd
+
+
+def summary(holdings: list[dict], hist: list[dict] | None = None) -> dict:
+    hist = trend.series() if hist is None else hist
+    rets = _monthly_returns(hist) if hist else []
     out: dict = {"months": len(rets)}
 
     if len(rets) >= 6:
@@ -75,13 +97,8 @@ def summary(holdings: list[dict]) -> dict:
         except Exception:
             pass
 
-    # max drawdown over the whole curve
-    peak, mdd = 0.0, 0.0
-    for s in hist:
-        v = s["total_value"]
-        peak = max(peak, v)
-        if peak > 500:
-            mdd = min(mdd, (v - peak) / peak)
+    # max drawdown over the whole curve, deposits and withdrawals taken out
+    mdd = max_drawdown(hist) if hist else 0.0
     if mdd < 0:
         out["max_drawdown_pct"] = round(mdd * 100, 1)
 

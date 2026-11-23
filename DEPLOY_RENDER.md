@@ -93,8 +93,13 @@ numbers when the server is up. (A small service worker, `frontend/sw.js`,
 keeps a copy of the page itself; no portfolio data is stored in it. Signing
 out clears the saved numbers.)
 
-**Keep it awake (optional, free).** Render sleeps a free service after 15
-minutes without traffic. A ping every 10 minutes stops that:
+**Keep it awake (on by default, free).** Render sleeps a free service after
+15 minutes without traffic. On Render the app pings its own address
+(`RENDER_EXTERNAL_URL`, set by Render) every 10 minutes, so it stays awake.
+Set `KEEPALIVE_SELF=0` to turn this off, for example when you run a second free
+service (see the budget below). `/healthz` shows `up_minutes`: if it keeps
+growing, the service has not slept. Other ways, should the built-in ping ever
+stop working:
 
 - *External monitor* (simplest, more punctual): a free account at
   cron-job.org → Create cronjob → URL
@@ -109,8 +114,9 @@ minutes without traffic. A ping every 10 minutes stops that:
 
 `/healthz` needs no login and returns no data. Mind the budget: Render gives
 750 free instance hours per workspace per month, and one service running all
-month uses about 744. So keep only one free service awake. Pings do not make
-the app call Yahoo or your brokers; it only refreshes data while you use it.
+month uses about 744. So keep only one free service awake. Pings themselves
+do no work. While nobody uses the app it refreshes its data every 20 minutes
+(every 4 minutes while you use it), so the next visit finds it ready.
 
 **Paid alternative.** Render's Starter plan ($7/month, 0.5 CPU, 512 MB) never
 sleeps and has 5× the CPU of the free plan (0.1 CPU), so pages also compute
@@ -121,11 +127,12 @@ itself up in the background):
 
 | Data | Fresh for | Then served while refreshing in the background |
 |---|---|---|
-| Live quotes (fetched in parallel) | 60 s | up to 15 min |
-| Holdings from all brokers | 30 s | up to 10 min |
+| Live quotes (fetched in parallel) | 60 s | up to 1 h (a new day always fetches) |
+| Holdings from all brokers | 30 s | up to 1 h |
 | Trade lists, realised P/L, income, UK tax, annual report | 5 min | up to 1 h |
 | FX rates | 1 h | up to 6 h |
 | Week/month/year price history | 5 min | up to 24 h |
+| Performance chart (daily history since the first trade) | 3 h | up to 7 days; rebuilt at once when trades change |
 | Index strip · sparklines · S&P benchmark | 5 min · 30 min · 1 h | up to 6–24 h |
 | Earnings dates · dividend history · correlation | 6–12 h | 4× as long |
 

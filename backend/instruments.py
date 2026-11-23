@@ -1,6 +1,6 @@
 """ISIN -> market-data ticker, shared by every connector and importer.
 
-One table instead of three: the DeGiro connector (open positions), the backfill
+One table instead of three: the DeGiro connector (open positions), the trendline (trend.py)
 (every instrument ever traded) and the Trade Republic importer all need the same
 answer to "which yfinance symbol prices this ISIN?". "" means no usable quote
 (delisted SPACs, penny stocks) — such positions are shown but not priced.

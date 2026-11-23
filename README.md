@@ -37,7 +37,8 @@ python3 -m venv .venv && .venv/bin/pip install -r requirements.txt
 | 🔬 **Quant analytics** | Beta vs S&P 500, annualized volatility, Sharpe, max drawdown, concentration, currency exposure — flow-adjusted so deposits don't fake returns |
 | 🌱 **Rising Stars screener** | Small-caps from Yahoo screeners, re-scored 0–100 with a fully disclosed methodology (momentum / valuation / size) — research leads, not advice |
 | 📅 **Earnings calendar** | Upcoming earnings dates for everything you hold |
-| 📉 **Performance since inception** | Portfolio value & profit reconstructed from full trade history, with a money-weighted S&P 500 benchmark overlay |
+| 📉 **Performance since inception** | Daily value & profit rebuilt from your full trade history (prices as quoted on the day, so splits don't distort it), ending at today's live total; 1M / this year / 1Y / all, with a money-weighted S&P 500 overlay |
+| 📆 **Calendar periods** | Today, this week, this month and this year count from midnight, Monday, the 1st and 1 January where you live (`DASHBOARD_TZ`, default Europe/London): a market that hasn't opened yet today shows no change |
 | 📱 **Installable PWA** | Home-screen app with login (Face ID via Keychain), auto-refresh, offline-tolerant loading |
 | 🏦 **Net worth view** | Bank/cash accounts (e.g. Rabobank, Revolut) alongside investments — balances edited in-app in seconds, "where your money is" breakdown |
 | 💷 **Take-home pay** | Salary and commission entered before tax get UK income tax, National Insurance and your pension contribution taken off (salary sacrifice, net pay or relief at source), so cash flow uses what reaches your bank. Shows your top rate, and the higher first payslips when you start a job mid-year |

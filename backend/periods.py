@@ -1,8 +1,14 @@
-"""Period profit views: today, this week, month, year.
+"""Period profit views: today, this week, this month, this year.
 
-These measure how the market value of your *current* holdings has moved over a
-window — computed from historical close prices (yfinance). This is distinct from
-all-time unrealized P/L (value vs cost) and from realized P/L (closed trades).
+These measure how the market value of your *current* holdings has moved since
+the start of the calendar period (midnight today, Monday, the 1st of the month,
+1 January; see backend/clock.py), computed from daily close prices (yfinance).
+This is distinct from all-time unrealized P/L (value vs cost) and from realized
+P/L (closed trades).
+
+"Today" is the sum of each holding's today change (main._open_holdings_rows),
+so it always matches the dashboard's headline. The other periods use the same
+rule against an older close, so on a Monday "this week" equals "today".
 
 Caveat surfaced to the caller: it values *today's* quantities at past prices, so
 it reflects market movement of what you hold now, not your actual past balance.
@@ -12,12 +18,13 @@ coverage gaps, so nothing is silently fabricated.
 
 from __future__ import annotations
 
-from . import cache
+from datetime import date
+
+from . import cache, clock
 from .fx import to_eur
 from .prices import quote_scale
 
-# Trading-day offsets from the latest close.
-_WINDOWS = {"today": 1, "week": 5, "month": 21, "year": 251}
+_PERIODS = ("today", "week", "month", "year")
 
 # Symbols whose market-data ticker differs from the broker's symbol.
 # (Trading 212 uses its own symbology, e.g. FB for Meta, ZPRRd for the Xetra
@@ -25,8 +32,32 @@ _WINDOWS = {"today": 1, "week": 5, "month": 21, "year": 251}
 _ALIAS = {"FB": "META", "ZPRRd": "ZPRR.DE"}
 
 
-def compute(holdings: list[dict]) -> dict:
-    """holdings: dicts with ticker, quantity, currency, value_eur, name."""
+def _ref(closes: list[tuple[date, float]], start: date) -> float | None:
+    """The last close before `start` (the period's opening price)."""
+    ref = None
+    for d, c in closes:
+        if d >= start:
+            break
+        ref = c
+    return ref
+
+
+def move_eur(row: dict, ref: float) -> float | None:
+    """EUR change of one holding row since the market price `ref` (same rule
+    as the today change in main._move_eur)."""
+    mkt = row.get("_mkt") or {}
+    q_price, q_ccy = mkt.get("price"), mkt.get("currency") or ""
+    if not mkt.get("own_price") or not q_ccy or q_ccy == row["currency"]:
+        return row["value_eur"] - to_eur(ref * row["quantity"], row["currency"])
+    if not q_price:
+        return None
+    pct = q_price / ref - 1
+    return row["value_eur"] * pct / (1 + pct)
+
+
+def compute(holdings: list[dict], today: date | None = None) -> dict:
+    """holdings: rows from main._open_holdings_rows (ticker, quantity,
+    currency, value_eur, daily_eur, name, _mkt)."""
     priceable = [h for h in holdings if h.get("ticker")]
     tickers = sorted({_ALIAS.get(h["ticker"], h["ticker"]) for h in priceable})
     if not tickers:
@@ -40,26 +71,22 @@ def compute(holdings: list[dict]) -> dict:
     except Exception:
         return _empty(holdings)
 
-    scale = {t: quote_scale(t) for t in series}  # pence -> pounds for London shares
-
-    def value_at(offset: int) -> tuple[float, float]:
-        """Total EUR value `offset` trading days back, and the EUR value covered
-        today for the same set of tickers (so deltas compare like with like)."""
-        then = now = 0.0
+    starts = clock.period_starts(today)
+    periods: dict[str, float | None] = {
+        "today": round(sum(h["daily_eur"] for h in holdings if h.get("daily_eur") is not None), 2)}
+    for name in ("week", "month", "year"):
+        total, any_ref = 0.0, False
         for h in priceable:
             t = _ALIAS.get(h["ticker"], h["ticker"])
             closes = series.get(t)
-            if not closes or len(closes) <= offset:
+            ref = _ref(closes, starts[name]) if closes else None
+            if ref is None:
                 continue
-            qty = h["quantity"] * scale.get(t, 1.0)
-            then += to_eur(closes[-1 - offset] * qty, h["currency"])
-            now += to_eur(closes[-1] * qty, h["currency"])
-        return then, now
-
-    periods = {}
-    for name, offset in _WINDOWS.items():
-        then, now = value_at(offset)
-        periods[name] = round(now - then, 2)
+            m = move_eur(h, ref * quote_scale(t))
+            if m is not None:
+                total += m
+                any_ref = True
+        periods[name] = round(total, 2) if any_ref else None
 
     covered = {_ALIAS.get(h["ticker"], h["ticker"]) for h in priceable} & series.keys()
     covered_value = sum(
@@ -73,31 +100,32 @@ def compute(holdings: list[dict]) -> dict:
     )
     return {
         "periods": periods,
+        "starts": {k: v.isoformat() for k, v in starts.items()},
         "coverage_pct": round(100 * covered_value / total_value, 1) if total_value else 0,
         "excluded": missing,
     }
 
 
-def _closes(tickers: list[str]) -> dict[str, list[float]]:
-    """{ticker: [daily closes over the last year]}, newest last. Raises when
-    nothing came back, so the cache keeps its last good download."""
+def _closes(tickers: list[str]) -> dict[str, list[tuple[date, float]]]:
+    """{ticker: [(exchange date, close)] over the last ~13 months}, oldest
+    first. Closes are split-adjusted (today's share count) but not dividend-
+    adjusted. Raises when nothing came back, so the cache keeps its last good
+    download."""
     import yfinance as yf
 
     hist = yf.download(
-        tickers, period="1y", interval="1d",
-        progress=False, auto_adjust=True,
+        tickers, period="13mo", interval="1d",
+        progress=False, auto_adjust=False,
     )["Close"]
-    series: dict[str, list[float]] = {}
+    series: dict[str, list[tuple[date, float]]] = {}
     if hasattr(hist, "columns"):
-        for t in tickers:
-            if t in hist.columns:
-                col = hist[t].dropna()
-                if len(col):
-                    series[t] = list(col.values)
+        cols = [(t, hist[t]) for t in tickers if t in hist.columns]
     else:  # single ticker -> Series
-        col = hist.dropna()
+        cols = [(tickers[0], hist)]
+    for t, col in cols:
+        col = col.dropna()
         if len(col):
-            series[tickers[0]] = list(col.values)
+            series[t] = [(ts.date(), float(v)) for ts, v in col.items()]
     if not series:
         raise ValueError("no price history returned")
     return series
@@ -105,7 +133,7 @@ def _closes(tickers: list[str]) -> dict[str, list[float]]:
 
 def _empty(holdings: list[dict]) -> dict:
     return {
-        "periods": {k: None for k in _WINDOWS},
+        "periods": {k: None for k in _PERIODS},
         "coverage_pct": 0,
         "excluded": sorted({h.get("name", "") for h in holdings}),
     }

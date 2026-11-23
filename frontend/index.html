@@ -269,8 +269,17 @@
             <button id="m-value" onclick="setChartMode('value')">Value</button>
           </div>
         </div>
+        <div id="chart-sub" class="muted" style="font-size:12.5px;margin:-6px 0 8px"></div>
         <div id="chart-wrap"><canvas id="chart"></canvas></div>
-        <div style="margin-top:12px"><span class="chip" id="bench-toggle" onclick="toggleBench()">＋ Compare to S&amp;P 500</span></div>
+        <div style="margin-top:12px;display:flex;gap:8px;flex-wrap:wrap;align-items:center">
+          <div class="seg" id="range-seg" style="margin:0">
+            <button data-r="1m" onclick="setRange('1m')">1M</button>
+            <button data-r="ytd" onclick="setRange('ytd')">This year</button>
+            <button data-r="1y" onclick="setRange('1y')">1Y</button>
+            <button data-r="all" class="active" onclick="setRange('all')">All</button>
+          </div>
+          <span class="chip" id="bench-toggle" onclick="toggleBench()">＋ Compare to S&amp;P 500</span>
+        </div>
         <div class="stats" id="period-stats"></div>
       </div>
       <div class="card">
@@ -464,7 +473,7 @@
       if(anaLoaded){ anaLoaded=false; loadAnalytics(); }
     }
     let PORT,PROFIT,HISTORY=[],CLOSED,SPARKS={},CASH=null,PROJ=null,sel="total_return",chartMode="profit",sortBy="value";
-    let chart,sc,bc,dchart,detailTicker=null,detailRange="1mo",BENCH=null,benchmarkOn=false;
+    let chart,sc,bc,dchart,detailTicker=null,detailRange="1mo",BENCH=null,benchmarkOn=false,chartRange="all";
     async function fetchJSON(url){
       const r=await fetch(url);
       if(r.status===401){ location.href="/login"; const e=new Error("login required"); e.auth=true; throw e; }
@@ -476,7 +485,7 @@
     function loadSnap(){ try{ return JSON.parse(localStorage.getItem(SNAP_KEY)||"null"); }catch(e){ return null; } }
     function saveSnap(){
       if(!PORT) return;
-      try{ localStorage.setItem(SNAP_KEY,JSON.stringify({at:Date.now(),port:PORT,closed:CLOSED,history:HISTORY,profit:PROFIT})); }catch(e){}
+      try{ localStorage.setItem(SNAP_KEY,JSON.stringify({at:Date.now(),port:PORT,closed:CLOSED,history:HISTORY,profit:PROFIT,cash:CASH,fin:FIN})); }catch(e){}
     }
     const PALETTE=["#4c8dff","#26a862","#e3b341","#f0616d","#a371f7","#3fb950","#db61a2","#f0883e","#58a6ff","#bc8cff","#56d364","#8b98a9"];
     const VIEWS=[
@@ -485,10 +494,10 @@
       ["unrealized","Unrealized", p=>p.totals.unrealized, "On the positions you currently hold"],
       ["realized","Realized", p=>p.totals.realized, "Locked-in gains from closed trades"],
       ["dividends","Dividends", p=>p.totals.income, "Dividends + interest received"],
-      ["today","Today", p=>p.totals.daily, "Change in your holdings since yesterday's close"],
-      ["week","Week", null, "Market move of current holdings over ~5 trading days"],
-      ["month","Month", null, "Market move of current holdings over ~1 month"],
-      ["year","Year", null, "Market move of current holdings over ~1 year"],
+      ["today","Today", p=>p.totals.daily, "Change since midnight: a market that hasn't opened yet today shows no change"],
+      ["week","This week", null, "Market move of current holdings since Monday"],
+      ["month","This month", null, "Market move of current holdings since the 1st"],
+      ["year","This year", null, "Market move of current holdings since 1 January"],
     ];
 
     function sparkSVG(vals,cls2){
@@ -621,7 +630,7 @@
             <span class="num neg" style="font-weight:600">−${money0(l.balance_eur)}</span></div>`).join(""):"");
     }
     function loadCash(){
-      fetchJSON("/api/cash").then(c=>{ CASH=c; renderMoney(); renderCashOpt(); })
+      fetchJSON("/api/cash").then(c=>{ CASH=c; renderMoney(); renderCashOpt(); saveSnap(); })
         .catch(()=>{ document.getElementById("money").textContent="Unavailable."; });
     }
 
@@ -678,7 +687,7 @@
     /* ---- finances: loans, income, payments ---- */
     let FIN=null;
     function loadFinances(){
-      fetchJSON("/api/finances").then(f=>{ FIN=f; renderMoney(); renderFixed(); }).catch(()=>{});
+      fetchJSON("/api/finances").then(f=>{ FIN=f; renderMoney(); renderFixed(); saveSnap(); }).catch(()=>{});
     }
     function fmtYM(ym){ if(!ym) return null;
       const [y,m]=ym.split("-"); return new Date(y,m-1,1).toLocaleDateString("en-GB",{month:"long",year:"numeric"}); }
@@ -1214,24 +1223,46 @@
     function setChartMode(m){ chartMode=m;
       document.getElementById("m-profit").classList.toggle("active",m==="profit"); document.getElementById("m-value").classList.toggle("active",m==="value");
       document.getElementById("chart-title").textContent=(m==="profit"?"Profit":"Value")+" since inception"; renderChart(); }
+    function setRange(r){ chartRange=r;
+      document.querySelectorAll("#range-seg button").forEach(b=>b.classList.toggle("active",b.dataset.r===r)); renderChart(); }
+    function rangeStart(){
+      const d=new Date();
+      if(chartRange==="1m") d.setMonth(d.getMonth()-1);
+      else if(chartRange==="1y") d.setFullYear(d.getFullYear()-1);
+      else if(chartRange==="ytd") return d.getFullYear()+"-01-01";
+      else return "";
+      return d.toISOString().slice(0,10);
+    }
+    const fmtDay=(iso,withYear)=>new Date(iso+"T12:00:00").toLocaleDateString("en-GB",withYear?{month:"short",year:"numeric"}:{day:"numeric",month:"short"});
     function renderChart(){
-      const h=HISTORY; if(!h.length||!window.Chart) return; const profit=chartMode==="profit";
-      const labels=h.map(d=>d.day),vals=h.map(d=>cv(profit?d.total_profit:d.total_value));
-      const up=vals[vals.length-1]>=0,color=profit?(up?"#26a862":"#f0616d"):"#4c8dff",ctx=document.getElementById("chart");
+      if(!HISTORY.length||!window.Chart) return; const profit=chartMode==="profit";
+      const from=rangeStart(); let h=HISTORY.filter(d=>d.day>=from);
+      if(from){ const before=HISTORY.filter(d=>d.day<from); if(before.length) h=[before[before.length-1],...h]; }  // start the line at the range's opening
+      if(!h.length) h=HISTORY.slice(-1);
+      const DAY=864e5, xs=h.map(d=>Date.parse(d.day+"T12:00:00Z")/DAY);   // days on a true time axis
+      const vals=h.map(d=>cv(profit?d.total_profit:d.total_value)), pts=xs.map((x,i)=>({x,y:vals[i]}));
+      const change=vals[vals.length-1]-vals[0];
+      const up=profit?(chartRange==="all"?vals[vals.length-1]>=0:change>=0):true;
+      const color=profit?(up?"#26a862":"#f0616d"):"#4c8dff",ctx=document.getElementById("chart");
+      document.getElementById("chart-sub").innerHTML=h.length>1&&chartRange!=="all"
+        ? `<span class="${cls(change)}">${signed(profit?h[h.length-1].total_profit-h[0].total_profit:h[h.length-1].total_value-h[0].total_value)}</span> ${profit?"profit":"change in value"} since ${fmtDay(h[0].day,false)}${profit?"":" (includes money you put in or took out)"}`
+        : (profit?"Price gains, realized and unrealized, excluding dividends":"What your investments were worth");
       if(chart) chart.destroy();
       const g=ctx.getContext("2d").createLinearGradient(0,0,0,300); g.addColorStop(0,color+"55"); g.addColorStop(1,color+"05");
-      const datasets=[{label:"Portfolio",data:vals,borderColor:color,backgroundColor:g,fill:true,tension:.25,pointRadius:0,borderWidth:2.5}];
+      const datasets=[{label:profit?"Profit":"Value",data:pts,borderColor:color,backgroundColor:g,fill:true,tension:.2,pointRadius:0,pointHoverRadius:3,borderWidth:2.2}];
       const showBench = !profit && benchmarkOn && BENCH;
       if(showBench){
-        datasets.push({label:"S&P 500 (same money invested)",data:labels.map(d=>BENCH[d]==null?null:cv(BENCH[d])),
+        datasets.push({label:"S&P 500 (same money invested)",data:h.map((d,i)=>({x:xs[i],y:BENCH[d.day]==null?null:cv(BENCH[d.day])})),
           borderColor:"#e3b341",borderDash:[5,4],borderWidth:1.8,pointRadius:0,fill:false,tension:.2,spanGaps:true});
       }
+      const longRange=xs.length>1&&xs[xs.length-1]-xs[0]>400, dayOf=x=>new Date(x*DAY).toISOString().slice(0,10);
       const tc=chartColors();
-      chart=new Chart(ctx,{type:"line",data:{labels,datasets},
-        options:{maintainAspectRatio:false,interaction:{intersect:false,mode:"index"},
+      chart=new Chart(ctx,{type:"line",data:{datasets},
+        options:{maintainAspectRatio:false,interaction:{intersect:false,mode:"index"},animation:{duration:300},
           plugins:{legend:{display:showBench,labels:{color:tc.tick,boxWidth:12,font:{size:11}}},
-          tooltip:{callbacks:{title:i=>i[0].label,label:c=>c.dataset.label+" "+shown0(c.parsed.y)}}},
-          scales:{x:{ticks:{color:tc.tick,maxTicksLimit:6,font:{size:11}},grid:{display:false}},
+          tooltip:{callbacks:{title:i=>new Date(dayOf(i[0].parsed.x)+"T12:00:00").toLocaleDateString("en-GB",{day:"numeric",month:"short",year:"numeric"}),
+                              label:c=>c.dataset.label+" "+shown0(c.parsed.y)}}},
+          scales:{x:{type:"linear",min:xs[0],max:xs[xs.length-1],ticks:{color:tc.tick,maxTicksLimit:6,maxRotation:0,font:{size:11},callback:v=>fmtDay(dayOf(v),longRange)},grid:{display:false}},
             y:{ticks:{color:tc.tick,font:{size:11},callback:axisK},grid:{color:tc.grid}}}}});
     }
     function toggleBench(){
@@ -1248,7 +1279,7 @@
     }
     function renderPeriods(){
       const el=document.getElementById("period-stats"),p=PROFIT?PROFIT.periods:{};
-      const items=[["Today",PORT.totals.daily]]; [["Week","week"],["Month","month"],["Year","year"]].forEach(([lab,k])=>items.push([lab,p[k]===undefined?null:p[k]]));
+      const items=[["Today",PORT.totals.daily]]; [["This week","week"],["This month","month"],["This year","year"]].forEach(([lab,k])=>items.push([lab,p[k]===undefined?null:p[k]]));
       el.innerHTML=items.map(([k,v])=>`<div class="stat"><div class="k">${k}</div><div class="v num ${v==null?'muted':cls(v)}">${v==null?'…':signed(v)}</div></div>`).join("");
     }
     const hhmm=t=>new Date(t).toLocaleTimeString("en-GB",{hour:"2-digit",minute:"2-digit"});
@@ -1306,22 +1337,28 @@
     }
     async function refreshLive(){
       if(document.hidden||!firstLoadDone) return;
-      try{ applyPortfolio(await getPortfolio(),false); }catch(e){}
+      try{ applyPortfolio(await getPortfolio(),false); }catch(e){ return; }
+      fetchJSON("/api/profit").then(d=>{ PROFIT=d; renderProfit(); renderPeriods(); }).catch(()=>{});
     }
     function boot(){
       renderChips();
       const s=loadSnap();
       if(s&&s.port){   // paint the last saved numbers at once, marked "updating…"
         PORT=s.port; CLOSED=s.closed||null; HISTORY=s.history||[]; PROFIT=s.profit||null; setFX(PORT.fx);
+        // yesterday's "today" numbers would be wrong on a new day: hide them until fresh ones arrive
+        if(new Date(s.at).toDateString()!==new Date().toDateString()){ PORT.totals.daily=null; PORT.holdings.forEach(h=>{ h.daily_eur=null; h.daily_pct=null; }); PROFIT=null; }
         renderHero(); renderProfit(); renderMovers(); renderOpen(); renderClosed(); renderAllocation(); renderChart(); renderPeriods();
+        if(s.cash||s.fin){ CASH=s.cash||null; FIN=s.fin||null; try{ renderMoney(); renderFixed(); if(CASH) renderCashOpt(); }catch(e){} }
         setStale(s.at);
       }
       loadAll();
       setInterval(refreshLive,30000);
       document.addEventListener("visibilitychange",()=>{ if(!document.hidden) refreshLive(); });
     }
-    // Chart.js is deferred; deferred scripts have run by DOMContentLoaded.
-    if(document.readyState==="loading") document.addEventListener("DOMContentLoaded",boot); else boot();
+    // Paint at once; Chart.js (deferred) has run by DOMContentLoaded, then draw the charts.
+    boot();
+    function drawCharts(){ if(PORT) renderAllocation(); if(HISTORY.length) renderChart(); }
+    if(document.readyState==="loading") document.addEventListener("DOMContentLoaded",drawCharts); else drawCharts();
     // Opens the app from cache while the server wakes up (see /sw.js).
     if("serviceWorker" in navigator) addEventListener("load",()=>navigator.serviceWorker.register("/sw.js").catch(()=>{}));
   </script>

@@ -224,11 +224,14 @@ def cached(ttl: float, stale: float = 0.0, data: bool = True, copy: bool = False
 
 # ------------------------------------------------------------------ warmer
 def start_warmer(tasks: Callable[[], list[Callable[[], Any]]], every: float = 240.0,
-                 active_within: float = 900.0, first: threading.Event | None = None) -> None:
+                 active_within: float = 900.0, idle_every: float = 1200.0,
+                 first: threading.Event | None = None) -> None:
     """Run the warm-up tasks once now, in a background thread, then again every
     `every` seconds while someone used the app in the last `active_within`
-    seconds. Each task goes through the caches, so fresh values cost nothing.
-    `first` is set once the first task (the main dashboard) has run."""
+    seconds, and every `idle_every` seconds otherwise (so a visit after a quiet
+    spell still finds everything ready). Each task goes through the caches, so
+    fresh values cost nothing. `first` is set once the first task (the main
+    dashboard) has run."""
     def run_all() -> None:
         for i, task in enumerate(tasks()):
             try:
@@ -242,9 +245,12 @@ def start_warmer(tasks: Callable[[], list[Callable[[], Any]]], every: float = 24
 
     def loop() -> None:
         run_all()
+        last = time.time()
         while True:
             time.sleep(every)
-            if time.time() - last_activity < active_within:
+            now = time.time()
+            if now - last_activity < active_within or now - last >= idle_every:
                 run_all()
+                last = time.time()
 
     threading.Thread(target=loop, name="cache-warmer", daemon=True).start()

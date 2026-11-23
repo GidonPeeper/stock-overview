@@ -1,13 +1,15 @@
 """Live price layer.
 
-Given market-data tickers, return the current price and the previous close for
-each (the previous close powers the per-holding "today" change). This is the
-source of "what is it worth right now" for holdings that didn't arrive with a
-price (i.e. everything except Trading 212), and of the prior close for all.
+Given market-data tickers, return the current price and the reference close
+for each: the last close before today (calendar day, see backend/clock.py).
+That reference powers the per-holding "today" change, so a market that has not
+traded yet today shows no change instead of the previous session's move. This
+is the source of "what is it worth right now" for holdings that didn't arrive
+with a price (i.e. everything except Trading 212), and of the reference for all.
 
 Provider is yfinance (free, no key, broad European coverage). Quotes are
 fetched in parallel (a small thread pool, not one ticker after another) and
-cached: fresh for 60 s, then served for up to 15 more minutes while one
+cached: fresh for 60 s, then served for up to an hour more while one
 background refresh runs (stale-while-revalidate). So a dashboard load only
 waits on Yahoo for a ticker it has never priced. A failed fetch keeps the last
 good quote, and a ticker Yahoo cannot price is retried in the background, not
@@ -20,6 +22,8 @@ import threading
 import time
 from concurrent.futures import ThreadPoolExecutor
 
+from . import clock
+
 # Fallback (price, prev_close) for the sample tickers, so the demo shows
 # realistic values and a small daily move when offline. Ignored once real
 # data flows.
@@ -30,10 +34,10 @@ SAMPLE_PRICES = {
     "VWRL.L": (118.2, 117.6),
 }
 
-# ticker -> (price, prev_close, fetched_at)
-_CACHE: dict[str, tuple[float, float | None, float]] = {}
+# ticker -> (price, prev_close, fetched_at, currency, day the quote was for)
+_CACHE: dict[str, tuple] = {}
 _TTL = 60          # seconds a quote counts as fresh
-_STALE = 15 * 60   # then served at once while a background refresh runs
+_STALE = 60 * 60   # then served at once while a background refresh runs
 _RETRY = 300       # a ticker whose last fetch failed is retried after this
 _WORKERS = 8       # parallel Yahoo requests
 
@@ -70,18 +74,33 @@ def quote_scale(ticker: str) -> float:
     return _SCALE[ticker]
 
 
-def _fetch_one(yf, t: str) -> tuple[float, float | None] | None:
-    """(price, prev_close) in pounds/euros/dollars, or None if Yahoo has none."""
+def _fetch_one(yf, t: str) -> tuple | None:
+    """(price, prev_close, currency) in pounds/euros/dollars, or None if Yahoo
+    has none. prev_close is the last close before today, so it equals the price
+    when the market has not traded today."""
     try:
-        info = yf.Ticker(t).fast_info
-        last = info.get("last_price") or info.get("lastPrice")
-        prev = info.get("previous_close") or info.get("previousClose")
+        tk = yf.Ticker(t)
+        # a month, not 5 days: Yahoo leaves gaps in some London ETFs' short history
+        hist = tk.history(period="1mo", interval="1d", auto_adjust=False)
+        meta = getattr(tk, "history_metadata", None) or {}
+        closes = []
+        if hist is not None and len(hist):
+            closes = [(ts.date(), float(c)) for ts, c in hist["Close"].dropna().items()]
+        last = meta.get("regularMarketPrice") or (closes[-1][1] if closes else None)
         if not last:
             return None
+        ccy = meta.get("currency") or ""
+        scale = 0.01 if ccy in ("GBp", "GBX") else 1.0
         if t.endswith(".L"):
-            _SCALE[t] = _scale_from(info)
-        scale = _SCALE.get(t, 1.0)
-        return float(last) * scale, (float(prev) * scale if prev else None)
+            _SCALE[t] = scale
+        today = clock.today()
+        before = [c for d, c in closes if d < today]
+        prev = before[-1] if before else None
+        traded = clock.local_date(meta.get("regularMarketTime"))
+        if traded is not None and traded < today:
+            prev = last  # no trading yet today: nothing changed today
+        ccy = "GBP" if scale != 1.0 else ccy.upper()
+        return float(last) * scale, (float(prev) * scale if prev else None), ccy
     except Exception:
         return None
 
@@ -93,12 +112,12 @@ def _fetch_many(tickers: list[str]) -> None:
         import yfinance as yf
     except Exception:
         return  # yfinance unavailable -> sample prices
-    now = time.time()
+    now, day = time.time(), clock.today()
     with ThreadPoolExecutor(max_workers=min(_WORKERS, len(tickers))) as pool:
         results = list(pool.map(lambda t: _fetch_one(yf, t), tickers))
     for t, r in zip(tickers, results):
         if r:
-            _CACHE[t] = (r[0], r[1], now)
+            _CACHE[t] = (r[0], r[1], now, r[2], day)
             _FAILED.pop(t, None)
         else:
             _FAILED[t] = now
@@ -108,6 +127,8 @@ def _plan(t: str, now: float) -> str:
     """'ok' (use what we have), 'sync' (must fetch before answering) or 'bg'
     (answer now, refresh in the background)."""
     c = _CACHE.get(t)
+    if c and c[4] != clock.today():
+        c = None  # yesterday's quote: its "today" change is out of date
     age = now - c[2] if c else None
     if age is not None and age < _TTL:
         return "ok"
@@ -141,7 +162,8 @@ def _refresh_in_background(tickers: list[str]) -> None:
 
 
 def fetch_quotes(tickers: list[str]) -> dict[str, dict]:
-    """Return {ticker: {"price": float, "prev_close": float|None}}."""
+    """Return {ticker: {"price": float, "prev_close": float|None, "currency": str}}.
+    prev_close is the last close before today (calendar day)."""
     tickers = sorted(set(t for t in tickers if t))
     if not tickers:
         return {}
@@ -162,10 +184,10 @@ def fetch_quotes(tickers: list[str]) -> dict[str, dict]:
     for t in tickers:
         c = _CACHE.get(t)
         if c:
-            out[t] = {"price": c[0], "prev_close": c[1]}
+            out[t] = {"price": c[0], "prev_close": c[1], "currency": c[3]}
         elif t in SAMPLE_PRICES:
             p, pc = SAMPLE_PRICES[t]
-            out[t] = {"price": p, "prev_close": pc}
+            out[t] = {"price": p, "prev_close": pc, "currency": ""}
     return out
 
 
