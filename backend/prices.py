@@ -76,28 +76,26 @@ def quote_scale(ticker: str) -> float:
 
 def _fetch_one(yf, t: str) -> tuple | None:
     """(price, prev_close, currency) in pounds/euros/dollars, or None if Yahoo
-    has none. prev_close is the last close before today, so it equals the price
-    when the market has not traded today."""
+    has none. prev_close is the close of the session before today's, so it
+    equals the price when the market has not traded today.
+
+    One small request: today's chart, whose metadata carries the live price,
+    the time of the last trade and Yahoo's previous close. (Yahoo's daily
+    history has gaps for some London ETFs; this previous close does not.)"""
     try:
         tk = yf.Ticker(t)
-        # a month, not 5 days: Yahoo leaves gaps in some London ETFs' short history
-        hist = tk.history(period="1mo", interval="1d", auto_adjust=False)
-        meta = getattr(tk, "history_metadata", None) or {}
-        closes = []
-        if hist is not None and len(hist):
-            closes = [(ts.date(), float(c)) for ts, c in hist["Close"].dropna().items()]
-        last = meta.get("regularMarketPrice") or (closes[-1][1] if closes else None)
+        tk.history(period="1d", interval="1d", auto_adjust=False)
+        meta = dict(getattr(tk, "history_metadata", None) or {})
+        last = meta.get("regularMarketPrice")
         if not last:
             return None
         ccy = meta.get("currency") or ""
         scale = 0.01 if ccy in ("GBp", "GBX") else 1.0
         if t.endswith(".L"):
             _SCALE[t] = scale
-        today = clock.today()
-        before = [c for d, c in closes if d < today]
-        prev = before[-1] if before else None
+        prev = meta.get("chartPreviousClose") or meta.get("previousClose")
         traded = clock.local_date(meta.get("regularMarketTime"))
-        if traded is not None and traded < today:
+        if traded is not None and traded < clock.today():
             prev = last  # no trading yet today: nothing changed today
         ccy = "GBP" if scale != 1.0 else ccy.upper()
         return float(last) * scale, (float(prev) * scale if prev else None), ccy

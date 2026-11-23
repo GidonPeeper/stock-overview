@@ -117,6 +117,19 @@ class PeriodsTest(unittest.TestCase):
         self.assertEqual(out["periods"], {"today": 4.0, "week": 20.0, "month": 40.0, "year": 100.0})
         self.assertEqual(out["starts"]["week"], "2026-11-23")
 
+    def test_gap_in_daily_history_is_bridged_by_the_quote(self):
+        # Yahoo lost 11-20 Nov for this ETF; the quote knows Friday's close
+        today = date(2026, 11, 23)  # Monday: this week = today
+        closes = {"PACW.L": [(date(2026, 11, 10), 11.276), (date(2026, 11, 23), 11.067)]}
+        row = {"ticker": "PACW.L", "name": "ACWI", "quantity": 100.0, "currency": "GBP",
+               "value_eur": 1106.7, "daily_eur": 33.2,
+               "_mkt": {"price": 11.067, "prev": 10.735, "currency": "GBP", "own_price": False}}
+        with mock.patch.object(periods, "_closes", return_value=closes), \
+                mock.patch.object(periods, "quote_scale", return_value=1.0), \
+                mock.patch.object(periods, "to_eur", side_effect=lambda v, c: v):
+            out = periods.compute([row], today=today)
+        self.assertAlmostEqual(out["periods"]["week"], 1106.7 - 1073.5, places=2)
+
     def test_other_currency_listing_uses_the_market_move(self):
         # broker holds a euro line of a dollar share: apply the % move only
         row = {"quantity": 10.0, "currency": "EUR", "value_eur": 1100.0,

@@ -261,8 +261,8 @@ def _open_holdings_rows() -> tuple[list[dict], float, float, dict]:
                 "priced_live": h.ticker in quotes or (h.price is not None and h.price > 0),
                 "wrapper": h.wrapper,
                 # market quote behind the "today" and period changes (periods.py)
-                "_mkt": {"price": q.get("price"), "currency": q.get("currency") or "",
-                         "own_price": h.price is not None},
+                "_mkt": {"price": q.get("price"), "prev": q.get("prev_close"),
+                         "currency": q.get("currency") or "", "own_price": h.price is not None},
             }
         )
 

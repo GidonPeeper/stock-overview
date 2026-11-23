@@ -202,6 +202,7 @@ def fake_yf(quotes, delay=0.0, calls=None, traded_today=True):
             index = pd.DatetimeIndex([datetime(d.year, d.month, d.day) for d in days]).tz_localize(clock.tz())
             when = datetime.now(clock.tz()) if traded_today else datetime.now(clock.tz()) - timedelta(days=1)
             self.history_metadata = {"regularMarketPrice": last, "currency": ccy,
+                                     "chartPreviousClose": prev,
                                      "regularMarketTime": pd.Timestamp(when)}
             if last is None:
                 self.history_metadata = {}

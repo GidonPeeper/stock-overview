@@ -18,7 +18,7 @@ coverage gaps, so nothing is silently fabricated.
 
 from __future__ import annotations
 
-from datetime import date
+from datetime import date, timedelta
 
 from . import cache, clock
 from .fx import to_eur
@@ -40,6 +40,24 @@ def _ref(closes: list[tuple[date, float]], start: date) -> float | None:
             break
         ref = c
     return ref
+
+
+def _patched(closes, row: dict, scale: float, today: date):
+    """Yahoo's daily history now and then misses days for a London ETF. The
+    previous session's close is also known from the live quote: when the
+    history has no close in the last 4 days before today, add it on the
+    previous weekday, so "this week" still starts from the right price."""
+    prev = (row.get("_mkt") or {}).get("prev")
+    if not closes or not prev or not scale:
+        return closes
+    before = [d for d, _ in closes if d < today]
+    last_day = today - timedelta(days=1)
+    while last_day.weekday() >= 5:
+        last_day -= timedelta(days=1)
+    if before and (today - before[-1]).days > 4 and before[-1] < last_day:
+        closes = [c for c in closes if c[0] < today] + [(last_day, prev / scale)] \
+            + [c for c in closes if c[0] >= today]
+    return closes
 
 
 def move_eur(row: dict, ref: float) -> float | None:
@@ -71,6 +89,7 @@ def compute(holdings: list[dict], today: date | None = None) -> dict:
     except Exception:
         return _empty(holdings)
 
+    today = today or clock.today()
     starts = clock.period_starts(today)
     periods: dict[str, float | None] = {
         "today": round(sum(h["daily_eur"] for h in holdings if h.get("daily_eur") is not None), 2)}
@@ -78,7 +97,7 @@ def compute(holdings: list[dict], today: date | None = None) -> dict:
         total, any_ref = 0.0, False
         for h in priceable:
             t = _ALIAS.get(h["ticker"], h["ticker"])
-            closes = series.get(t)
+            closes = _patched(series.get(t), h, quote_scale(t), today)
             ref = _ref(closes, starts[name]) if closes else None
             if ref is None:
                 continue
