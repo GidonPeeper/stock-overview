@@ -476,10 +476,18 @@ def _same_account_as_statement(acct: Account) -> bool:
 
 
 @_ttl_cache(seconds=900)
-def _reads_positions(acct: Account) -> bool:
+def _still_in_use(acct: Account) -> bool:
+    """The key's account holds shares, or traded after the statement ends.
+    False for a closed account (positions unreadable or empty, nothing new)."""
     try:
-        account_holdings(acct)
-        return True
+        if account_holdings(acct):
+            return True
+    except requests.RequestException:
+        return False
+    st = _statement() or {}
+    end = max((str(t.get("date", ""))[:10] for t in st.get("trades", [])), default="")
+    try:
+        return any(t.when[:10] > end for t in account_trades(acct))
     except requests.RequestException:
         return False
 
@@ -489,16 +497,17 @@ def _sources() -> tuple[list[Account], dict | None]:
 
     A key and an imported statement can describe the same account, e.g. the
     key of an account that has since been closed. Counting both would double
-    its realized P/L, dividends and interest. When the key can still read its
-    positions the live account wins; otherwise (closed account) the statement
-    does, as it was checked against the statement's own totals."""
+    its realized P/L, dividends and interest. While the account is still in
+    use (holds shares or traded after the statement) the key wins; for a
+    closed account the statement does, as it was checked against the
+    statement's own totals."""
     accts, st = accounts(), _statement()
     if not st:
         return accts, None
     keep = []
     for a in accts:
         if _same_account_as_statement(a):
-            if _reads_positions(a):
+            if _still_in_use(a):
                 keep.append(a)
                 st = None
         else:

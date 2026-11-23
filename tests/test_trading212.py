@@ -77,7 +77,7 @@ def fake_get(routes: dict):
 def clear_caches():
     for fn in (t212.account_currency, t212.account_summary, t212.account_holdings,
                t212.account_trades, t212.account_dividends, t212.account_transactions,
-               t212._same_account_as_statement, t212._reads_positions):
+               t212._same_account_as_statement, t212._still_in_use):
         fn.cache_clear()
 
 
@@ -313,8 +313,12 @@ class SameAccountTest(Base):
             trades = t212.trade_sources()["Trading212"][1]()
         self.assertEqual(len(trades), 3)  # the statement's three, not six
 
+    def test_closed_account_that_still_lists_no_positions(self):
+        sources, divs, interest, replaced = self.run_with([])  # readable, but empty
+        self.assertEqual(replaced, ["Trading212"])
+
     def test_live_key_makes_the_statement_redundant(self):
-        sources, divs, interest, replaced = self.run_with([])
+        sources, divs, interest, replaced = self.run_with(POSITIONS)
         self.assertEqual(sources, {"Trading212"})
         self.assertEqual(replaced, [])
         self.assertEqual(interest, {"Trading212"})
