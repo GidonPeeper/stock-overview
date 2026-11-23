@@ -359,7 +359,10 @@ def portfolio() -> dict:
             "dividends": inc["dividends"],
             "interest": inc["interest"],
             "income": inc["total"],
-            "total_return": round(all_time + inc["total"], 2),
+            "fees": inc["fees"],
+            # everything you made: price gains (realized + unrealized) +
+            # dividends + interest, after fees charged outside trades
+            "total_return": round(all_time + inc["total"] + inc["fees"], 2),
         },
         "income_by_broker": inc["by_broker"],
         "by_broker": [
@@ -399,7 +402,9 @@ def _history() -> list[dict]:
     if DEMO_MODE:
         return store.get_history()
     _, total_value, total_cost, _ = _open_holdings_rows()
-    return trend.history(total_value, total_cost, realized.summary()["total_realized_eur"])
+    inc = income.summary()
+    return trend.history(total_value, total_cost, realized.summary()["total_realized_eur"],
+                         inc["total"] + inc["fees"])
 
 
 @app.get("/api/history")

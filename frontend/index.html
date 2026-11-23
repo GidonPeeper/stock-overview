@@ -489,7 +489,7 @@
     }
     const PALETTE=["#4c8dff","#26a862","#e3b341","#f0616d","#a371f7","#3fb950","#db61a2","#f0883e","#58a6ff","#bc8cff","#56d364","#8b98a9"];
     const VIEWS=[
-      ["total_return","Total return", p=>p.totals.total_return, "Capital gains + dividends & interest — matches your broker apps"],
+      ["total_return","Total return", p=>p.totals.total_return, "Everything you made: realized + unrealized gains + dividends + interest − fees"],
       ["all_time","Capital gains", p=>p.totals.all_time, "Realized + unrealized price gains (excludes dividends)"],
       ["unrealized","Unrealized", p=>p.totals.unrealized, "On the positions you currently hold"],
       ["realized","Realized", p=>p.totals.realized, "Locked-in gains from closed trades"],
@@ -1090,6 +1090,7 @@
       const nEl=document.getElementById("p-num"),dEl=document.getElementById("p-desc"); let val,extra="";
       if(getter){ val=getter(PORT);
         if(k==="dividends"){ const t=PORT.totals; extra=` · ${money(t.dividends)} dividends + ${money(t.interest)} interest`; }
+        if(k==="total_return"){ const t=PORT.totals; extra=` · ${signed(t.realized)} realized, ${signed(t.unrealized)} unrealized, ${signed(t.dividends)} dividends, ${signed(t.interest)} interest${t.fees?`, ${signed(t.fees)} fees`:""}`; }
         if(k==="today"&&(val===null||val===undefined)){ nEl.textContent="n/a"; nEl.className="n num muted"; dEl.textContent=desc; return; }
       } else { if(!PROFIT){ nEl.textContent="…"; nEl.className="n num skeleton"; dEl.textContent=desc+" · loading"; return; }
         val=PROFIT.periods[k]; if(val===null){ nEl.textContent="n/a"; nEl.className="n num muted"; dEl.textContent=desc+" · no price history"; return; }
@@ -1246,7 +1247,7 @@
       const color=profit?(up?"#26a862":"#f0616d"):"#4c8dff",ctx=document.getElementById("chart");
       document.getElementById("chart-sub").innerHTML=h.length>1&&chartRange!=="all"
         ? `<span class="${cls(change)}">${signed(profit?h[h.length-1].total_profit-h[0].total_profit:h[h.length-1].total_value-h[0].total_value)}</span> ${profit?"profit":"change in value"} since ${fmtDay(h[0].day,false)}${profit?"":" (includes money you put in or took out)"}`
-        : (profit?"Price gains, realized and unrealized, excluding dividends":"What your investments were worth");
+        : (profit?"Total return: realized + unrealized gains + dividends + interest − fees":"What your investments were worth");
       if(chart) chart.destroy();
       const g=ctx.getContext("2d").createLinearGradient(0,0,0,300); g.addColorStop(0,color+"55"); g.addColorStop(1,color+"05");
       const datasets=[{label:profit?"Profit":"Value",data:pts,borderColor:color,backgroundColor:g,fill:true,tension:.2,pointRadius:0,pointHoverRadius:3,borderWidth:2.2}];

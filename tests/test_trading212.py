@@ -76,7 +76,8 @@ def fake_get(routes: dict):
 
 def clear_caches():
     for fn in (t212.account_currency, t212.account_summary, t212.account_holdings,
-               t212.account_trades, t212.account_dividends, t212.account_transactions):
+               t212.account_trades, t212.account_dividends, t212.account_transactions,
+               t212._same_account_as_statement, t212._reads_positions):
         fn.cache_clear()
 
 
@@ -266,6 +267,57 @@ class ClosedAccountTest(Base):
         plain = t212.Account("Trading212", "k", "s")
         with mock.patch.object(t212, "accounts", return_value=[plain]):
             self.assertEqual(set(t212.trade_sources()), {"Trading212", "Trading212 (statement)"})
+
+
+def _order(day: str, side: str, qty: float, net: float) -> dict:
+    return {"order": {"status": "FILLED", "side": side, "ticker": "ASML_EQ", "createdAt": day + "T10:00:00Z",
+                      "instrument": {"ticker": "ASML_EQ", "isin": "NL0010273215", "name": "ASML", "currency": "EUR"}},
+            "fill": {"filledAt": day + "T10:00:01Z", "quantity": qty if side == "BUY" else -qty,
+                     "walletImpact": {"currency": "EUR", "netValue": net}}}
+
+
+SAME_STATEMENT = {**CLOSED_STATEMENT, "trades": CLOSED_STATEMENT["trades"] + [
+    {"date": "2025-01-10", "isin": "NL0010273215", "symbol": "ASML", "name": "ASML",
+     "side": "buy", "quantity": 1, "amount_eur": 650.0}]}
+SAME_ORDERS = {"items": [_order("2024-03-01", "BUY", 2, 1200.0), _order("2025-01-10", "BUY", 1, 650.0),
+                         _order("2025-06-01", "SELL", 3, 1950.0)], "nextPagePath": None}
+
+
+class SameAccountTest(Base):
+    """An old key and an uploaded statement for the same account are counted once."""
+
+    def setUp(self):
+        super().setUp()
+        p = mock.patch.object(t212, "_statement", return_value=SAME_STATEMENT)
+        p.start()
+        self.addCleanup(p.stop)
+        self.old = t212.Account("Trading212", "k", "s")
+
+    def run_with(self, positions):
+        routes = {"/equity/positions": positions, "/equity/history/orders": SAME_ORDERS,
+                  "/equity/history/dividends": DIVIDENDS, "/equity/history/transactions": TRANSACTIONS,
+                  "/equity/account/info": {"currencyCode": "EUR"}}
+        with mock.patch.object(t212, "_get", fake_get(routes)), \
+                mock.patch.object(t212, "accounts", return_value=[self.old]):
+            return (set(t212.trade_sources()), {d["account"] for d in t212.get_dividends()},
+                    {i["account"] for i in t212.get_interest()}, t212.replaced_by_statement())
+
+    def test_closed_account_key_gives_way_to_the_statement(self):
+        sources, divs, interest, replaced = self.run_with(http_error(403))
+        self.assertEqual(sources, {"Trading212"})
+        self.assertEqual(divs, {"Trading212"})
+        self.assertEqual(replaced, ["Trading212"])
+        with mock.patch.object(t212, "accounts", return_value=[self.old]), \
+                mock.patch.object(t212, "_get", fake_get({"/equity/history/orders": SAME_ORDERS,
+                                                          "/equity/positions": http_error(403)})):
+            trades = t212.trade_sources()["Trading212"][1]()
+        self.assertEqual(len(trades), 3)  # the statement's three, not six
+
+    def test_live_key_makes_the_statement_redundant(self):
+        sources, divs, interest, replaced = self.run_with([])
+        self.assertEqual(sources, {"Trading212"})
+        self.assertEqual(replaced, [])
+        self.assertEqual(interest, {"Trading212"})
 
 
 if __name__ == "__main__":

@@ -457,13 +457,67 @@ def _statement_trades(st: dict) -> list[Trade]:
     ]
 
 
+# ------------------------------------------------- one account, two sources
+@_ttl_cache(seconds=900)
+def _same_account_as_statement(acct: Account) -> bool:
+    """True when this key's order history is the imported statement's account:
+    most of the statement's trades (same ISIN, same day) are in it."""
+    st = _statement()
+    if not st or not st.get("trades"):
+        return False
+    try:
+        api = account_trades(acct)
+    except requests.RequestException:
+        return False
+    stmt = {(t.get("isin"), str(t.get("date", ""))[:10]) for t in st["trades"]}
+    mine = {(t.key, t.when[:10]) for t in api}
+    common = len(stmt & mine)
+    return common >= 3 and common >= 0.5 * min(len(stmt), len(mine))
+
+
+@_ttl_cache(seconds=900)
+def _reads_positions(acct: Account) -> bool:
+    try:
+        account_holdings(acct)
+        return True
+    except requests.RequestException:
+        return False
+
+
+def _sources() -> tuple[list[Account], dict | None]:
+    """(accounts whose history counts, the statement if it counts).
+
+    A key and an imported statement can describe the same account, e.g. the
+    key of an account that has since been closed. Counting both would double
+    its realized P/L, dividends and interest. When the key can still read its
+    positions the live account wins; otherwise (closed account) the statement
+    does, as it was checked against the statement's own totals."""
+    accts, st = accounts(), _statement()
+    if not st:
+        return accts, None
+    keep = []
+    for a in accts:
+        if _same_account_as_statement(a):
+            if _reads_positions(a):
+                keep.append(a)
+                st = None
+        else:
+            keep.append(a)
+    return keep, st
+
+
+def replaced_by_statement() -> list[str]:
+    """Labels of keys left out because the imported statement covers them."""
+    keep = {a.label for a in _sources()[0]}
+    return [a.label for a in accounts() if a.label not in keep]
+
+
 # ------------------------------------------------------------- public API
 # The imported activity statement is for an account without an API key, e.g. a
 # closed one (an old EU account after moving to the UK). It is shown next to the
 # live accounts, so its history (trades, dividends, interest) is kept.
 def get_holdings() -> list[Holding]:
-    accts = accounts()
-    st = _statement()
+    accts, st = _sources()
     if not accts and not st:
         return _sample_holdings()
     out: list[Holding] = _statement_holdings(st, _statement_label(accts)) if st else []
@@ -479,9 +533,8 @@ def trade_sources() -> dict[str, tuple[bool, callable]]:
     """{account label: (is_isa, get_trades)} — one entry per account, so
     realized P/L is computed per account (an ISA and a normal account holding
     the same share are separate pools)."""
-    accts = accounts()
+    accts, st = _sources()
     out = {a.label: (a.is_isa, functools.partial(account_trades, a)) for a in accts}
-    st = _statement()
     if st or not accts:
         out[_statement_label(accts)] = (False, lambda: _statement_trades(st) if st else [])
     return out
@@ -499,9 +552,8 @@ def get_trades() -> list[Trade]:
 
 def get_dividends() -> list[dict]:
     """[{account, isa, date, ticker, isin, amount, currency, amount_eur}]"""
-    accts = accounts()
+    accts, st = _sources()
     out: list[dict] = []
-    st = _statement()
     if st:
         label = _statement_label(accts)
         out += [{"account": label, "isa": False, "date": d["date"][:10],
@@ -518,7 +570,7 @@ def get_dividends() -> list[dict]:
 
 def get_transactions() -> list[dict]:
     out: list[dict] = []
-    for a in accounts():
+    for a in _sources()[0]:
         try:
             out.extend(account_transactions(a))
         except requests.RequestException:
@@ -530,18 +582,33 @@ _INTEREST_TYPES = {"INTEREST_ON_FREE_CASH", "LENDING_INTEREST"}
 
 
 def get_interest() -> list[dict]:
-    """Interest on cash (and share-lending income): [{account, isa, date, amount_eur}]."""
-    accts = accounts()
+    """Interest on cash (and share-lending income, sign-up bonuses):
+    [{account, isa, date, amount_eur}]."""
+    accts, st = _sources()
     out: list[dict] = []
-    st = _statement()
     if st:
         label = _statement_label(accts)
         out += [{"account": label, "isa": False, "date": t["date"], "amount_eur": t["amount_eur"]}
-                for t in st.get("transactions", []) if t.get("kind") == "interest"]
+                for t in st.get("transactions", []) if t.get("kind") in ("interest", "bonus")]
     if accts:
         out += [{"account": t["account"], "isa": t["isa"], "date": t["date"],
                  "amount_eur": t["amount_eur"]}
                 for t in get_transactions() if t["type"] in _INTEREST_TYPES]
+    return out
+
+
+def get_fees() -> list[dict]:
+    """Fees charged outside trades (currency conversion of deposits and
+    withdrawals, account fees): [{account, isa, date, amount_eur}], negative."""
+    accts, st = _sources()
+    out: list[dict] = []
+    if st:
+        label = _statement_label(accts)
+        out += [{"account": label, "isa": False, "date": t["date"], "amount_eur": t["amount_eur"]}
+                for t in st.get("transactions", []) if t.get("kind") == "fx"]
+    out += [{"account": t["account"], "isa": t["isa"], "date": t["date"],
+             "amount_eur": -abs(t["amount_eur"])}
+            for t in get_transactions() if t["type"] == "FEE"]
     return out
 
 
@@ -559,8 +626,11 @@ def get_cash() -> list[dict]:
 def status() -> list[dict]:
     """Per-account health for the Settings page (no secrets)."""
     out = []
+    replaced = set(replaced_by_statement())
     for a in accounts():
         row = {"label": a.label, "isa": a.is_isa}
+        if a.label in replaced:
+            row["note"] = "same account as the uploaded statement; the statement is used"
         try:
             row["currency"] = account_currency(a)
             row["positions"] = len(account_holdings(a))

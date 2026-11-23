@@ -1,10 +1,17 @@
-"""Dividends and interest received — income, distinct from trading P/L.
+"""Dividends and interest received, and fees charged outside trades.
 
-Kept separate from realized P/L so "profit" stays unambiguous. Sources:
+Kept separate from realized P/L so each part of the total return is visible.
+Sources:
   * Trading 212 — dividends + interest from the API, per account; or the
-    imported activity statement (which also carries the daily interest on cash)
-  * DeGiro       — dividend / tax / interest rows in the statement CSV
+    imported activity statement (which also carries the daily interest on cash,
+    sign-up bonuses and currency-conversion fees on deposits)
+  * DeGiro       — dividend / withholding tax / interest / securities lending
+    rows in the statement CSV, and fees booked outside orders (exchange
+    connection fees, ADR custody fees, French transaction tax)
   * Trade Republic — transcribed from the statement PDF (`data/income_*.json`)
+
+Fees inside an order (commission, FX fee, stamp duty) are already in the
+trade's cash amount, so in realized and unrealized P/L, not here.
 """
 
 from __future__ import annotations
@@ -25,70 +32,101 @@ def _num(s: str) -> float:
     return float(s.replace(".", "").replace(",", ".")) if s else 0.0
 
 
+def _zero() -> dict:
+    return {"dividends": 0.0, "interest": 0.0, "fees": 0.0}
+
+
 def _trading212() -> dict[str, dict]:
-    """{account label: {dividends, interest}} — one entry per Trading 212 account."""
-    out: dict[str, dict] = {label: {"dividends": 0.0, "interest": 0.0}
-                            for label in trading212.trade_sources()}
-    for x in trading212.get_dividends():
-        out.setdefault(x["account"], {"dividends": 0.0, "interest": 0.0})["dividends"] += x["amount_eur"]
-    for x in trading212.get_interest():
-        out.setdefault(x["account"], {"dividends": 0.0, "interest": 0.0})["interest"] += x["amount_eur"]
-    return {k: {"dividends": round(v["dividends"], 2), "interest": round(v["interest"], 2)}
-            for k, v in out.items()}
+    """{account label: {dividends, interest, fees}} — one entry per Trading 212 account."""
+    out: dict[str, dict] = {label: _zero() for label in trading212.trade_sources()}
+    for kind, rows in (("dividends", trading212.get_dividends()),
+                       ("interest", trading212.get_interest()),
+                       ("fees", trading212.get_fees())):
+        for x in rows:
+            out.setdefault(x["account"], _zero())[kind] += x["amount_eur"]
+    return {k: {f: round(v, 2) for f, v in d.items()} for k, d in out.items()}
 
 
-def _degiro() -> dict:
+# DeGiro statement rows outside orders: what each one is
+_DEGIRO_INTEREST = ("rente", "interest", "securities lending", "geldmarktfondsen compensatie")
+_DEGIRO_FEES = ("aansluitingskosten", "adr/gdr externe kosten", "transactiebelasting")
+
+
+def _degiro_kind(desc: str) -> str | None:
+    d = desc.lower()
+    if d.startswith("dividend"):                 # includes Dividendbelasting (tax, negative)
+        return "dividends"
+    if any(w in d for w in _DEGIRO_INTEREST):
+        return "interest"
+    if any(w in d for w in _DEGIRO_FEES):
+        return "fees"
+    return None
+
+
+def _degiro_rows() -> list[dict]:
+    """[{date, kind, amount_eur}] for the income and fee rows."""
     csv_file = _resolve_data("degiro_account.csv")[0]
     if not csv_file.exists():
-        return {"dividends": 0.0, "interest": 0.0}
-    dividends = interest = 0.0
+        return []
+    out = []
     with csv_file.open(encoding="utf-8") as fh:
         reader = csv.reader(fh)
         next(reader, None)
         for row in reader:
-            if len(row) < 9:
+            if len(row) < 9 or (len(row) > 11 and row[11]):   # order rows are trades
                 continue
-            desc = row[5].lower()
-            eur = to_eur(_num(row[8]), row[7] if row[7] in FX_TO_EUR else "EUR")
-            if desc.startswith("dividend"):          # includes Dividendbelasting (tax, negative)
-                dividends += eur
-            elif any(w in desc for w in ("rente", "interest", "securities lending")):
-                interest += eur
-    return {"dividends": round(dividends, 2), "interest": round(interest, 2)}
+            kind = _degiro_kind(row[5])
+            if kind:
+                eur = to_eur(_num(row[8]), row[7] if row[7] in FX_TO_EUR else "EUR")
+                out.append({"date": f"{row[0][6:10]}-{row[0][3:5]}-{row[0][0:2]}",
+                            "kind": kind, "amount_eur": eur})
+    return out
+
+
+def _degiro() -> dict:
+    out = _zero()
+    for r in _degiro_rows():
+        out[r["kind"]] += r["amount_eur"]
+    return {k: round(v, 2) for k, v in out.items()}
 
 
 def _trade_republic() -> dict:
     f = _resolve_data("income_trade_republic.json")[0]
     if not f.exists():
-        return {"dividends": 0.0, "interest": 0.0}
+        return _zero()
     rows = json.loads(f.read_text()).get("income", [])
     dividends = sum(r["amount_eur"] for r in rows if r["type"] == "dividend")
     interest = sum(r["amount_eur"] for r in rows if r["type"] == "interest")
-    return {"dividends": round(dividends, 2), "interest": round(interest, 2)}
+    return {"dividends": round(dividends, 2), "interest": round(interest, 2), "fees": 0.0}
+
+
+def events() -> list[tuple[str, float]]:
+    """(YYYY-MM-DD, EUR) for every dividend, interest payment and fee, all
+    accounts — the same items as summary(), dated (for the Performance chart)."""
+    out: list[tuple[str, float]] = [(r["date"], r["amount_eur"]) for r in _degiro_rows()]
+    f = _resolve_data("income_trade_republic.json")[0]
+    if f.exists():
+        out += [(str(r.get("date", ""))[:10], float(r.get("amount_eur", 0)))
+                for r in json.loads(f.read_text()).get("income", [])
+                if r.get("type") in ("dividend", "interest")]
+    for x in (trading212.get_dividends() + trading212.get_interest() + trading212.get_fees()
+              + _connections_income()):
+        out.append((str(x.get("date", ""))[:10], float(x["amount_eur"])))
+    return sorted(out)
 
 
 def by_year() -> dict[str, float]:
-    """Dividends + interest received per calendar year (EUR), all brokers."""
+    """Dividends + interest received per calendar year (EUR), all brokers
+    (fees not included)."""
     years: dict[str, float] = {}
 
     def add(year: str, amount: float):
         if year and len(year) == 4:
             years[year] = years.get(year, 0.0) + amount
 
-    # DeGiro: statement rows dated dd-mm-yyyy
-    csv_file = _resolve_data("degiro_account.csv")[0]
-    if csv_file.exists():
-        with csv_file.open(encoding="utf-8") as fh:
-            reader = csv.reader(fh)
-            next(reader, None)
-            for row in reader:
-                if len(row) < 9:
-                    continue
-                desc = row[5].lower()
-                if desc.startswith("dividend") or any(
-                        w in desc for w in ("rente", "interest", "securities lending")):
-                    eur = to_eur(_num(row[8]), row[7] if row[7] in FX_TO_EUR else "EUR")
-                    add(row[0][6:10], eur)
+    for r in _degiro_rows():
+        if r["kind"] != "fees":
+            add(r["date"][:4], r["amount_eur"])
 
     # Trade Republic: transcribed income file
     f = _resolve_data("income_trade_republic.json")[0]
@@ -132,9 +170,11 @@ def summary() -> dict:
     }
     dividends = round(sum(b["dividends"] for b in by_broker.values()), 2)
     interest = round(sum(b["interest"] for b in by_broker.values()), 2)
+    fees = round(sum(b.get("fees", 0.0) for b in by_broker.values()), 2)
     return {
         "by_broker": by_broker,
         "dividends": dividends,
         "interest": interest,
-        "total": round(dividends + interest, 2),
+        "total": round(dividends + interest, 2),   # income received
+        "fees": fees,                              # charged outside trades (negative)
     }

@@ -7,7 +7,9 @@ live dashboard total, so the chart ends exactly where the headline numbers are.
 Per account, like realized.summary(): which shares each account held at the end
 of each day (average-cost method, positions.py), valued at that day's close and
 that day's EUR exchange rate. Profit = unrealized (value - cost) + realized so
-far, so selling, or moving money between brokers, does not move the profit line.
+far + dividends and interest received so far, after fees charged outside trades
+(income.py), the same total return as the dashboard headline. Selling, or
+moving money between brokers, does not move the profit line.
 
 Prices: Yahoo's closes are adjusted for later splits. They are turned back into
 the prices quoted on each day, because the trade history holds the share counts
@@ -55,29 +57,42 @@ def _fingerprint(accts: dict[str, list[Trade]]) -> str:
     return format(hash(parts) & 0xFFFFFFFFFFFF, "x")
 
 
+def _income_events() -> list[tuple[str, float]]:
+    try:
+        from . import income
+        return income.events()
+    except Exception:
+        return []
+
+
 def series() -> list[dict]:
     """Past points (up to yesterday). Served from memory; rebuilt in the
-    background a few times a day, and at once when the trades change."""
+    background a few times a day, and at once when the trades or the income
+    change."""
     accts = _accounts()
     if not any(accts.values()):
         return []
-    return cache.get("trend.series:" + _fingerprint(accts), lambda: build(accts),
+    inc = _income_events()
+    key = _fingerprint(accts) + format(hash((len(inc), round(sum(a for _, a in inc), 2))) & 0xFFFFFF, "x")
+    return cache.get("trend.series:" + key, lambda: build(accts, income_events=inc),
                      ttl=3 * 3600, stale=7 * 24 * 3600, data=False)
 
 
-def history(live_value: float, live_cost: float, live_realized: float) -> list[dict]:
+def history(live_value: float, live_cost: float, live_realized: float,
+            live_income: float = 0.0) -> list[dict]:
     """The chart: past points plus today's live point."""
     past = [p for p in series() if p["day"] < clock.today().isoformat()]
     return past + [_point(clock.today().isoformat(), live_value, live_cost, live_realized,
-                          past[-1].get("sp") if past else None)]
+                          past[-1].get("sp") if past else None, live_income)]
 
 
-def _point(day: str, value: float, cost: float, realized: float, sp=None) -> dict:
-    value, cost, realized = float(value), float(cost), float(realized)
+def _point(day: str, value: float, cost: float, realized: float, sp=None,
+           income: float = 0.0) -> dict:
+    value, cost, realized, income = float(value), float(cost), float(realized), float(income)
     unreal = value - cost
     out = {"day": day, "total_value": round(value, 2), "total_cost": round(cost, 2),
            "unrealized": round(unreal, 2), "realized": round(realized, 2),
-           "total_profit": round(unreal + realized, 2)}
+           "income": round(income, 2), "total_profit": round(unreal + realized + income, 2)}
     if sp:
         out["sp"] = sp
     return out
@@ -130,12 +145,15 @@ def _download(tickers: list[str], start: str):
     return close.ffill()
 
 
-def build(accts: dict[str, list[Trade]] | None = None, today: date | None = None) -> list[dict]:
+def build(accts: dict[str, list[Trade]] | None = None, today: date | None = None,
+          income_events: list[tuple[str, float]] | None = None) -> list[dict]:
     """Rebuild the series from scratch (a few seconds: one price download)."""
     import time
 
     t0 = time.time()
     accts = accts if accts is not None else _accounts()
+    inc = sorted(income_events if income_events is not None else _income_events())
+    inc_i, inc_sum = 0, 0.0
     trades = [t for ts in accts.values() for t in ts]
     if not trades:
         return []
@@ -162,6 +180,9 @@ def build(accts: dict[str, list[Trade]] | None = None, today: date | None = None
     unpriced: set[str] = set()
     for i, d in days:
         iso = d.isoformat()
+        while inc_i < len(inc) and inc[inc_i][0] <= iso:
+            inc_sum += inc[inc_i][1]
+            inc_i += 1
         value = cost = realized = priced = 0.0
         no_price: set[str] = set()
         for label, ts in accts.items():
@@ -194,7 +215,8 @@ def build(accts: dict[str, list[Trade]] | None = None, today: date | None = None
             continue
         sp = cols.get(BENCH)
         out.append(_point(iso, value, cost, realized,
-                          round(float(sp[i]), 2) if sp is not None and sp[i] == sp[i] else None))
+                          round(float(sp[i]), 2) if sp is not None and sp[i] == sp[i] else None,
+                          inc_sum))
         covered, total_cost_last, unpriced = priced, cost, no_price
 
     cutoff = (today - timedelta(days=DAILY_DAYS)).isoformat()
