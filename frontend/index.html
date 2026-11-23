@@ -1016,6 +1016,7 @@
     /* ---- UK tax year (always in pounds: HMRC works in GBP) ---- */
     function renderUkTax(t){
       const el=document.getElementById("uktax"); el.className="";
+      if(t.applies===false){ el.closest(".card").hidden=true; return; }   // not a UK tax resident
       document.getElementById("uktax-year").textContent=t.tax_year;
       document.getElementById("uktax-method").textContent=t.method;
       const stat=(k,v,sub,c)=>`<div class="stat" style="flex:1;min-width:130px"><div class="k">${k}</div>
@@ -1051,6 +1052,7 @@
     }
     function renderHarvest(){
       const h=HARVEST, el=document.getElementById("harvest"); if(!h) return; el.className="";
+      if(h.residence==="OTHER"){ el.closest(".card").hidden=true; return; }   // no tax rules for this country
       const sym={GBP:"£",USD:"$"}[h.currency]||"";
       const t0=n=>sym+Math.abs(Number(n)).toLocaleString("en-GB",{maximumFractionDigits:0});
       document.getElementById("harvest-how").innerHTML=(h.how_it_works||[]).map(p=>`<p style="margin:0 0 6px">${p}</p>`).join("");
@@ -1075,11 +1077,11 @@
     /* ---- data status banner ---- */
     function loadDataStatus(){
       fetchJSON("/api/datastatus").then(s=>{
-        const names={degiro:"DeGiro",trade_republic:"Trade Republic",tr_income:"TR income",trading212:"Trading 212"};
-        const sample=Object.keys(names).filter(k=>s[k]&&!s[k].real).map(k=>names[k]);
+        // Sample data is shown only until you add something of your own
+        // (a broker key, a statement, a connected account or a balance).
         const el=document.getElementById("datastatus");
-        if(sample.length){ el.hidden=false; el.innerHTML="⚠ Sample data for: "+sample.join(", ")+
-          '. <a href="/settings" style="color:#e3b341;font-weight:600">Fix it here →</a>'; }
+        if(s._demo){ el.hidden=false; el.innerHTML="👋 This is sample data. Add your own accounts and the samples disappear. "+
+          '<a href="/settings" style="color:#e3b341;font-weight:600">Add your accounts →</a>'; }
         else el.hidden=true;
       }).catch(()=>{});
     }

@@ -20,7 +20,7 @@ from pathlib import Path
 
 from .base import Holding
 from ..fx import to_eur
-from ..instruments import TICKERS, price_currency
+from ..instruments import TICKERS, prefetch, price_currency, ticker_for
 from ..positions import Trade, compute_positions
 
 from ..datafiles import resolve as _resolve_data
@@ -78,6 +78,7 @@ def get_trades() -> list[Trade]:
             corporate.append(row)
 
     trades: list[Trade] = []
+    traded_in: dict[str, str] = {}     # ISIN -> currency of its first fill
 
     def _when(r):
         return f"{r[0][6:]}-{r[0][3:5]}-{r[0][0:2]} {r[1]}"  # "YYYY-MM-DD HH:MM"
@@ -91,6 +92,7 @@ def get_trades() -> list[Trade]:
         side = "BUY" if first.group(1) == "Koop" else "SELL"
         qty = sum(_num(_TRADE_RE.match(f[5]).group(2)) for f in fills)
         isin, name = fills[0][4], fills[0][3]
+        traded_in.setdefault(isin, first.group(4))
         # Actual net EUR cash flow = sum of EUR-currency Change rows (real rate + fees).
         eur = abs(sum(_num(r[8]) for r in rows if r[7] == "EUR"))
         if eur < 1e-6:
@@ -98,7 +100,6 @@ def get_trades() -> list[Trade]:
         trades.append(Trade(
             when=_when(fills[0]), key=isin, name=name.title(), side=side,
             quantity=qty, amount=round(eur, 2), currency="EUR",
-            ticker=TICKER.get(isin, ""),
         ))
 
     # ISIN changes: pair the "Verkoop" (old ISIN) with the "Koop" (new ISIN) row
@@ -128,7 +129,6 @@ def get_trades() -> list[Trade]:
         trades.append(Trade(
             when=_when(r), key=r[4], name=r[3].title(), side=side,
             quantity=qty, amount=round(eur, 2), currency="EUR",
-            ticker=TICKER.get(r[4], ""),
         ))
 
     for t in trades:  # follow ISIN changes (possibly chained) to the current ISIN
@@ -136,7 +136,10 @@ def get_trades() -> list[Trade]:
         while t.key in renames and t.key not in seen:
             seen.add(t.key)
             t.key, t.name = renames[t.key]
-            t.ticker = TICKER.get(t.key, t.ticker)
+    # the ISIN table, else a Yahoo lookup (instruments.py); "" = no live price
+    prefetch({t.key: traded_in.get(t.key) for t in trades})
+    for t in trades:
+        t.ticker = ticker_for(t.key, traded_in.get(t.key))
     return trades
 
 

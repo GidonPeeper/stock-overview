@@ -7,9 +7,22 @@ answer to "which yfinance symbol prices this ISIN?". "" means no usable quote
 
 Convention: US listings price in USD; ".AS" (Euronext Amsterdam), ".DE" (Xetra),
 ".PA", ".MI" in EUR; ".L" in GBP (see `price_currency`).
+
+An ISIN missing from the table is looked up once on Yahoo's search (the first
+listing quoted in EUR, USD, GBP or CHF, preferring the currency you traded
+in), so shares you hold that nobody added here still get a live price. Found
+tickers are kept in data/tickers_found.json; a failed lookup is retried after
+6 hours. TICKER_LOOKUP=0 turns lookups off (the tests do).
 """
 
 from __future__ import annotations
+
+import json
+import os
+import threading
+import time
+from concurrent.futures import ThreadPoolExecutor
+from pathlib import Path
 
 TICKERS: dict[str, str] = {
     # --- equities ---
@@ -61,14 +74,136 @@ NAMES: dict[str, str] = {
 }
 
 
-def ticker_for(isin: str) -> str:
-    return TICKERS.get(isin, "")
+_FOUND_FILE = Path(__file__).resolve().parents[1] / "data" / "tickers_found.json"
+_CURRENCIES = {"EUR", "USD", "GBP", "CHF"}    # the ones fx.py converts
+_RETRY_AFTER = 6 * 3600
+_lock = threading.Lock()
+_found: dict[str, dict] | None = None        # isin -> {"ticker", "currency"}
+_failed: dict[str, float] = {}               # isin -> time of a lookup that found nothing
+
+
+def _found_map() -> dict[str, dict]:
+    global _found
+    if _found is None:
+        try:
+            _found = json.loads(_FOUND_FILE.read_text())
+        except (OSError, ValueError):
+            _found = {}
+    return _found
+
+
+_ccy_cache: list = [None, None]   # [found map size, {ticker: currency}]
+
+
+def _ccy_of() -> dict[str, str]:
+    found = _found_map()
+    if _ccy_cache[0] != len(found):
+        _ccy_cache[1] = {h["ticker"]: h["currency"] for h in found.values() if h.get("ticker")}
+        _ccy_cache[0] = len(found)
+    return _ccy_cache[1]
+
+
+def _lookups_on() -> bool:
+    return os.getenv("TICKER_LOOKUP", "1") != "0"
+
+
+def _quote_currency(yf, symbol: str) -> str | None:
+    """The currency Yahoo quotes `symbol` in (GBp counts as GBP), or None
+    when it has no price."""
+    tk = yf.Ticker(symbol)
+    tk.history(period="5d", interval="1d", auto_adjust=False)
+    meta = dict(getattr(tk, "history_metadata", None) or {})
+    if not meta.get("regularMarketPrice"):
+        return None
+    ccy = meta.get("currency") or ""
+    return "GBP" if ccy in ("GBp", "GBX", "GBx") else ccy.upper()
+
+
+def _pick(symbols: list[str], currency: str | None, quote_currency) -> dict | None:
+    """The first of (up to 3) listings with a price in a currency fx.py
+    converts, preferring `currency`."""
+    first = None
+    for sym in symbols[:3]:
+        try:
+            ccy = quote_currency(sym)
+        except Exception:
+            continue
+        if ccy not in _CURRENCIES:
+            continue
+        hit = {"ticker": sym, "currency": ccy}
+        if not currency or ccy == currency.upper():
+            return hit
+        first = first or hit
+    return first
+
+
+def _search(isin: str, currency: str | None) -> dict | None:
+    import yfinance as yf
+
+    quotes = yf.Search(isin, max_results=8, news_count=0, lists_count=0,
+                       raise_errors=False).quotes or []
+    symbols = [q.get("symbol") for q in quotes
+               if q.get("symbol") and not q["symbol"].upper().startswith(isin)
+               and q.get("quoteType") in ("EQUITY", "ETF", "MUTUALFUND")]
+    return _pick(symbols, currency, lambda s: _quote_currency(yf, s))
+
+
+def lookup(isin: str, currency: str | None = None) -> str:
+    """Ticker for an ISIN missing from TICKERS ("" if none was found)."""
+    with _lock:
+        hit = _found_map().get(isin)
+        if hit:
+            return hit["ticker"]
+        if not _lookups_on() or not is_valid_isin(isin) \
+                or time.time() - _failed.get(isin, -1e9) < _RETRY_AFTER:
+            return ""
+    try:
+        hit = _search(isin, currency)
+    except Exception:
+        hit = None
+    with _lock:
+        if not hit:
+            _failed[isin] = time.time()
+            return ""
+        _found_map()[isin] = hit
+        try:
+            _FOUND_FILE.parent.mkdir(exist_ok=True)
+            _FOUND_FILE.write_text(json.dumps(_found_map(), indent=1, sort_keys=True))
+        except OSError:
+            pass
+    return hit["ticker"]
+
+
+def ticker_for(isin: str, currency: str | None = None) -> str:
+    """The Yahoo ticker that prices `isin`: the table above, else a lookup.
+    `currency` (what you traded in) picks between listings."""
+    if not isin:
+        return ""
+    if isin in TICKERS:
+        return TICKERS[isin]
+    return lookup(isin, currency)
+
+
+def prefetch(isins) -> None:
+    """Look up several unknown ISINs at once (a few at a time), so a first
+    load does not wait for them one by one. `isins`: ISINs, or {ISIN: the
+    currency you traded it in}."""
+    hints = dict(isins) if isinstance(isins, dict) else dict.fromkeys(isins)
+    with _lock:
+        todo = sorted(i for i in hints if i and i not in TICKERS and i not in _found_map())
+    if todo and _lookups_on():
+        with ThreadPoolExecutor(max_workers=6) as pool:
+            list(pool.map(lambda i: lookup(i, hints[i]), todo))
 
 
 def price_currency(ticker: str) -> str:
-    """Currency a yfinance ticker is quoted in, from its exchange suffix."""
+    """Currency a yfinance ticker is quoted in: what a lookup saw, else the
+    exchange suffix."""
     if not ticker:
         return "EUR"
+    found = _ccy_of().get(ticker)
+    if found:
+        return found
     if ticker.endswith((".AS", ".DE", ".F", ".PA", ".MI", ".BR")):
         return "EUR"
     if ticker.endswith(".L"):

@@ -5,7 +5,7 @@ key, or database to a server. The app keeps running on your Mac; Cloudflare
 exposes it over HTTPS and only lets *you* in.
 
 ```
-phone ──HTTPS──▶ Cloudflare (Access login: gidonpeeper@gmail.com)
+phone ──HTTPS──▶ Cloudflare (Access login: you@example.com)
                       │  (encrypted tunnel, no open ports)
                       ▼
                  cloudflared ──▶ http://localhost:8000  (your Mac)
@@ -14,7 +14,9 @@ phone ──HTTPS──▶ Cloudflare (Access login: gidonpeeper@gmail.com)
 
 ## Two layers of protection
 1. **Cloudflare Access** — a login wall locked to your Google account.
-2. **App password** — `DASHBOARD_PASSWORD` in `.env` (defence in depth).
+2. **App password** — `DASHBOARD_PASSWORD` in `.env` (defence in depth). The app
+   refuses to show anything through the tunnel without it. To rely on
+   Cloudflare Access alone, set `ALLOW_NO_PASSWORD=1` instead.
 
 The T212 key is read-only, so even a total breach cannot move money.
 
@@ -41,7 +43,7 @@ The T212 key is read-only, so even a total breach cannot move money.
 3. Create `~/.cloudflared/config.yml`:
    ```yaml
    tunnel: stock-overview
-   credentials-file: /Users/gidonp/.cloudflared/<TUNNEL-ID>.json
+   credentials-file: /Users/<you>/.cloudflared/<TUNNEL-ID>.json
    ingress:
      - hostname: stocks.YOURDOMAIN
        service: http://localhost:8000
@@ -55,7 +57,7 @@ The T212 key is read-only, so even a total breach cannot move money.
    (Later: `cloudflared service install` to run the tunnel on boot.)
 5. In the **Cloudflare Zero Trust** dashboard → **Access → Applications** →
    *Add a self-hosted application* for `stocks.YOURDOMAIN`, then add a policy:
-   **Allow** where **emails == gidonpeeper@gmail.com**. Choose email OTP or Google
+   **Allow** where **emails == your email address**. Choose email OTP or Google
    as the login method.
 
 Now `https://stocks.YOURDOMAIN` on your phone shows a Cloudflare login, then the

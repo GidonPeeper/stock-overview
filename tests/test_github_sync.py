@@ -22,9 +22,10 @@ def http_error(code: int) -> urllib.error.HTTPError:
 
 
 class FakeGitHub:
-    """Just enough of the GitHub API for github_sync."""
+    """Just enough of the GitHub API for github_sync (one repo)."""
 
-    def __init__(self):
+    def __init__(self, repo: str = "me/data"):
+        self.repo = repo
         self.blobs: dict[str, bytes] = {}
         self.trees: dict[str, str] = {}
         self.commits: dict[str, dict] = {}
@@ -46,7 +47,12 @@ class FakeGitHub:
         self.calls.append((method, path))
         if self.down:
             raise urllib.error.URLError("offline")
-        repo = "/repos/" + github_sync._repo()
+        repo = "/repos/" + self.repo
+        if method == "DELETE" and path == repo + "/git/refs/heads/data-sync":
+            if self.branch is None:
+                raise http_error(422)
+            self.branch = None
+            return {}
         if method == "GET" and path.startswith(repo + "/contents/data/vault.enc"):
             if self.branch is None:
                 raise http_error(404)
@@ -80,6 +86,19 @@ class FakeGitHub:
         raise AssertionError(f"unexpected call {method} {path}")
 
 
+class Router:
+    """Several fake repos behind one _req."""
+
+    def __init__(self, *repos: FakeGitHub):
+        self.repos = repos
+
+    def __call__(self, path, method="GET", body=None):
+        for r in self.repos:
+            if path.startswith(f"/repos/{r.repo}/"):
+                return r(path, method, body)
+        raise http_error(404)
+
+
 class SyncTest(unittest.TestCase):
     def setUp(self):
         self.tmp = tempfile.TemporaryDirectory()
@@ -93,7 +112,8 @@ class SyncTest(unittest.TestCase):
             mock.patch.object(github_sync, "_req", self.gh),
             mock.patch.object(github_sync, "_spawn", self.spawned.append),
             mock.patch.object(github_sync, "_sleep", lambda s: None),
-            mock.patch.dict(os.environ, {"GITHUB_TOKEN": "t", "DATA_KEY": "k"}),
+            mock.patch.dict(os.environ, {"GITHUB_TOKEN": "t", "DATA_KEY": "k",
+                                         "GITHUB_REPO": "me/data", "RENDER_GIT_REPO_SLUG": ""}),
         ]
         for p in patches:
             p.start()
@@ -227,6 +247,69 @@ class SyncTest(unittest.TestCase):
         self.assertEqual(self.spawned, [])
         self.assertEqual(self.gh.calls, [])
         self.assertFalse(github_sync.last_result["enabled"])
+
+
+    def test_repo_defaults_to_the_deploy_repo(self):
+        with mock.patch.dict(os.environ, {"GITHUB_REPO": "", "RENDER_GIT_REPO_SLUG": "friend/copy"}):
+            self.assertEqual(github_sync._repo(), "friend/copy")
+        with mock.patch.dict(os.environ, {"GITHUB_REPO": "", "RENDER_GIT_REPO_SLUG": ""}):
+            github_sync.restore()
+            github_sync.push_vault_async()
+            self.assertEqual(self.gh.calls, [])
+            self.assertIn("GITHUB_REPO", github_sync.last_result["hint"])
+
+
+class MoveTest(SyncTest):
+    """GITHUB_REPO set to a new (private) repo: the copy in the deploy repo moves there."""
+
+    def setUp(self):
+        super().setUp()
+        self.old = FakeGitHub("me/code")
+        self.new = self.gh                       # "me/data", empty
+        patch = mock.patch.object(github_sync, "_req", Router(self.old, self.new))
+        patch.start()
+        self.addCleanup(patch.stop)
+        env = mock.patch.dict(os.environ, {"RENDER_GIT_REPO_SLUG": "me/code"})
+        env.start()
+        self.addCleanup(env.stop)
+
+    def store_in_old_repo(self, files: dict, key: str = "k"):
+        for n, t in files.items():
+            self.write(n, t)
+        with mock.patch.dict(os.environ, {"DATA_KEY": key}):
+            vault.encrypt()
+        self.old.blobs["b"] = vault.VAULT.read_bytes()
+        self.old.trees["t"] = "b"
+        self.old.commits["c"] = {"tree": "t"}
+        self.old.branch = "c"
+        for p in self.data.iterdir():
+            p.unlink()
+
+    def test_data_moves_to_the_new_repo_once(self):
+        self.store_in_old_repo({"cash_accounts.json": "mine"})
+        state = github_sync.restore()
+        self.assertTrue(state["cloud"])
+        self.assertEqual((self.data / "cash_accounts.json").read_text(), "mine")
+        self.run_spawned()
+        self.assertEqual(self.stored_files(), {"cash_accounts.json": "mine"})
+        self.assertIsNone(self.old.branch)       # gone from the old repo
+        self.assertEqual(github_sync.last_result["moved_from"], "me/code")
+        # next boot reads the new repo only
+        self.old.calls.clear()
+        self.reboot()
+        self.assertEqual((self.data / "cash_accounts.json").read_text(), "mine")
+        self.assertEqual(self.old.calls, [])
+
+    def test_someone_elses_data_is_left_alone(self):
+        # a friend deployed straight from the owner's repo: its copy is not theirs
+        self.store_in_old_repo({"cash_accounts.json": "theirs"}, key="other")
+        state = github_sync.restore()
+        self.run_spawned()
+        self.assertFalse(state["cloud"])
+        self.assertFalse((self.data / "cash_accounts.json").exists())
+        self.assertFalse(vault.VAULT.exists())
+        self.assertIsNotNone(self.old.branch)
+        self.assertIsNone(self.new.branch)
 
 
 if __name__ == "__main__":

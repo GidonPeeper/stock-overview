@@ -27,7 +27,7 @@ import logging
 from datetime import date, timedelta
 
 from . import cache, clock, sources
-from .instruments import TICKERS, price_currency
+from .instruments import TICKERS, prefetch, price_currency, ticker_for
 from .positions import Trade, compute_positions
 from .prices import quote_scale
 
@@ -163,6 +163,10 @@ def build(accts: dict[str, list[Trade]] | None = None, today: date | None = None
     ticker_of: dict[str, str] = {}
     for t in trades:  # the ISIN table first, else the ticker the broker gave
         ticker_of[t.key] = TICKERS.get(t.key, ticker_of.get(t.key) or t.ticker)
+    unknown = [k for k, v in ticker_of.items() if not v and k not in TICKERS]
+    prefetch(unknown)                    # else a Yahoo lookup (instruments.py)
+    for k in unknown:
+        ticker_of[k] = ticker_for(k)
     tickers = sorted({tk for tk in ticker_of.values() if tk})
     ccys = {price_currency(tk) for tk in tickers} - {"EUR"}
     fx_pairs = {c: f"EUR{c}=X" for c in ccys}

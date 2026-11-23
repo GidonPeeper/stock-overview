@@ -1,81 +1,72 @@
 # Deploy to Render (free, always-on, phone-friendly)
 
 The dashboard runs 24/7 on Render's free tier at a fixed `…onrender.com` URL,
-behind your login. **The repo can be public** — your keys go in as environment
-variables and your statement files as Render **Secret Files**, so nothing
-private is ever in git.
+behind your login. The code repo can be public: keys go in as environment
+variables, and your data is saved encrypted in a **private** repo of your own.
+[SETUP.md](SETUP.md) walks through it step by step; this page has the details.
 
 Free-tier notes: the service sleeps after 15 min without visits, and waking it
 takes about a minute. The app copes with that (it opens from the last numbers
-saved on your phone while the server wakes up), and you can keep it awake for
+saved on your phone while the server wakes up), and it keeps itself awake for
 free — see [Speed](#speed-sleep-keep-alive-and-caching) below.
 
-## 1. Push the code to GitHub (public or private — no private data is in it)
-```bash
-gh repo create stock-overview --public --source=. --push
-```
+## 1. Code and data repos
+- **Code:** fork this repo (or push your clone). Public is fine: it holds no data.
+- **Data:** a separate **private** repo, created with a README (GitHub's API
+  cannot write to an empty repo). The app keeps one encrypted file there,
+  `data/vault.enc` on a `data-sync` branch. It is encrypted, but file names and
+  sizes can be read, so keep the repo private.
 
 ## 2. Create the Render service
 1. Sign up at https://render.com (GitHub login is easiest).
-2. **New → Blueprint**, pick the repo — Render reads `render.yaml`.
-3. Set the environment variables (Environment tab):
-   - `T212_INVEST_API_KEY` + `T212_INVEST_API_SECRET`, `T212_ISA_API_KEY` + `T212_ISA_API_SECRET`
-     — one read-only key pair per Trading 212 account (generate each one while that
-     account is selected in the app). A single account can use plain `T212_API_KEY` + `T212_API_SECRET`.
-   - `DISPLAY_CURRENCY` — `GBP` or `EUR`, the currency the dashboard opens in
-   - `DASHBOARD_USER`, `DASHBOARD_PASSWORD` — your phone login
-   - `DASHBOARD_SECRET` — any long random string (keeps you logged in)
+2. **New → Blueprint**, pick the code repo — Render reads `render.yaml`.
+3. Fill in the environment variables it asks for:
+   - `DASHBOARD_USER`, `DASHBOARD_PASSWORD` — your login. Required: on a host
+     the app shows nothing until a password is set.
+   - `DASHBOARD_SECRET` — a long random string. It keeps you logged in and
+     encrypts your saved data (`DATA_KEY`, if set, is used for the data instead).
+     Never change it, or the saved data can no longer be read.
+   - `GITHUB_TOKEN` — fine-grained token, **Contents: Read and write** on the
+     data repo only. Pick a long expiry and renew it before it ends.
+   - `GITHUB_REPO` — the data repo, `owner/name`. Without it the app saves to
+     the repo it was deployed from (Render's `RENDER_GIT_REPO_SLUG`).
+   - `DISPLAY_CURRENCY` — `EUR`, `GBP` or `USD`, the currency the app opens in.
+   - `TAX_RESIDENCE` — `UK` (default), `US` or `NL`; anything else (`NONE`)
+     hides the tax cards.
+   - Optional: `DASHBOARD_TZ` (default `Europe/London`), `UK_RESIDENT_FROM`.
 
-## 3. Private data — the vault (recommended, zero-touch)
+Broker and bank keys are added in the app (Settings → Add an account), or as
+env vars: `T212_<NAME>_API_KEY` + `T212_<NAME>_API_SECRET` per Trading 212
+account (a name containing `ISA` counts as tax-free).
 
-Your statement files can ship inside the public repo as **encrypted ciphertext**
-(`data/vault.enc`), decrypted on boot with a key derived from the
-`DASHBOARD_SECRET` (or `DATA_KEY`) env var — which only exists on the host and
-in your local `.env`, never in git. With the vault present, every deploy
-self-hydrates your real data automatically — no uploads, no secret files.
-
-After updating a statement locally, rebuild and push it:
-```bash
-.venv/bin/python -m backend.vault && git add data/vault.enc && git commit -m "update data" && git push
-```
-
-## 3b. Alternative: Secret Files
-Still on the service's **Environment** tab → **Secret Files** → add the files
-(paste the contents of your local files), named exactly:
-
-- `degiro_account.csv`
-- `trades_trade_republic.json`
-- `income_trade_republic.json`
-- `trading212_statement.json` (only without a Trading 212 API key)
-
-Render mounts Secret Files at the service root and `/etc/secrets/` — the app
-checks both automatically (plus `data/`), so a plain filename is all you need.
-Without these it runs on bundled sample data; the in-app banner shows which
-sources are live vs sample, so you can see at a glance what's missing.
-
-## 4. Deploy, then install on your phone
+## 3. Deploy, then install on your phone
 1. **Apply** → wait a few minutes for the build.
 2. Open the `…onrender.com` URL in **Safari** → sign in → **Save Password**.
 3. **Share → Add to Home Screen** → app icon. Next time, tap the password field
    and unlock with **Face ID**.
+4. Settings → Cloud persistence should say **Cloud sync ON**.
 
-## Save uploads permanently (free, do this once)
-Render wipes its disk on every restart and deploy. Without this step, every
-upload, balance and key added in the app disappears with it.
-
-1. GitHub → Settings → Developer settings → Personal access tokens →
-   **Fine-grained tokens** → Generate new token. Repository access: only this
-   repo. Permissions → Repository → **Contents: Read and write**. Pick the
-   longest expiry you are comfortable with (and renew it before it ends).
-2. Render → your service → Environment → add `GITHUB_TOKEN` = the token. Save
-   (the service restarts).
-3. In the app, Settings → Cloud persistence should say **Cloud sync ON**.
-
-From then on, every change is encrypted (with `DATA_KEY`/`DASHBOARD_SECRET`)
-and stored on the `data-sync` branch, and loaded back on every start. The
-branch keeps one commit, replaced on each save, so the repo does not grow.
+## How saving works
+Render wipes its disk on every restart and deploy. Every upload, balance or
+key added in the app is encrypted (with `DATA_KEY`/`DASHBOARD_SECRET`) and
+stored on the data repo's `data-sync` branch, and loaded back on every start.
+The branch keeps one commit, replaced on each save, so the repo does not grow.
 If GitHub cannot be reached at start-up, saving pauses (so older data never
 overwrites newer data) and resumes once it can.
+
+**Moving saved data to another repo.** Set `GITHUB_REPO` to the new private
+repo (created with a README) and give the token Contents read & write on both
+repos. On the next start the app copies the data over, reads it back, and
+deletes the old `data-sync` branch.
+
+**Alternatives** (private code repo only):
+- *Committed vault:* `.venv/bin/python -m backend.vault` writes
+  `data/vault.enc` from your local `data/` files; `git add -f data/vault.enc`,
+  commit and push. Each deploy decrypts it with `DASHBOARD_SECRET`.
+- *Secret Files:* on the service's **Environment** tab → **Secret Files**, add
+  `degiro_account.csv`, `trades_trade_republic.json`,
+  `income_trade_republic.json` or `trading212_statement.json` (the app checks
+  the service root, `/etc/secrets/` and `data/`).
 
 ## Updating your data later
 Open the app's **Settings** page on your phone or laptop and upload the fresh

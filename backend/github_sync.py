@@ -2,9 +2,17 @@
 
 Free hosting wipes the local disk on every restart, so uploads, balances and
 keys added in-app would silently disappear. When a GITHUB_TOKEN env var is
-present (fine-grained PAT, Contents read/write on this repo only), every edit
-re-encrypts the vault and stores it on a dedicated `data-sync` branch; on boot
-the stored vault is pulled back before unlocking. So each upload is needed once.
+present (fine-grained PAT, Contents read/write on the data repo only), every
+edit re-encrypts the vault and stores it on a dedicated `data-sync` branch; on
+boot the stored vault is pulled back before unlocking. So each upload is needed
+once.
+
+Which repo holds the data: GITHUB_REPO ("owner/name") if set, else the repo
+this copy was deployed from (Render sets RENDER_GIT_REPO_SLUG). Keep it
+private: the vault is encrypted, but file names and sizes can be read. When
+GITHUB_REPO points somewhere new (e.g. a private repo next to a public code
+repo) and holds nothing yet, the copy in the deploy repo is moved there once:
+copied, read back, then deleted from the old repo.
 
   * The branch holds one commit with only data/vault.enc, replaced on each save
     (force-updated), so the public repo does not grow with every edit. Data
@@ -56,8 +64,22 @@ def _token() -> str | None:
     return os.getenv("GITHUB_TOKEN")
 
 
+def _deploy_repo() -> str:
+    """The repo this copy runs from ("owner/name"), when the host says so."""
+    return (os.getenv("RENDER_GIT_REPO_SLUG") or "").strip()
+
+
 def _repo() -> str:
-    return os.getenv("GITHUB_REPO", "GidonPeeper/stock-overview")
+    """The repo that holds the data ("owner/name"), or "" when unknown."""
+    return (os.getenv("GITHUB_REPO") or "").strip() or _deploy_repo()
+
+
+def _off_reason() -> str | None:
+    if not _token():
+        return "set GITHUB_TOKEN to persist edits across restarts"
+    if not _repo():
+        return "set GITHUB_REPO (owner/name of a private repo) to persist edits across restarts"
+    return None
 
 
 def _req(path: str, method: str = "GET", body: dict | None = None):
@@ -68,7 +90,8 @@ def _req(path: str, method: str = "GET", body: dict | None = None):
                  "Accept": "application/vnd.github+json",
                  "User-Agent": "stock-overview"})
     with urllib.request.urlopen(req, timeout=30) as r:
-        return json.load(r)
+        raw = r.read()
+        return json.loads(raw) if raw.strip() else {}   # DELETE answers 204, no body
 
 
 def _describe(e: BaseException) -> str:
@@ -77,6 +100,8 @@ def _describe(e: BaseException) -> str:
             return "GitHub rejected the token (expired or wrong)"
         if e.code in (403, 404):
             return f"HTTP {e.code}: the token needs Contents read & write on {_repo()}"
+        if e.code == 409:
+            return f"{_repo()} is empty: add a README to it on GitHub"
         return f"HTTP {e.code}"
     if isinstance(e, SystemExit):
         return str(e)
@@ -85,10 +110,11 @@ def _describe(e: BaseException) -> str:
 
 # ---------------------------------------------------------------- reading
 
-def _fetch_cloud_vault() -> bytes | None:
+def _fetch_cloud_vault(repo: str | None = None) -> bytes | None:
     """The stored vault, or None if nothing is stored yet. Raises on other errors."""
+    repo = repo or _repo()
     try:
-        meta = _req(f"/repos/{_repo()}/contents/{VAULT_PATH}?ref={BRANCH}")
+        meta = _req(f"/repos/{repo}/contents/{VAULT_PATH}?ref={BRANCH}")
     except urllib.error.HTTPError as e:
         if e.code == 404:    # no branch or no file yet (a bad token gives 401)
             return None
@@ -96,14 +122,14 @@ def _fetch_cloud_vault() -> bytes | None:
     if meta.get("content"):
         return base64.b64decode(meta["content"])
     # the contents API leaves files over 1 MB out; the blob API serves up to 100 MB
-    blob = _req(f"/repos/{_repo()}/git/blobs/{meta['sha']}")
+    blob = _req(f"/repos/{repo}/git/blobs/{meta['sha']}")
     return base64.b64decode(blob["content"])
 
 
 def pull_vault(attempts: int = 3) -> bool:
     """Fetch the stored vault into data/vault.enc. True if one was fetched."""
     global _pulled, last_result
-    if not _token():
+    if _off_reason():
         return False
     from . import vault
     err: BaseException | None = None
@@ -117,7 +143,7 @@ def pull_vault(attempts: int = 3) -> bool:
             continue
         with _lock:
             _pulled = True
-        last_result = {"enabled": True, "ok": True}
+        last_result = {"enabled": True, "ok": True, "repo": _repo()}
         if content is None:
             return False
         vault.DATA_DIR.mkdir(exist_ok=True)
@@ -136,12 +162,67 @@ def restore() -> dict:
     global _restored_at
     from . import vault
     pulled = pull_vault()
+    old = _moving_from() if (_pulled and not pulled) else None
+    if old:
+        pulled = _take_old_copy(old)
     state = vault.unlock()
     state["cloud"] = pulled
     _restored_at = time.time()
+    if old and pulled:
+        if state.get("error") is None and (state["unlocked"] or state["skipped"]):
+            _spawn(lambda: _finish_move(old))
+        else:   # not ours to read (another person's data): leave it alone
+            vault.VAULT.unlink(missing_ok=True)
+            state["cloud"] = False
     if _pulled is False:
         _spawn(_retry_pull)
     return state
+
+
+# ---------------------------------------------------------------- moving
+def _moving_from() -> str | None:
+    """The deploy repo, when the data now goes to another repo (GITHUB_REPO)."""
+    old = _deploy_repo()
+    return old if old and old.lower() != _repo().lower() else None
+
+
+def _take_old_copy(old: str) -> bool:
+    """Fetch the vault stored in the deploy repo into data/vault.enc."""
+    from . import vault
+    try:
+        content = _fetch_cloud_vault(old)
+    except Exception:
+        return False
+    if content is None:
+        return False
+    vault.DATA_DIR.mkdir(exist_ok=True)
+    vault.VAULT.write_bytes(content)
+    return True
+
+
+def _finish_move(old: str) -> None:
+    """Save the data to the new repo, read it back, then delete the old copy."""
+    global _running, last_result
+    with _lock:
+        _running = True          # edits meanwhile wait for this save
+    try:
+        result = _push_once()
+        if result.get("ok"):
+            try:
+                if _fetch_cloud_vault() is None:
+                    raise RuntimeError("the new copy could not be read back")
+                _req(f"/repos/{old}/git/refs/heads/{BRANCH}", "DELETE")
+                result["moved_from"] = old
+            except Exception as e:
+                result["note"] = (f"data copied to {_repo()}, but the old copy on {old} "
+                                  f"was not deleted ({_describe(e)})")
+        last_result = result
+    finally:
+        with _lock:
+            _running = False
+            waiting = _dirty
+        if waiting:
+            push_vault_async()
 
 
 def _retry_pull() -> None:
@@ -191,7 +272,8 @@ def _push_once() -> dict:
                       {"message": "chore: sync encrypted data vault (in-app edit)",
                        "tree": tree["sha"], "parents": []})
         _set_ref(commit["sha"])
-        return {"enabled": True, "ok": True, "files": names, "at": time.strftime("%H:%M:%S")}
+        return {"enabled": True, "ok": True, "repo": repo, "files": names,
+                "at": time.strftime("%H:%M:%S")}
     except (Exception, SystemExit) as e:   # vault.encrypt exits when there is nothing to save
         return {"enabled": True, "ok": False, "error": _describe(e)}
 
@@ -223,9 +305,9 @@ def _push_loop() -> None:
 def push_vault_async() -> None:
     """After an edit: save the current data files to the cloud in the background."""
     global last_result, _dirty, _running
-    if not _token():
-        last_result = {"enabled": False,
-                       "hint": "set GITHUB_TOKEN to persist edits across restarts"}
+    off = _off_reason()
+    if off:
+        last_result = {"enabled": False, "hint": off}
         return
     with _lock:
         _dirty = True

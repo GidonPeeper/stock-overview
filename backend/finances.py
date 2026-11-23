@@ -36,6 +36,7 @@ ASSET_CATEGORIES = ("watch", "jewellery", "car", "art", "collectible", "property
 
 def _load_raw() -> tuple[dict, bool]:
     path, real = resolve(_FILE)
+    real = real or not path.exists()     # "sample" = the bundled demo file only
     if not path.exists():
         return {k: [] for k in KINDS}, not real
     try:

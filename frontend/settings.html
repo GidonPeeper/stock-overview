@@ -299,7 +299,7 @@
     function renderStatus(s){
       document.getElementById("status").innerHTML=Object.entries(NAMES).map(([k,label])=>{
         const v=s[k]; if(!v) return "";
-        const tag = !v.real ? 'SAMPLE' : (k==='trading212' ? (v.live ? 'LIVE · API' : 'STATEMENT') : 'LIVE');
+        const tag = !v.real ? (s._demo ? 'SAMPLE' : 'NOT USED') : (k==='trading212' ? (v.live ? 'LIVE · API' : 'STATEMENT') : 'LIVE');
         return `<div class="row"><span>${label}<br><span style="font-size:11px;color:var(--faint)">${v.expected}</span></span>
           <span class="pill ${v.real?'live':'sample'}">${tag}</span></div>`;
       }).join("");

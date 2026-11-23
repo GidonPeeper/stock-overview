@@ -22,6 +22,7 @@ _search_cache: dict[str, tuple[list, float]] = {}
 
 def _load_raw() -> tuple[list[dict], bool]:
     path, real = resolve(_FILE)
+    real = real or not path.exists()     # "sample" = the bundled demo file only
     if not path.exists():
         return [], not real
     try:

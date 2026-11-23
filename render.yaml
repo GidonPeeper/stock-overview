@@ -1,9 +1,10 @@
-# Render Blueprint — free, always-on (with idle spin-down) hosting.
-# Deploy: push this repo to a PRIVATE GitHub repo, then in Render create a new
-# Blueprint from it and fill in the four secret env vars below.
+# Render Blueprint: free hosting with a fixed …onrender.com address.
+# Step by step: SETUP.md. In Render: New → Blueprint → pick your copy of this
+# repo, then fill in the values it asks for (they are not stored in git).
+# Broker keys are added later in the app (Settings → Add an account).
 services:
   - type: web
-    name: stock-overview-512a6c65   # random, unlisted URL
+    name: stock-overview-512a6c65   # any name; it becomes part of the address
     runtime: python
     plan: free
     buildCommand: pip install -r requirements.txt
@@ -11,27 +12,19 @@ services:
     envVars:
       - key: PYTHON_VERSION
         value: "3.12.2"
-      - key: DISPLAY_CURRENCY
-        value: GBP
-      # Set these in the Render dashboard (Environment) — not stored in git.
-      # One read-only key pair per Trading 212 account; leave unused ones empty.
-      - key: T212_INVEST_API_KEY
-        sync: false
-      - key: T212_INVEST_API_SECRET
-        sync: false
-      - key: T212_ISA_API_KEY
-        sync: false
-      - key: T212_ISA_API_SECRET
-        sync: false
-      - key: T212_API_KEY            # older single-account setup
-        sync: false
-      - key: T212_API_SECRET
-        sync: false
-      - key: UK_RESIDENT_FROM        # optional, YYYY-MM-DD
-        sync: false
       - key: DASHBOARD_USER
         sync: false
-      - key: DASHBOARD_PASSWORD
+      - key: DASHBOARD_PASSWORD     # required: without it the app shows nothing
         sync: false
-      - key: DASHBOARD_SECRET       # signs the login cookie; keeps you logged in
+      - key: DASHBOARD_SECRET       # long random text; encrypts your saved data
+        sync: false
+      - key: GITHUB_TOKEN           # fine-grained token: Contents read & write on GITHUB_REPO
+        sync: false
+      - key: GITHUB_REPO            # your private data repo, owner/name
+        sync: false
+      - key: DISPLAY_CURRENCY       # EUR, GBP or USD
+        sync: false
+      - key: TAX_RESIDENCE          # UK, US, NL, or NONE to hide the tax cards
+        sync: false
+      - key: UK_RESIDENT_FROM       # optional, YYYY-MM-DD: moved to the UK this tax year
         sync: false

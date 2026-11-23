@@ -13,6 +13,9 @@ small-cap screener. Shows amounts in pounds or euros.
 
 **Read-only by design: it can never place a trade or move money.**
 
+**Want your own?** [SETUP.md](SETUP.md) gets you your own private copy online in
+about 20 minutes, free.
+
 ## ⚡ Try it in 60 seconds (demo mode)
 
 ```bash
@@ -75,8 +78,12 @@ flowchart LR
 ## 🔑 Using your own data
 
 Everything private is git-ignored and resolved from `data/`, the project root,
-or `/etc/secrets` (Render Secret Files) — the in-app banner tells you exactly
-which sources are live vs sample.
+or `/etc/secrets` (Render Secret Files). Until you add something of your own,
+the app shows sample data and says so in a banner.
+
+**Shares are priced automatically.** Each holding is priced on Yahoo Finance
+by its ISIN: a table of known tickers (`backend/instruments.py`), else a
+one-time Yahoo search that prefers the listing in the currency you traded in.
 
 **Add an account (Settings page).** Pick your broker or bank from a searchable
 list of ~50 (NL, UK, US) and the app shows the simplest way to track it, with
@@ -155,8 +162,9 @@ The tests use canned broker and bank responses, so they need no keys or network.
 
 ## ☁️ Deploy
 
-Free 24/7 hosting on Render with the repo public and your data private
-(env vars + Secret Files): see [`DEPLOY_RENDER.md`](DEPLOY_RENDER.md).
+Free 24/7 hosting on Render with the code public and your data private
+(encrypted in a private repo of your own): [`SETUP.md`](SETUP.md) step by step,
+details in [`DEPLOY_RENDER.md`](DEPLOY_RENDER.md).
 
 **Speed.** The page opens at once from the last numbers saved on your device
 (marked "Updating…") and refreshes in place. The server fetches quotes in
@@ -169,11 +177,15 @@ sleeping — see *Speed* in [`DEPLOY_RENDER.md`](DEPLOY_RENDER.md).
 ## 🔒 Privacy & safety
 
 - The repo contains **code + sample data only** — statements and keys never
-  enter git in plaintext (verified: no secrets anywhere in history). The owner's
-  data ships only as `data/vault.enc`: Fernet-encrypted (PBKDF2, 600k
-  iterations) with a key that lives exclusively in the host's environment.
-- The Trading 212 key is **read-only**: worst case is viewing, never trading.
-- The dashboard sits behind a session login; iOS unlocks it with Face ID.
+  enter git in plaintext. Your data is saved only as `data/vault.enc` in your
+  own private repo: Fernet-encrypted (PBKDF2, 600k iterations) with a key that
+  lives only in the host's environment.
+- Sample data is shown only until you add data of your own; it is never mixed
+  into your real numbers.
+- Broker keys are **read-only**: worst case is viewing, never trading.
+- The dashboard sits behind a session login (5 wrong tries per visitor, 50 in
+  total, per 15 minutes). On a host it shows nothing until a password is set.
+  iOS unlocks it with Face ID.
 
 ## 🛠 Stack
 

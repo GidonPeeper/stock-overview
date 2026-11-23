@@ -528,7 +528,8 @@ def replaced_by_statement() -> list[str]:
 def get_holdings() -> list[Holding]:
     accts, st = _sources()
     if not accts and not st:
-        return _sample_holdings()
+        from ..datafiles import demo
+        return _sample_holdings() if demo() else []
     out: list[Holding] = _statement_holdings(st, _statement_label(accts)) if st else []
     for a in accts:
         try:

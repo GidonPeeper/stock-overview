@@ -29,12 +29,11 @@ def _store_path() -> Path:
 
 def load() -> dict:
     path, real = resolve(_FILE)
-    if not path.exists():
-        return {"accounts": [], "sample": not real}
-    try:
-        data = json.loads(path.read_text())
+    sample = not real and path.exists()   # the bundled demo file (demo mode only)
+    try:   # no typed-in balances yet: still show cash in connected accounts
+        data = json.loads(path.read_text()) if path.exists() else {}
     except ValueError:
-        return {"accounts": [], "sample": not real}
+        data = {}
     accounts = [a for a in data.get("accounts", []) if not a.get("auto")]
     accounts += _broker_cash() + _connection_cash()
     total = interest = 0.0
@@ -50,7 +49,7 @@ def load() -> dict:
     return {"accounts": accounts, "total_eur": round(total, 2), "by_type": by_type,
             "interest_eur_yr": round(interest, 2),
             "blended_rate_pct": round(interest / total * 100, 2) if total else 0,
-            "sample": not real, "updated": data.get("updated")}
+            "sample": sample, "updated": data.get("updated")}
 
 
 def _broker_cash() -> list[dict]:

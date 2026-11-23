@@ -228,7 +228,7 @@ HINDSIGHT_METHOD = (
 
 def hindsight() -> dict:
     from .instruments import TICKERS as HIST_TICKER
-    from .instruments import price_currency
+    from .instruments import price_currency, ticker_for
     from .prices import fetch_quotes
 
     trades = sources.all_trades()
@@ -243,7 +243,8 @@ def hindsight() -> dict:
         s["qty"] += t.quantity
         s["proceeds"] += to_eur(t.amount, t.currency)
 
-    tickers = {isin: HIST_TICKER.get(isin, s["ticker"]) for isin, s in sold.items()}
+    tickers = {isin: HIST_TICKER[isin] if isin in HIST_TICKER else (s["ticker"] or ticker_for(isin))
+               for isin, s in sold.items()}
     quotes = fetch_quotes([tk for tk in tickers.values() if tk])
 
     rows = []

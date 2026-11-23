@@ -7,7 +7,7 @@ main._open_holdings_rows(). Amounts come in as EUR and go out in the tax
 currency (GBP for the UK, USD for the US).
 
 Settings (.env, all optional):
-  TAX_RESIDENCE         UK (default), US or NL
+  TAX_RESIDENCE         UK (default), US or NL; anything else (e.g. NONE) turns the card off
   CGT_RATE              your rate in %, default 24 (UK) / 15 (US)
   HARVEST_MIN_LOSS_PCT  smallest loss worth flagging, % of cost (default 10)
   HARVEST_MIN_LOSS      smallest loss worth flagging, in GBP/USD (default 250)
@@ -83,8 +83,10 @@ _LIB_FILE = Path(__file__).with_name("replacements.json")
 
 # ------------------------------------------------------------------ settings
 def residence() -> str:
+    """UK (also when blank), US, NL, or OTHER for anywhere else (tax cards off)."""
     r = (os.getenv("TAX_RESIDENCE") or "UK").strip().upper()
-    return r if r in RESIDENCES else "UK"
+    r = {"GB": "UK", "USA": "US"}.get(r, r)
+    return r if r in RESIDENCES else "OTHER"
 
 
 def _env_float(name: str, default: float) -> float:
@@ -410,6 +412,10 @@ def suggest(rows: list[dict], *, today: date | None = None, res: str | None = No
     res = (res or residence()).upper()
     if res == "NL":
         return _netherlands()
+    if res not in CURRENCY:
+        msg = "Tax-loss tips cover the UK, the US and the Netherlands (TAX_RESIDENCE)."
+        return {"residence": res, "applies": False, "message": msg, "candidates": [],
+                "totals": None, "skipped": [], "notes": [], "how_it_works": [msg], "disclaimer": ""}
 
     ccy = CURRENCY[res]
     rate = _rate(res)

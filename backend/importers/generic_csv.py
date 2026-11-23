@@ -23,7 +23,7 @@ import json
 import re
 import sys
 
-from ..instruments import TICKERS, is_valid_isin, price_currency
+from ..instruments import TICKERS, is_valid_isin, price_currency, ticker_for
 
 FIELDS = ("symbol", "isin", "name", "quantity", "cost", "value", "price", "currency")
 
@@ -261,7 +261,7 @@ def parse(content: bytes, mapping: dict, default_currency: str = "GBP") -> tuple
         if symbol and is_valid_isin(symbol.upper()):
             isin = isin or symbol.upper()
             symbol = ""
-        ticker = TICKERS.get(isin, "") if isin else ""
+        ticker = ticker_for(isin, ccy) if isin else ""
         if not ticker and symbol:
             sym = symbol.upper().replace(" ", "-")
             # a bare symbol is only safe to price live for US listings; others

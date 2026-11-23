@@ -45,9 +45,13 @@ from .prices import fetch_quotes, quotes_status
 from . import (analytics, cache, cash, datafiles, finances, income, insights, market,
                periods, realized, reports, sectors, sources, store, trend, uktax, watch)
 
-# Demo mode = no real data source at all (no broker key, no imported statement):
-# only then do sample holdings and a synthetic trendline make sense.
-DEMO_MODE = not any(v.get("real") for k, v in datafiles.status().items() if not k.startswith("_"))
+
+def _demo() -> bool:
+    """Demo mode = nothing of the user's own yet (no broker key, statement,
+    connected account or typed balance): only then are the sample holdings and
+    a synthetic trendline shown (datafiles.demo)."""
+    return datafiles.demo()
+
 FRONTEND_DIR = Path(__file__).resolve().parents[1] / "frontend"
 
 # Set once the warm-up has computed the main dashboard.
@@ -123,11 +127,45 @@ _PUBLIC = {
 }
 
 
+# Without a password the app is open to anyone who can reach it. That is fine
+# on your own computer, never on a host: there every page except the health
+# check says to set DASHBOARD_PASSWORD first. ALLOW_NO_PASSWORD=1 is for a
+# copy protected some other way (e.g. Cloudflare Access, see HOSTING.md).
+_LOCAL_CLIENTS = {"127.0.0.1", "::1", "localhost", "testclient"}
+_SETUP_PAGE = """<!doctype html><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Set a password</title>
+<body style="font:16px/1.5 system-ui,sans-serif;max-width:560px;margin:48px auto;padding:0 16px">
+<h1 style="font-size:22px">Set a password first</h1>
+<p>This dashboard can be reached from the internet but has no password yet, so it
+shows nothing. In your host's settings (on Render: the service's
+<b>Environment</b> page) add:</p>
+<ul><li><code>DASHBOARD_USER</code>: a username</li>
+<li><code>DASHBOARD_PASSWORD</code>: a long password</li>
+<li><code>DASHBOARD_SECRET</code>: a long random text (it also encrypts your saved data)</li></ul>
+<p>Save, wait for the restart, and reload this page. See SETUP.md in the repo.</p>
+</body>"""
+
+
+def _needs_password(request: Request) -> bool:
+    if _DASH_PASS or os.getenv("ALLOW_NO_PASSWORD") == "1":
+        return False
+    if os.getenv("RENDER"):            # Render sets RENDER=true on every service
+        return True
+    host = request.client.host if request.client else ""
+    proxied = request.headers.get("x-forwarded-for") or request.headers.get("cf-connecting-ip")
+    return bool(proxied) or host not in _LOCAL_CLIENTS
+
+
 @app.middleware("http")
 async def _auth(request: Request, call_next):
-    if not _DASH_PASS:  # auth disabled locally
-        return await call_next(request)
     path = request.url.path
+    if not _DASH_PASS:  # auth disabled on your own computer
+        if _needs_password(request) and path not in ("/healthz", "/sw.js"):
+            if path.startswith("/api"):
+                return Response("Set DASHBOARD_PASSWORD first", status_code=503)
+            return Response(_SETUP_PAGE, status_code=503, media_type="text/html")
+        return await call_next(request)
     if path in _PUBLIC or request.session.get("auth"):
         return await call_next(request)
     if path.startswith("/api"):
@@ -173,13 +211,44 @@ def login_page():
     return FileResponse(FRONTEND_DIR / "login.html")
 
 
+# Wrong passwords: at most 5 per visitor and 50 in total per 15 minutes; then
+# the login waits (a session you already have keeps working). The visitor is
+# told apart by the first forwarded address, which a caller can fake, so the
+# total cap is what really stops guessing.
+_FAIL_WINDOW, _FAIL_PER_CLIENT, _FAIL_TOTAL = 15 * 60, 5, 50
+_fails: dict[str, list[float]] = {}
+_fail_lock = threading.Lock()
+
+
+def _client_key(request: Request) -> str:
+    fwd = (request.headers.get("x-forwarded-for") or "").split(",")[0].strip()
+    return fwd or (request.client.host if request.client else "?")
+
+
+def _login_blocked(key: str, now: float) -> bool:
+    with _fail_lock:
+        for k in list(_fails):
+            _fails[k] = [t for t in _fails[k] if now - t < _FAIL_WINDOW]
+            if not _fails[k]:
+                del _fails[k]
+        return (len(_fails.get(key, ())) >= _FAIL_PER_CLIENT
+                or sum(len(v) for v in _fails.values()) >= _FAIL_TOTAL)
+
+
 @app.post("/login", include_in_schema=False)
 def login(request: Request, username: str = Form(...), password: str = Form(...)):
+    key, now = _client_key(request), time.time()
+    if _login_blocked(key, now):
+        return RedirectResponse("/login?e=2", status_code=303)
     ok = (_DASH_PASS and secrets.compare_digest(username, _DASH_USER)
           and secrets.compare_digest(password, _DASH_PASS))
     if ok:
+        with _fail_lock:
+            _fails.pop(key, None)
         request.session["auth"] = True
         return RedirectResponse("/", status_code=303)
+    with _fail_lock:
+        _fails.setdefault(key, []).append(now)
     return RedirectResponse("/login?e=1", status_code=303)
 
 
@@ -336,14 +405,14 @@ def portfolio() -> dict:
     daily = round(sum(h["daily_eur"] for h in holdings if h["daily_eur"] is not None), 2)
     prev_value = total_value - daily
 
-    if DEMO_MODE:  # sample data: a synthetic trendline (real data: trend.py)
+    if _demo():  # sample data: a synthetic trendline (real data: trend.py)
         store.seed_demo_history(total_value, total_cost)
         store.record_snapshot(total_value, total_cost, realized=realized_total)
 
     return {
         "base_currency": BASE_CURRENCY,
         "fx": display_rates(),
-        "demo_mode": DEMO_MODE,
+        "demo_mode": _demo(),
         # {as_of, refreshing}: quotes older than a minute are shown while a
         # background refresh runs; the UI then says "updating…" and re-polls.
         "quotes": quotes_status([r["ticker"] for r in rows]),
@@ -399,7 +468,7 @@ def profit() -> dict:
 def _history() -> list[dict]:
     """Value and profit per day since the first trade, ending with today's
     live totals (trend.py)."""
-    if DEMO_MODE:
+    if _demo():
         return store.get_history()
     _, total_value, total_cost, _ = _open_holdings_rows()
     inc = income.summary()
@@ -581,10 +650,9 @@ app.include_router(banklink_api.router)
 
 
 def _connections_changed(trades_changed: bool) -> None:
-    """A connection was added/removed: leave demo mode. (The trendline
-    rebuilds itself when the trade history changes, see trend.py.)"""
-    global DEMO_MODE
-    DEMO_MODE = not any(v.get("real") for k, v in datafiles.status().items() if not k.startswith("_"))
+    """A connection was added/removed: leave (or return to) demo mode. (The
+    trendline rebuilds itself when the trade history changes, see trend.py.)"""
+    datafiles.refresh()
 
 
 connections_api.after_change.append(_connections_changed)
@@ -617,7 +685,11 @@ def fx_rates() -> dict:
 @app.get("/api/uk_tax")
 def uk_tax() -> dict:
     """UK tax year so far: realised gains/losses and dividends outside ISAs,
-    ISA allowance used, and the 30-day rule for recent sales."""
+    ISA allowance used, and the 30-day rule for recent sales. Only for UK
+    tax residents (TAX_RESIDENCE); otherwise {"applies": false} and the card hides."""
+    from .harvest import residence
+    if residence() != "UK":
+        return {"applies": False}
     return uktax.summary()
 
 
@@ -638,7 +710,7 @@ def savings() -> dict:
     from . import advisors
 
     rows, *_ = _open_holdings_rows()
-    return advisors.collect(rows, demo=DEMO_MODE)
+    return advisors.collect(rows, demo=_demo())
 
 
 @app.get("/api/headlines")
@@ -809,7 +881,7 @@ def benchmark() -> dict[str, float]:
     """Money-weighted S&P 500 comparison: what the portfolio would be worth today
     if every euro put in (or taken out) had gone into the S&P 500 instead, valued
     on each day of the chart. Directly comparable to the portfolio value curve."""
-    if DEMO_MODE:
+    if _demo():
         return {}
     return trend.benchmark(_history())
 

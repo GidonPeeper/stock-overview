@@ -46,8 +46,9 @@
     <button type="submit">Sign in</button>
   </form>
   <script>
-    if (new URLSearchParams(location.search).get("e") === "1")
-      document.getElementById("err").textContent = "Wrong username or password";
+    const e = new URLSearchParams(location.search).get("e");
+    if (e === "1") document.getElementById("err").textContent = "Wrong username or password";
+    if (e === "2") document.getElementById("err").textContent = "Too many attempts. Try again in 15 minutes.";
   </script>
 </body>
 </html>

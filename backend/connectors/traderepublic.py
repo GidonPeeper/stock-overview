@@ -14,7 +14,7 @@ import json
 from pathlib import Path
 
 from .base import Holding
-from ..instruments import price_currency, ticker_for
+from ..instruments import prefetch, price_currency, ticker_for
 from ..positions import Trade, compute_positions
 
 from ..datafiles import resolve as _resolve_data
@@ -31,6 +31,7 @@ def get_trades() -> list[Trade]:
     if not f.exists():
         return []
     raw = json.loads(f.read_text()).get("trades", [])
+    prefetch({t["isin"]: "EUR" for t in raw if not t.get("ticker")})
     return [
         Trade(
             when=t["date"],
@@ -40,7 +41,7 @@ def get_trades() -> list[Trade]:
             quantity=float(t["quantity"]),
             amount=float(t["amount_eur"]),   # exact EUR
             currency="EUR",
-            ticker=t.get("ticker") or ticker_for(t["isin"]),
+            ticker=t.get("ticker") or ticker_for(t["isin"], "EUR"),
         )
         for t in raw
     ]
