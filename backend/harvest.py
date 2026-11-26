@@ -45,8 +45,17 @@ US (basic): wash sale = buying "substantially identical" stock "within 30 days
   (https://www.irs.gov/taxtopics/tc409). https://www.irs.gov/publications/p550
 NL: box 3 taxes a fictitious return on what you own on 1 January, or (if lower)
   your actual return including unrealised price changes — never the sale
-  itself, so harvesting saves nothing.
+  itself, so harvesting saves nothing. Checked 2026-11-26: the actual return
+  counts "koerswinst of -verlies op aandelen" over the year, and a negative
+  year cannot be carried to another year.
   https://www.belastingdienst.nl/wps/wcm/connect/nl/box-3/content/wat-is-mijn-werkelijk-rendement
+  Announced, not yet law in force: a new box 3 on actual returns, "waarschijnlijk
+  1 januari 2028" (same page). As proposed it taxes shares on yearly price
+  changes, sold or not (not checked on an official page): re-check when it passes.
+The same-day rule and the exact UK matching order are applied to this year's
+gains in uktax.match_disposals(); the cost of each candidate is the broker's
+average cost per account (pooled across accounts), which can differ from the
+section 104 pool after a sale and rebuy within 30 days.
 """
 
 from __future__ import annotations
@@ -67,13 +76,15 @@ from .positions import realized_events
 RESIDENCES = ("UK", "US", "NL")
 CURRENCY = {"UK": "GBP", "US": "USD"}
 SYMBOL = {"GBP": "£", "USD": "$"}
+# UK 24%: higher/additional rate, https://www.gov.uk/capital-gains-tax/rates
+# US 15%: the middle long-term rate, https://www.irs.gov/taxtopics/tc409
 DEFAULT_RATE_PCT = {"UK": 24.0, "US": 15.0}
 DEFAULT_MIN_LOSS_PCT = 10.0
 DEFAULT_MIN_LOSS = 250.0
 UK_EXEMPT = uktax.CGT_ANNUAL_EXEMPT_GBP
-US_ORDINARY_OFFSET = 3000
-REBUY_DAYS = 30  # a rebuy within 30 days after the sale undoes the loss
-CLAIM_YEARS = 4  # UK: claim a loss within 4 years of the end of the tax year
+US_ORDINARY_OFFSET = 3000  # $1,500 if married filing separately (irs.gov/taxtopics/tc409)
+REBUY_DAYS = 30  # a rebuy within 30 days after the sale undoes the loss (CG51560; Pub. 550)
+CLAIM_YEARS = 4  # UK: claim a loss within 4 years of the end of the tax year (gov.uk/capital-gains-tax/losses)
 
 # Accounts whose name or wrapper says tax-free / tax-deferred.
 SHELTERED = {"ISA", "IRA", "ROTH", "SIPP", "401K", "PENSION"}
