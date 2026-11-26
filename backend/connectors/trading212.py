@@ -483,7 +483,9 @@ def _same_account_as_statement(acct: Account) -> bool:
         return False
     try:
         api = account_trades(acct)
-    except requests.RequestException:
+    except requests.RequestException as e:
+        if _transient(e):
+            raise      # not known yet: asked again next time, never cached as "no"
         return False
     stmt = {(t.get("isin"), str(t.get("date", ""))[:10]) for t in st["trades"]}
     mine = {(t.key, t.when[:10]) for t in api}
@@ -501,14 +503,25 @@ def _still_in_use(acct: Account) -> bool:
     try:
         if account_holdings(acct):
             return True
-    except requests.RequestException:
+    except requests.RequestException as e:
+        if _transient(e):
+            raise      # not known yet: asked again next time, never cached as "no"
         return False
     st = _statement() or {}
     end = max((str(t.get("date", ""))[:10] for t in st.get("trades", [])), default="")
     try:
         return any(t.when[:10] > end for t in account_trades(acct))
-    except requests.RequestException:
+    except requests.RequestException as e:
+        if _transient(e):
+            raise
         return False
+
+
+def _transient(err: Exception) -> bool:
+    """A timeout, a dropped connection, 429 or a 5xx: says nothing about the
+    account (unlike 401/403/404 of a closed account or a revoked key)."""
+    resp = getattr(err, "response", None)
+    return resp is None or resp.status_code == 429 or resp.status_code >= 500
 
 
 def _sources() -> tuple[list[Account], dict | None]:
@@ -525,8 +538,16 @@ def _sources() -> tuple[list[Account], dict | None]:
         return accts, None
     keep = []
     for a in accts:
-        if _same_account_as_statement(a):
-            if _still_in_use(a):
+        try:
+            same = _same_account_as_statement(a)
+        except requests.RequestException:
+            same = False   # the API is down right now: decided once it answers
+        if same:
+            try:
+                in_use = _still_in_use(a)
+            except requests.RequestException:
+                in_use = False   # down right now: the statement counts meanwhile
+            if in_use:
                 keep.append(a)
                 st = None
         else:

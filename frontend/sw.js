@@ -8,7 +8,7 @@
    page (it carries the X-Stock-Overview header), that fresh page is used and
    cached. Otherwise the cached page opens and fills itself in when the server
    is up. Redirects (e.g. to /login when signed out) always pass through. */
-const CACHE = "so-shell-v2";   // bump when index.html changes shape, so phones get the new page
+const CACHE = "so-shell-v3";   // bump when index.html changes shape, so phones get the new page
 const WAIT_MS = 1500;
 
 self.addEventListener("install", () => self.skipWaiting());

@@ -11,8 +11,8 @@ import json
 import time
 from pathlib import Path
 
-from .datafiles import DATA_DIR, resolve
-from . import market
+from .datafiles import DATA_DIR, read_json, resolve, write_atomic
+from . import cache, market
 from .prices import fetch_quotes
 
 _FILE = "watchlist.json"
@@ -25,15 +25,13 @@ def _load_raw() -> tuple[list[dict], bool]:
     real = real or not path.exists()     # "sample" = the bundled demo file only
     if not path.exists():
         return [], not real
-    try:
-        return json.loads(path.read_text()).get("tickers", []), not real
-    except ValueError:
-        return [], not real
+    data = read_json(path, {}, lists=("tickers",))   # damaged: DataFileError, never empty
+    return [t for t in data.get("tickers", []) if t.get("ticker")], not real
 
 
 def _save(tickers: list[dict]) -> None:
     DATA_DIR.mkdir(exist_ok=True)
-    (DATA_DIR / _FILE).write_text(json.dumps(
+    write_atomic(DATA_DIR / _FILE, json.dumps(
         {"tickers": tickers, "updated": time.strftime("%Y-%m-%d %H:%M")}, indent=2))
 
 
@@ -92,4 +90,5 @@ def search(query: str, limit: int = 8) -> list[dict]:
         pass
     if out:
         _search_cache[key] = (out, time.time())
+        cache.trim(_search_cache, 200)   # any text can be searched: keep memory bounded
     return out

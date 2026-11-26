@@ -10,6 +10,7 @@ from __future__ import annotations
 
 import os
 import re
+import threading
 import time
 from pathlib import Path
 
@@ -120,7 +121,7 @@ def status() -> dict:
     }
     from .connections import load_all  # accounts added in Settings ("Add an account")
 
-    conns = [c["label"] for c in load_all()]
+    conns = [c.get("label") or c["id"] for c in load_all()]
     out["connections"] = {"real": bool(conns), "accounts": conns, "path": "connections.json",
                           "expected": "accounts added in Settings → Add an account"}
     seen: dict[str, list[str]] = {}
@@ -153,6 +154,76 @@ def save_upload(kind: str, content: bytes) -> Path:
 def save_file(fname: str, content: bytes) -> Path:
     DATA_DIR.mkdir(exist_ok=True)
     dest = DATA_DIR / fname
-    dest.write_bytes(content)
+    write_atomic(dest, content)
     refresh()
     return dest
+
+
+# ------------------------------------------------------- safe reads and writes
+class DataFileError(ValueError):
+    """One of the user's data files exists but cannot be read (damaged, cut
+    off half-way, or not the shape the app writes). The message says which
+    file and what to do; main.py sends it to the browser as the card's error."""
+
+    def __init__(self, path: Path, why: str):
+        self.path = Path(path)
+        super().__init__(
+            f"Your file {self.path.name} could not be read ({why}). Nothing was changed. "
+            f"Restore it from a backup, or move it out of the data folder to start that part again.")
+
+
+def write_atomic(path: Path, content: bytes | str) -> None:
+    """Write `path` so a reader (or a crash, or a full disk) never sees half a
+    file: write a temporary file next to it, then rename it over the old one."""
+    path = Path(path)
+    data = content.encode() if isinstance(content, str) else content
+    tmp = path.with_name(f".{path.name}.{os.getpid()}.{threading.get_ident()}.tmp")
+    try:
+        with open(tmp, "wb") as fh:
+            fh.write(data)
+            fh.flush()
+            os.fsync(fh.fileno())
+        try:
+            os.chmod(tmp, path.stat().st_mode & 0o777)   # keep the old file's permissions
+        except OSError:
+            pass
+        os.replace(tmp, path)
+    except BaseException:
+        try:
+            tmp.unlink()
+        except OSError:
+            pass
+        raise
+
+
+def read_json(path: Path, default, lists: tuple[str, ...] = ()):
+    """The JSON in `path`, or a copy of `default` when there is no file.
+    Raises DataFileError when the file is there but damaged: not JSON, not
+    the same kind of value as `default` (an object, a list), or one of the
+    keys in `lists` is not a list of objects. Callers then show an error
+    instead of an empty (zero) value, and never save over the damaged file."""
+    import copy
+    import json
+
+    path = Path(path)
+    try:
+        raw = path.read_bytes()
+    except FileNotFoundError:
+        return copy.deepcopy(default)
+    except OSError as e:
+        raise DataFileError(path, f"it cannot be opened: {e.strerror or type(e).__name__}") from None
+    try:
+        data = json.loads(raw.decode("utf-8-sig"))
+    except ValueError:
+        raise DataFileError(path, "it is empty or cut off" if len(raw.strip()) < 2 or raw.strip()[-1:] not in b"}]"
+                            else "it is not valid JSON") from None
+    if not isinstance(data, type(default)):
+        raise DataFileError(path, f"expected {'an object' if isinstance(default, dict) else 'a list'}, "
+                                  f"found {type(data).__name__}")
+    for key in lists:
+        if key not in data:
+            continue
+        rows = data[key]
+        if not isinstance(rows, list) or not all(isinstance(r, dict) for r in rows):
+            raise DataFileError(path, f'"{key}" is not a list of entries')
+    return data

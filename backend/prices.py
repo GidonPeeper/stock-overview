@@ -192,15 +192,22 @@ def fetch_quotes(tickers: list[str]) -> dict[str, dict]:
         _refresh_in_background(due)
 
     out: dict[str, dict] = {}
+    today = clock.today()
     for t in tickers:
         c = _CACHE.get(t)
         if c:
-            prev = c[1] if c[4] == clock.today() else c[0]
-            out[t] = {"price": c[0], "prev_close": prev, "currency": c[3]}
-        elif t in SAMPLE_PRICES:
+            # a quote from an earlier day (today's fetch failed) is still the
+            # last known price, but its move is not today's: no "today" change
+            out[t] = {"price": c[0], "prev_close": c[1] if c[4] == today else None, "currency": c[3]}
+        elif t in SAMPLE_PRICES and _demo():   # made-up prices: never for your own holdings
             p, pc = SAMPLE_PRICES[t]
             out[t] = {"price": p, "prev_close": pc, "currency": ""}
     return out
+
+
+def _demo() -> bool:
+    from .datafiles import demo
+    return demo()
 
 
 def quotes_status(tickers: list[str]) -> dict:

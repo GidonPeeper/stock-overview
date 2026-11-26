@@ -21,7 +21,14 @@ endpoints are covered without extra code) or when one of the user's data
 files changes on disk (checked by mtime at most once a second).
 
 Concurrent callers of the same key share one computation, and when a
-recompute raises, the last good value is returned if there is one.
+recompute raises, the last good value is returned if there is one. A failure
+is shared too: for a few seconds (`_ERROR_HOLD`, at most the ttl) callers get
+the same error (or the last good value) at once instead of each waiting for
+another attempt at a source that is down.
+
+Memory stays bounded: keys of one family (the key up to ':' or '(', e.g. one
+entry per set of tickers) beyond `_FAMILY_MAX` are dropped once nobody has
+read them for `_IDLE` seconds. `trim()` does the same for small dict caches.
 """
 
 from __future__ import annotations
@@ -41,13 +48,17 @@ _counter = 0                      # bumped by invalidate()
 _fp: tuple[float, int] = (float("-inf"), 0)  # (checked_at, data-file fingerprint)
 _FP_EVERY = 1.0                   # seconds between data-file mtime checks
 
+_ERROR_HOLD = 10.0                # seconds a failed computation's error is shared
+_FAMILY_MAX = 8                   # entries per key family kept even when idle
+_IDLE = 15 * 60                   # an entry beyond that, unread this long, is dropped
+
 # Last time a person (not a keep-alive ping) asked for data; the background
 # warmer only refreshes while someone is actually using the app.
 last_activity = 0.0
 
 
 class _Entry:
-    __slots__ = ("value", "at", "version", "has_value", "lock", "refreshing")
+    __slots__ = ("value", "at", "version", "has_value", "lock", "refreshing", "error", "used")
 
     def __init__(self) -> None:
         self.value: Any = None
@@ -56,6 +67,8 @@ class _Entry:
         self.has_value = False
         self.lock = threading.RLock()   # single-flight per key
         self.refreshing = False
+        self.error: tuple | None = None  # (exception, version, monotonic time) of the last failure
+        self.used = time.monotonic()
 
 
 # ----------------------------------------------------------------- versions
@@ -131,12 +144,37 @@ def after_request(method: str, path: str, status: int) -> None:
 
 
 # -------------------------------------------------------------------- core
+def _family(key: str) -> str:
+    return key.split(":", 1)[0].split("(", 1)[0]
+
+
+def _evict(family: str, now: float) -> None:
+    """Drop idle entries of `family` beyond _FAMILY_MAX (call with _lock held)."""
+    same = sorted((e.used, k) for k, e in _entries.items() if _family(k) == family)
+    for used, k in same[:max(len(same) - _FAMILY_MAX, 0)]:
+        if now - used > _IDLE:
+            _entries.pop(k, None)
+
+
 def _entry(key: str) -> _Entry:
     e = _entries.get(key)
     if e is None:
         with _lock:
-            e = _entries.setdefault(key, _Entry())
+            e = _entries.get(key)
+            if e is None:
+                _evict(_family(key), time.monotonic())
+                e = _entries[key] = _Entry()
+    e.used = time.monotonic()
     return e
+
+
+def trim(d: dict, limit: int) -> None:
+    """Drop the oldest items of a plain dict used as a cache, beyond `limit`."""
+    while len(d) > limit:
+        try:
+            d.pop(next(iter(d)), None)
+        except (RuntimeError, StopIteration):   # changed by another thread meanwhile
+            return
 
 
 def _out(value: Any, copy: bool) -> Any:
@@ -158,8 +196,10 @@ def _refresh_async(key: str, e: _Entry, fn: Callable[[], Any], data: bool) -> No
             with e.lock:
                 version = data_version() if data else None
                 _store(e, fn(), version)
+                e.error = None
         except Exception as exc:  # keep serving the last good value
-            log.info("background refresh of %s failed: %r", key, exc)
+            e.error = (exc, version, time.monotonic())
+            log.warning("background refresh of %s failed (serving the last good value): %r", key, exc)
         finally:
             e.refreshing = False
 
@@ -183,15 +223,31 @@ def get(key: str, fn: Callable[[], Any], ttl: float, stale: float = 0.0,
         version = data_version() if data else None
         if e.has_value and e.version == version and time.monotonic() - e.at < ttl:
             return _out(e.value, copy)
+        err = e.error
+        if err is not None and err[1] == version and time.monotonic() - err[2] < min(ttl, _ERROR_HOLD):
+            # it failed a moment ago (maybe while this caller waited): no new attempt yet
+            if e.has_value:
+                return _out(e.value, copy)
+            raise err[0].with_traceback(None)
         try:
             value = fn()
-        except Exception:
+        except Exception as exc:
+            e.error = (exc, version, time.monotonic())
             if e.has_value:
-                log.info("recompute of %s failed; serving the last good value", key)
+                log.warning("recompute of %s failed (%r); serving the last good value", key, exc)
                 return _out(e.value, copy)
+            log.warning("computing %s failed: %r", key, exc)
             raise
+        e.error = None
         _store(e, value, version)
         return _out(value, copy)
+
+
+def last_error(key: str) -> BaseException | None:
+    """The error of the latest attempt to compute `key` when it failed (the
+    value served is then an older one), else None."""
+    e = _entries.get(key)
+    return e.error[0] if e is not None and e.error is not None else None
 
 
 def peek(key: str) -> tuple[bool, float | None]:

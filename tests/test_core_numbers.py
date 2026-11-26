@@ -354,8 +354,9 @@ class QuoteDayTest(unittest.TestCase):
 
     def test_quote_from_an_earlier_day_shows_no_change_today(self):
         # Tuesday's quote (100.00, previous close 99.00) is still cached on
-        # Wednesday and Yahoo fails. Its +1.00 is Tuesday's move, so today's
-        # reference is the price itself (no change known today), not 99.00.
+        # Wednesday and Yahoo fails. Its +1.00 is Tuesday's move, not today's:
+        # the price is kept, and today's change is unknown (shown as none,
+        # neither +1.00 nor a made-up 0.00).
         from tests.test_cache import fake_yf
         quotes = {"AAA": (100.0, 99.0, "USD")}
         with mock.patch.dict(sys.modules, {"yfinance": fake_yf(quotes)}):
@@ -364,7 +365,7 @@ class QuoteDayTest(unittest.TestCase):
             prices._CACHE["AAA"] = (p, pc, at, ccy, date.fromordinal(day.toordinal() - 1))
             quotes["AAA"] = RuntimeError("Yahoo is down")
             out = prices.fetch_quotes(["AAA"])["AAA"]
-        self.assertEqual((out["price"], out["prev_close"]), (100.0, 100.0))
+        self.assertEqual((out["price"], out["prev_close"]), (100.0, None))
 
     def test_nan_from_yahoo_is_no_price(self):
         # A NaN price is no quote at all; a NaN previous close is a missing one.

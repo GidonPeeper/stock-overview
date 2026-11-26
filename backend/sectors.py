@@ -32,15 +32,19 @@ def _load_cache() -> dict[str, str]:
         _memory = {}
         if CACHE_FILE.exists():
             try:
-                _memory = json.loads(CACHE_FILE.read_text())
-            except ValueError:
-                pass
+                data = json.loads(CACHE_FILE.read_text())
+            except (OSError, ValueError):
+                data = None
+            # damaged or not {ticker: sector}: look the sectors up again
+            if isinstance(data, dict):
+                _memory = {k: v for k, v in data.items() if isinstance(v, str)}
     return _memory
 
 
 def _save_cache(cache: dict[str, str]) -> None:
+    from .datafiles import write_atomic
     try:
-        CACHE_FILE.write_text(json.dumps(cache, indent=0))
+        write_atomic(CACHE_FILE, json.dumps(cache, indent=0))
     except OSError:
         pass
 

@@ -86,9 +86,12 @@ def _found_map() -> dict[str, dict]:
     global _found
     if _found is None:
         try:
-            _found = json.loads(_FOUND_FILE.read_text())
+            data = json.loads(_FOUND_FILE.read_text())
         except (OSError, ValueError):
-            _found = {}
+            data = {}
+        # damaged or not {isin: {"ticker", "currency"}}: those are looked up again
+        _found = {k: v for k, v in data.items() if isinstance(v, dict) and isinstance(v.get("ticker"), str)} \
+            if isinstance(data, dict) else {}
     return _found
 
 
@@ -168,7 +171,8 @@ def lookup(isin: str, currency: str | None = None) -> str:
         _found_map()[isin] = hit
         try:
             _FOUND_FILE.parent.mkdir(exist_ok=True)
-            _FOUND_FILE.write_text(json.dumps(_found_map(), indent=1, sort_keys=True))
+            from .datafiles import write_atomic
+            write_atomic(_FOUND_FILE, json.dumps(_found_map(), indent=1, sort_keys=True))
         except OSError:
             pass
     return hit["ticker"]

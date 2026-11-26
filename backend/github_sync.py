@@ -52,6 +52,13 @@ _pulled: bool | None = None   # None: not tried / no token; False: cloud copy un
 _restored_at = 0.0        # files older than this came from a vault, not from an edit
 
 
+def _save_vault(content: bytes) -> None:
+    """Store a fetched vault; never half-written (temp file, then rename)."""
+    from . import vault
+    from .datafiles import write_atomic
+    write_atomic(vault.VAULT, content)
+
+
 def _spawn(fn) -> None:   # replaced in tests to run synchronously
     threading.Thread(target=fn, daemon=True).start()
 
@@ -147,7 +154,7 @@ def pull_vault(attempts: int = 3) -> bool:
         if content is None:
             return False
         vault.DATA_DIR.mkdir(exist_ok=True)
-        vault.VAULT.write_bytes(content)
+        _save_vault(content)
         return True
     with _lock:
         _pulled = False
@@ -196,7 +203,7 @@ def _take_old_copy(old: str) -> bool:
     if content is None:
         return False
     vault.DATA_DIR.mkdir(exist_ok=True)
-    vault.VAULT.write_bytes(content)
+    _save_vault(content)
     return True
 
 

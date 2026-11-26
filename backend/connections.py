@@ -58,6 +58,7 @@ import dataclasses
 import functools
 import hashlib
 import json
+import logging
 import os
 import secrets
 import threading
@@ -71,6 +72,8 @@ from .connectors.base import Holding
 from .connectors.live import ConnectorError, Snapshot, consent
 from .datafiles import DATA_DIR, resolve
 from .fx import to_eur
+
+log = logging.getLogger("stock_overview.connections")
 
 FILE = "connections.json"
 HOLDINGS_FILE = "manual_holdings.json"
@@ -95,6 +98,7 @@ _cache: dict[str, tuple[Snapshot, float]] = {}      # id -> (snapshot, fetched_a
 _failed: dict[str, tuple[float, float]] = {}        # id -> (failed_at, seconds to wait)
 _inflight: dict[str, object] = {}                    # id -> Future
 _read_cache: dict[str, tuple[float, object]] = {}    # file name -> (mtime, parsed)
+damaged: dict[str, str] = {}                        # file name -> why it could not be read
 
 
 # ------------------------------------------------------------------- files
@@ -128,8 +132,16 @@ def _read(name: str, default):
             return _copy(hit[1])
         try:
             data = json.loads(path.read_text())
-        except (ValueError, OSError):
+            if not isinstance(data, type(default)):
+                raise ValueError(f"expected {type(default).__name__}, found {type(data).__name__}")
+        except (ValueError, OSError) as e:
+            # Damaged (cut off, edited by hand): run without it, say so, and
+            # keep the file aside before anything is saved over it (_write).
+            if name not in damaged:
+                log.warning("%s could not be read (%s); running without it", name, e)
+            damaged[name] = f"{type(e).__name__}: {e}"[:200]
             return copy.deepcopy(default)
+        damaged.pop(name, None)
         _read_cache[name] = (mtime, data)
         return _copy(data)
 
@@ -137,16 +149,28 @@ def _read(name: str, default):
 def _write(name: str, data) -> None:
     path = _file(name)
     path.parent.mkdir(parents=True, exist_ok=True)
-    tmp = path.with_name(f".{path.name}.{os.getpid()}.tmp")
-    tmp.write_text(json.dumps(data, indent=1, ensure_ascii=False))
-    os.replace(tmp, path)
     with _lock:
+        if name in damaged and path.exists():
+            # never save over a damaged file: keep it for the user to recover
+            keep = path.with_name(f"{path.name}.damaged-{time.strftime('%Y%m%d-%H%M%S')}")
+            os.replace(path, keep)
+            log.warning("%s was damaged; kept as %s before saving a new one", name, keep.name)
+            damaged.pop(name, None)
+        tmp = path.with_name(f".{path.name}.{os.getpid()}.{threading.get_ident()}.tmp")
+        tmp.write_text(json.dumps(data, indent=1, ensure_ascii=False))
+        os.replace(tmp, path)
         _read_cache.pop(name, None)
 
 
 def load_all() -> list[dict]:
     data = _read(FILE, {"connections": []})
-    return [c for c in data.get("connections", []) if isinstance(c, dict) and c.get("id")]
+    conns = data.get("connections")
+    out = []
+    for c in conns if isinstance(conns, list) else []:
+        if isinstance(c, dict) and isinstance(c.get("id"), str) and c["id"]:
+            c.setdefault("label", c.get("institution_name") or c.get("institution") or c["id"])
+            out.append(c)
+    return out
 
 
 def _save_all(conns: list[dict], apps: dict | None = None) -> None:

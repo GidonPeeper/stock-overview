@@ -116,6 +116,9 @@
     .link-btn:hover{ background:var(--accent-bg); }
     .empty{ color:var(--muted); font-size:13.5px; padding:4px 0; line-height:1.55; }
     .empty a{ font-weight:600; }
+    .notice{ border:1px solid var(--amber); border-radius:12px; padding:10px 14px; margin:0 0 14px; font-size:13px; line-height:1.5; color:var(--text); background:var(--panel); overflow-wrap:anywhere; }
+    .notice ul{ margin:4px 0 0; padding-left:18px; }
+    .linkbtn{ background:none; border:0; padding:0; color:var(--accent); font:inherit; font-weight:600; cursor:pointer; text-decoration:underline; }
     .note{ font-size:12px; color:var(--faint); margin-top:12px; line-height:1.5; }
 
     /* loading placeholders: fixed height, so nothing jumps when data arrives */
@@ -216,6 +219,7 @@
     /* allocation */
     .alloc{ display:flex; gap:20px; align-items:center; flex-wrap:wrap; }
     .alloc .donut{ position:relative; width:180px; height:180px; flex:0 0 180px; margin:0 auto; }
+    .alloc .donut canvas{ max-width:100%; max-height:100%; }   /* before the chart draws (data still loading) */
     .alloc .legend{ flex:1; min-width:220px; }
     .lg{ display:flex; align-items:center; gap:8px; padding:6px 0; border-bottom:1px solid var(--border); font-size:13.5px; }
     .lg:last-child{ border-bottom:none; }
@@ -316,9 +320,10 @@
         <button class="iconbtn" id="ccybtn" onclick="toggleCcy()" title="Show amounts in pounds or euros" aria-label="Switch currency">€</button>
         <button class="iconbtn" id="themebtn" onclick="toggleTheme()" title="Light or dark" aria-label="Switch light or dark">☀</button>
         <a class="iconbtn" href="/settings" title="Settings: accounts and data" aria-label="Settings">⚙</a>
-        <button class="iconbtn" onclick="loadAll()" title="Refresh" aria-label="Refresh">↻</button>
+        <button class="iconbtn" onclick="refreshAll()" title="Refresh" aria-label="Refresh">↻</button>
       </div>
     </header>
+    <div id="notice" class="notice" role="status" hidden></div>
 
     <nav class="tabbar" aria-label="Sections">
       <button data-page="overview" aria-current="page" onclick="showPage('overview')"><svg viewBox="0 0 24 24"><path d="M3 3v18h18"/><path d="M7 14l3-4 3 3 5-7"/></svg>Overview</button>
@@ -736,7 +741,9 @@
     const arrow=n=>n>0.004?"▲ ":n<-0.004?"▼ ":"";
     const dateGB=iso=>new Date(iso+"T12:00:00").toLocaleDateString("en-GB",{day:"numeric",month:"short",year:"numeric"});
     function empty(el,html){ el=typeof el==="string"?$(el):el; if(!el) return; el.className="empty"; el.innerHTML=html; }
-    const failed=(id,what)=>empty(id,(what||"This")+" could not load right now. Press ↻ at the top to try again.");
+    // A card whose data could not load: says so, with the server's reason when it gave one, and a retry.
+    const failed=(id,what,err)=>empty(id,esc((what||"This")+" could not load right now."+(err&&err.detail?" "+err.detail:""))+
+      ' <button class="linkbtn" onclick="refreshAll()">Try again</button>');
 
     /* ---- theme ---- */
     (function(){ let t=null; try{ t=localStorage.getItem("theme"); }catch(e){}
@@ -778,12 +785,26 @@
     }
     let PORT,PROFIT,HISTORY=[],CLOSED,SPARKS={},CASH=null,PROJ=null,chartMode="profit",sortBy="value",allocBy="sector";
     let chart,ac,dchart,incChart,detailTicker=null,detailRange="1mo",BENCH=null,benchmarkOn=false,chartRange="all",current="overview";
-    async function fetchJSON(url){
-      const r=await fetch(url);
-      if(r.status===401){ location.href="/login"; const e=new Error("login required"); e.auth=true; throw e; }
-      if(!r.ok) throw new Error(url+" "+r.status);
-      return r.json();   // a host's "waking up" page is not JSON: throws, so callers retry
+    // Every API call: never waits for ever (a card that cannot load says so),
+    // and a failure carries the server's reason ({"detail": "..."}) when there is one.
+    async function fetchJSON(url,ms){
+      const ctl=window.AbortController?new AbortController():null;
+      const timer=ctl&&setTimeout(()=>ctl.abort(),ms||60000);
+      try{
+        let r;
+        try{ r=await fetch(url,ctl?{signal:ctl.signal}:undefined); }
+        catch(e){ const err=new Error(url+" unreachable"); err.detail=e&&e.name==="AbortError"?"The server took too long to answer.":""; throw err; }
+        if(r.status===401){ location.href="/login"; const e=new Error("login required"); e.auth=true; throw e; }
+        if(!r.ok){
+          const e=new Error(url+" "+r.status);
+          try{ const b=await r.json(); if(b&&typeof b.detail==="string") e.detail=b.detail; }catch(_){}
+          throw e;
+        }
+        return await r.json();   // a host's "waking up" page is not JSON: throws, so callers retry
+      } finally { if(timer) clearTimeout(timer); }
     }
+    // ↻ and every "Try again": the dashboard numbers and the cards of the open tab, again.
+    function refreshAll(){ loaded.delete(current); loadAll(); loadPage(current); }
     /* ---- last good data, kept on this device so the next visit paints at once ---- */
     const SNAP_KEY="so.snap.v1";
     function loadSnap(){ try{ return JSON.parse(localStorage.getItem(SNAP_KEY)||"null"); }catch(e){ return null; } }
@@ -826,7 +847,7 @@
       if(name==="holdings"&&!loaded.has("holdings")){ loaded.add("holdings"); loadWatchlist(); loadEarnings(); }
       if(name==="income"){ if(!loaded.has("income")){ loaded.add("income"); loadIncome(); } else if(INC_YEARS) renderIncomeYears(); renderReceived(); }
       if(name==="analysis"){ if(!loaded.has("analysis")){ loaded.add("analysis"); loadAnalysis(); } else if(PROJ) renderProjection(); }
-      if(name==="money"&&!loaded.has("money")){ loaded.add("money"); loadSavings(); fetchJSON("/api/uk_tax").then(renderUkTax).catch(()=>failed("uktax","The tax summary")); }
+      if(name==="money"&&!loaded.has("money")){ loaded.add("money"); loadSavings(); fetchJSON("/api/uk_tax").then(renderUkTax).catch(e=>failed("uktax","The tax summary",e)); }
     }
 
     /* ---- welcome: only while the app shows sample data ---- */
@@ -851,7 +872,7 @@
         $("brief-date").textContent=b.date;
         const el=$("brief-body"); el.className="";
         el.innerHTML=b.summary.map(p=>`<p style="margin:0 0 9px">${p}</p>`).join("");
-      }).catch(()=>failed("brief-body","The summary"));
+      }).catch(e=>failed("brief-body","The summary",e));
       loadHealth();
       loadStressCorr();
       loadProjection();
@@ -873,7 +894,7 @@
            <div class="bar">${ccy.map((c,i)=>`<div title="${c.currency} ${c.pct}%" style="width:${c.pct}%;background:${PALETTE[i%PALETTE.length]}"></div>`).join("")}</div>
            <div style="display:flex;gap:14px;flex-wrap:wrap;margin-top:6px;font-size:12.5px;color:var(--muted)">${
              ccy.map((c,i)=>`<span><span style="color:${PALETTE[i%PALETTE.length]}">●</span> ${c.currency} ${c.pct}%</span>`).join("")}</div>` : "";
-      }).catch(()=>empty("ana-stats","Needs about a month of price history for your holdings. It fills in on its own."));
+      }).catch(e=>failed("ana-stats","The risk numbers",e));
     }
 
     /* ---- holdings tab extras ---- */
@@ -884,7 +905,7 @@
         const el=$("earnings"); el.className="";
         el.innerHTML=rows.map(r=>`<div class="row"><span>${esc(nameOf(r.ticker)||r.ticker)} <span class="tag">${esc(r.ticker)}</span></span>
            <span class="r-end num">${dateGB(r.date)}<span class="r-sub">in ${r.days_away} day${r.days_away===1?"":"s"}</span></span></div>`).join("");
-      }).catch(()=>failed("earnings","Results dates"));
+      }).catch(e=>failed("earnings","Results dates",e));
     }
 
     /* ---- "More" (analysis tab): loaded only when opened ---- */
@@ -897,14 +918,14 @@
           `<div class="row"><span><b>${esc(p.symbol)}</b> <span class="muted">${esc(p.name)}</span>
              <span class="r-sub">${esc(p.from_screener)} · ${p.market_cap?("$"+(p.market_cap/1e9).toFixed(1)+"B company"):"size unknown"}${p.pe?(" · P/E "+p.pe):""}</span></span>
            <span class="r-end"><span class="num ${cls(p.change_pct)}">${pct(p.change_pct)}</span><span class="r-sub">score ${p.score}</span></span></div>`).join("");
-      }).catch(()=>{ loaded.delete("stars"); failed("rising-stars","The screener"); });
+      }).catch(e=>{ loaded.delete("stars"); failed("rising-stars","The screener",e); });
     });
     $("more-news").addEventListener("toggle",e=>{ if(!e.target.open||loaded.has("news")) return; loaded.add("news");
       fetchJSON("/api/headlines").then(items=>{
         if(!items.length) return empty("headlines","No headlines right now.");
         const el=$("headlines"); el.className="news";
         el.innerHTML=items.map(n=>`<a href="${esc(n.url)}" target="_blank" rel="noopener">${esc(n.title)}<div class="src">${esc(n.source)}</div></a>`).join("");
-      }).catch(()=>{ loaded.delete("news"); failed("headlines","Headlines"); });
+      }).catch(e=>{ loaded.delete("news"); failed("headlines","Headlines",e); });
     });
 
     /* ---- net worth (money tab), grouped by asset class ---- */
@@ -955,7 +976,7 @@
     }
     function loadCash(){
       fetchJSON("/api/cash").then(c=>{ CASH=c; renderMoney(); renderCashOpt(); renderReceived(); saveSnap(); })
-        .catch(()=>failed("money","Your balances"));
+        .catch(e=>{ failed("money-body","Your balances",e); failed("cashopt","Your balances",e); });
     }
 
     /* ---- cash interest: most interest, insured & safe ---- */
@@ -1008,7 +1029,7 @@
     /* ---- finances: loans, income, payments ---- */
     let FIN=null;
     function loadFinances(){
-      fetchJSON("/api/finances").then(f=>{ FIN=f; renderMoney(); renderFixed(); saveSnap(); }).catch(()=>failed("fixedflow","Your budget"));
+      fetchJSON("/api/finances").then(f=>{ FIN=f; renderMoney(); renderFixed(); saveSnap(); }).catch(e=>failed("fixedflow","Your budget",e));
     }
     function fmtYM(ym){ if(!ym) return null;
       const [y,m]=ym.split("-"); return new Date(y,m-1,1).toLocaleDateString("en-GB",{month:"long",year:"numeric"}); }
@@ -1058,7 +1079,7 @@
               <div style="height:6px;background:var(--panel2);border-radius:4px;margin-top:4px">
                 <div style="width:${p}%;height:6px;border-radius:4px;background:${p>=70?'var(--green)':p>=40?'var(--amber)':'var(--red)'}"></div></div></div>`;
           }).join("");
-      }).catch(()=>empty("health","Needs holdings with price history to work out a score."));
+      }).catch(e=>failed("health","The health score",e));
     }
 
     /* ---- stress + correlation (analysis tab) ---- */
@@ -1070,7 +1091,7 @@
         el.innerHTML=s.scenarios.map(x=>
           `<div class="row"><span>${esc(x.name)}<span class="r-sub">${esc(x.detail)}</span></span>
            <span class="num r-end ${cls(x.impact_eur)}" style="font-weight:600">${signed0(x.impact_eur)}</span></div>`).join("");
-      }).catch(()=>empty("stress","Needs holdings with price history."));
+      }).catch(e=>failed("stress","What-if scenarios",e));
       fetchJSON("/api/correlation").then(c=>{
         $("corr-method").textContent=(c.method||"")+" 1 = always move together, 0 = unrelated, −1 = move in opposite directions.";
         if((c.tickers||[]).length<2) return empty("corr","Needs at least two holdings with a ticker symbol. Add another account or holding to see how they move together.");
@@ -1091,13 +1112,13 @@
             c.matrix[i].map((v,j)=>`<td title="${esc(c.tickers[i])} and ${esc(c.tickers[j])}: ${v}" style="width:18px;height:18px;${cell(v)}"></td>`).join("")+"</tr>";
         }
         el.innerHTML=html+"</table><div class='note'>Green = they move differently, which spreads your risk. Red = they move together.</div>";
-      }).catch(()=>failed("corr","Diversification"));
+      }).catch(e=>failed("corr","Diversification",e));
     }
 
     /* ---- watchlist + global search ---- */
     let WATCH=null, searchTimer;
     function loadWatchlist(){
-      fetchJSON("/api/watchlist").then(w=>{ WATCH=w; renderWatchlist(); }).catch(()=>failed("watchlist","Your watchlist"));
+      fetchJSON("/api/watchlist").then(w=>{ WATCH=w; renderWatchlist(); }).catch(e=>failed("watchlist","Your watchlist",e));
     }
     function renderWatchlist(){
       const el=$("watchlist");
@@ -1253,7 +1274,7 @@
           <span class="num r-end ${r.delta_eur>0?'neg':'pos'}" style="font-weight:600">${r.delta_eur>0?"−":"+"}${money0(Math.abs(r.delta_eur))}</span></div>`;
         el.innerHTML=(h.regrets.length?`<div class="grp-h muted"><span>Sold too early</span></div>`+h.regrets.map(row).join(""):"")+
           (h.good_exits.length?`<div class="grp-h muted"><span>Good time to sell</span></div>`+h.good_exits.map(row).join(""):"");
-      }).catch(()=>failed("hindsight","Hindsight"));
+      }).catch(e=>failed("hindsight","Hindsight",e));
     }
 
     /* ---- trade cost comparison (fees are approximate + disclosed) ---- */
@@ -1287,7 +1308,7 @@
 
     /* ---- ways to save (money tab): tips ranked by saving; {{n}} in text = n EUR ---- */
     function loadSavings(){
-      fetchJSON("/api/savings").then(renderSavings).catch(()=>failed("savings","Saving tips"));
+      fetchJSON("/api/savings").then(renderSavings).catch(e=>failed("savings","Saving tips",e));
     }
     function renderSavings(s){
       const el=$("savings"); el.className="";
@@ -1333,7 +1354,7 @@
           ip.holdings.slice(0,8).map(r=>`<div class="row"><span>${esc(r.name)} <span class="tag">${esc(r.ticker)}</span>
              <span class="r-sub">dividend yield ${r.yield_pct}%</span></span>
            <span class="num r-end pos" style="font-weight:600">${money(r.annual_eur)} a year</span></div>`).join("")+cashInt;
-      }).catch(()=>failed("income-proj","Expected income"));
+      }).catch(e=>failed("income-proj","Expected income",e));
       fetchJSON("/api/annual_report").then(ar=>{
         INC_YEARS=ar.years||[];
         renderIncomeYears();
@@ -1345,11 +1366,12 @@
             <span>${y.year}</span><span class="num ${cls(y.realized_eur)}" style="text-align:right">${signed(y.realized_eur)}</span>
             <span class="num" style="text-align:right">${money(y.dividends_eur)}</span>
             <span class="num ${cls(y.total_eur)}" style="text-align:right;font-weight:650">${signed(y.total_eur)}</span></div>`).join("");
-      }).catch(()=>{ failed("annual","The year-by-year report"); $("inc-years-empty").hidden=false; $("inc-years-empty").textContent="The yearly chart could not load right now."; });
+      }).catch(e=>{ failed("annual","The year-by-year report",e); $("inc-years-empty").hidden=false; $("inc-years-empty").textContent="The yearly chart could not load right now."; });
     }
     function renderReceived(){
       if(!PORT) return;
       const t=PORT.totals, el=$("inc-received");
+      if(t.income==null) return empty(el,"Dividends and interest could not be read just now. The note at the top says why.");
       const by=Object.entries(PORT.income_by_broker||{}).filter(([,v])=>Math.abs(v.dividends)+Math.abs(v.interest)+Math.abs(v.fees)>0.004);
       if(Math.abs(t.income)<0.005&&Math.abs(t.fees)<0.005)
         return empty(el,"No dividends or interest recorded yet. They show here when your broker statement or key includes them.");
@@ -1409,7 +1431,7 @@
     let HARVEST=null;
     function loadHarvest(){
       fetchJSON("/api/harvest").then(h=>{ HARVEST=h; renderHarvest(); renderOpen(); })
-        .catch(()=>failed("harvest","Tax-loss harvesting"));
+        .catch(e=>failed("harvest","Tax-loss harvesting",e));
     }
     function harvestTag(r){
       return HARVEST&&(HARVEST.candidates||[]).some(c=>c.isin?c.isin===r.isin:c.ticker===r.ticker)
@@ -1454,13 +1476,16 @@
         })(t0);
       } else vEl.textContent=money(target);
       const d=PORT.totals.daily,dp=PORT.totals.daily_pct,el=$("v-today");
-      if(d===null||d===undefined){ el.className="today muted"; el.innerHTML='<span class="small">No price change yet today</span>'; }
+      // no holding has a move for today (no live prices): the server's 0 is "unknown", not "flat"
+      const noneKnown=PORT.holdings.length&&!PORT.holdings.some(h=>h.daily_eur!=null);
+      if(noneKnown&&(PORT.quotes||{}).unpriced){ el.className="today muted"; el.innerHTML='<span class="small">Today’s change not known yet (no live prices)</span>'; }
+      else if(d===null||d===undefined){ el.className="today muted"; el.innerHTML='<span class="small">No price change yet today</span>'; }
       else { el.className="today "+cls(d); el.innerHTML=`${arrow(d)}${signed(d)} (${pct(dp)}) today`; }
       renderReturn();
     }
     function renderReturn(){
       const t=PORT.totals, n=$("p-num");
-      n.textContent=signed(t.total_return); n.className="tr-num num "+cls(t.total_return);
+      n.textContent=t.total_return==null?"—":signed(t.total_return); n.className="tr-num num "+(t.total_return==null?"flat":cls(t.total_return));
       $("p-desc").textContent=t.cost?`since your first trade · ${money(t.cost)} paid for what you hold now`:"since your first trade";
       const rows=[
         ["Price gains on what you hold", t.unrealized, t.cost?pct(t.unrealized_pct):""],
@@ -1470,7 +1495,7 @@
       ];
       if(Math.abs(t.fees||0)>0.004) rows.push(["Fees outside trades", t.fees]);
       const el=$("tr-break"); el.className="kv";
-      el.innerHTML=rows.map(([k,v,x])=>`<div class="r"><span class="k">${k}</span><span class="v num ${cls(v)}">${signed(v)}${x?` <span class="small">${x}</span>`:""}</span></div>`).join("");
+      el.innerHTML=rows.map(([k,v,x])=>`<div class="r"><span class="k">${k}</span><span class="v num ${v==null?"flat":cls(v)}">${v==null?"—":signed(v)}${x?` <span class="small">${x}</span>`:""}</span></div>`).join("");
     }
     function renderMovers(){
       const el=$("movers"); el.className="movers-grid";
@@ -1689,32 +1714,46 @@
     }
     function renderPeriods(){
       const el=$("period-stats"),p=PROFIT?PROFIT.periods:{};
-      const items=[["Today",PORT.totals.daily]]; [["This week","week"],["This month","month"],["This year","year"]].forEach(([lab,k])=>items.push([lab,p[k]===undefined?null:p[k]]));
+      const noLive=PORT.holdings.length&&!PORT.holdings.some(h=>h.daily_eur!=null)&&(PORT.quotes||{}).unpriced;
+      const items=[["Today",noLive?null:PORT.totals.daily]]; [["This week","week"],["This month","month"],["This year","year"]].forEach(([lab,k])=>items.push([lab,p[k]===undefined?null:p[k]]));
       el.innerHTML=items.map(([k,v])=>`<div class="stat"><div class="k">${k}</div><div class="v num ${v==null?'flat':cls(v)}">${v==null?'—':signed(v)}</div></div>`).join("");
       $("period-note").textContent="Price move of what you hold now."+(PROFIT&&PROFIT.coverage_pct<100?` Covers ${PROFIT.coverage_pct}% of your holdings (the rest has no price history).`:"");
     }
     const hhmm=t=>new Date(t).toLocaleTimeString("en-GB",{hour:"2-digit",minute:"2-digit"});
     function setLive(html){ const el=$("live"); if(el) el.innerHTML=html; }
-    function setUpdated(refreshing){
+    function setUpdated(refreshing,q){
       document.body.classList.remove("is-stale");
+      const asOf=q&&q.as_of?q.as_of*1000:0, old=asOf&&Date.now()-asOf>15*60000;   // prices Yahoo could not refresh
+      const noLive=PORT&&PORT.holdings.length&&!PORT.holdings.some(h=>h.priced_live);   // none at all
       setLive(refreshing ? `<span class="dot amber"></span>Updating prices… · ${hhmm(Date.now())}`
-                         : `<span class="dot"></span>Live · updated ${hhmm(Date.now())}`);
+            : noLive ? `<span class="dot amber"></span>No live prices right now · updated ${hhmm(Date.now())}`
+            : old ? `<span class="dot amber"></span>Prices from ${when(asOf)} (could not refresh them yet)`
+                  : `<span class="dot"></span>Live · updated ${hhmm(Date.now())}`);
     }
-    function setStale(at){   // showing the numbers saved on this device last time
+    const when=at=>{ const d=new Date(at); return d.toDateString()===new Date().toDateString()?hhmm(at):d.toLocaleDateString("en-GB",{day:"numeric",month:"short"})+" "+hhmm(at); };
+    function setStale(at,failedNow){   // showing the numbers saved on this device last time
       document.body.classList.add("is-stale");
-      const d=new Date(at), today=d.toDateString()===new Date().toDateString();
-      setLive(`<span class="dot amber"></span>Updating… · showing ${today?hhmm(at):d.toLocaleDateString("en-GB",{day:"numeric",month:"short"})+" "+hhmm(at)}`);
+      setLive(`<span class="dot amber"></span>${failedNow?"Could not refresh":"Updating…"} · showing ${when(at)}`);
+    }
+    /* ---- what the numbers leave out right now (a source down, no live price, fixed exchange rates) ---- */
+    function renderNotice(){
+      const el=$("notice"); if(!el||!PORT) return;
+      const q=PORT.quotes||{}, items=(PORT.problems||[]).map(p=>`<b>${esc(p.source)}:</b> ${esc(p.message)}`);
+      if(q.unpriced) items.push(`${q.unpriced} holding${q.unpriced===1?" has":"s have"} no live price and ${q.unpriced===1?"is":"are"} counted at what you paid.`);
+      if(q.fx_live===false&&PORT.holdings.some(h=>h.currency&&h.currency!=="EUR")) items.push("Live exchange rates could not be loaded: amounts in other currencies use built-in rates for now.");
+      el.hidden=!items.length;
+      el.innerHTML=items.length?`<b>Some numbers are incomplete right now.</b><ul>${items.map(i=>`<li>${i}</li>`).join("")}</ul>`:"";
     }
 
     // One /api/portfolio request at a time, shared by the first load and the live refresh.
-    let portReq=null, quickPolls=0;
+    let portReq=null, quickPolls=0, lastOk=0;
     function getPortfolio(){ return portReq||(portReq=fetchJSON("/api/portfolio").finally(()=>{ portReq=null; })); }
     function applyPortfolio(p,full){
-      PORT=p; setFX(p.fx); setDemo(p.demo_mode);
-      renderHero(); renderMovers(); renderOpen(); renderPeriods(); renderReceived();
+      PORT=p; lastOk=Date.now(); setFX(p.fx); setDemo(p.demo_mode);
+      renderHero(); renderMovers(); renderOpen(); renderPeriods(); renderReceived(); renderNotice();
       if(full){ renderAllocation(); renderMoney(); }
       const refreshing=!!(p.quotes&&p.quotes.refreshing);
-      setUpdated(refreshing);
+      setUpdated(refreshing,p.quotes);
       saveSnap();
       // prices were a little old and are being refreshed on the server: ask again shortly
       if(refreshing&&quickPolls<5){ quickPolls++; setTimeout(refreshLive,4000); } else if(!refreshing) quickPolls=0;
@@ -1729,12 +1768,14 @@
         if(e.auth) return;
         setLive(`<span class="dot amber"></span>${PORT?"Updating":"Loading"}… the server may be waking up (this can take a minute on free hosting)`);
         if(attempt<40) setTimeout(()=>loadAll(attempt+1),Math.min(2000+attempt*1000,6000));  // keep trying ~4 min
+        else setLive(`<span class="dot amber"></span>Could not reach the server${PORT?" · showing "+when(lastOk||Date.now()):""}. <button class="linkbtn" onclick="refreshAll()">Try again</button>`);
         return;
       }
       applyPortfolio(p,true);
       // Not needed for the first screen, so they never hold it up.
-      fetchJSON("/api/closed").then(c=>{ CLOSED=c; renderClosed(); saveSnap(); }).catch(()=>{});
-      fetchJSON("/api/history").then(h=>{ HISTORY=h; histLoaded=true; renderChart(); saveSnap(); }).catch(()=>{});
+      fetchJSON("/api/closed").then(c=>{ CLOSED=c; renderClosed(); saveSnap(); }).catch(e=>{ if(!CLOSED) failed("closed-rows","What you sold",e); });
+      fetchJSON("/api/history").then(h=>{ HISTORY=h; histLoaded=true; renderChart(); saveSnap(); })
+        .catch(e=>{ if(!HISTORY.length){ $("chart-wrap").hidden=true; failed("chart-sub","The chart",e); } });
       fetchJSON("/api/profit").then(d=>{ PROFIT=d; renderPeriods(); saveSnap(); }).catch(()=>{});
       fetchJSON("/api/indices").then(renderTicker).catch(()=>renderTicker([]));
       fetchJSON("/api/sparklines").then(s=>{ SPARKS=s; renderOpen(); }).catch(()=>{});
@@ -1747,7 +1788,8 @@
     }
     async function refreshLive(){
       if(document.hidden||!firstLoadDone) return;
-      try{ applyPortfolio(await getPortfolio(),false); }catch(e){ return; }
+      try{ applyPortfolio(await getPortfolio(),false); }
+      catch(e){ if(!e.auth&&lastOk) setStale(lastOk,true); return; }   // keep the last numbers, marked as old
       fetchJSON("/api/profit").then(d=>{ PROFIT=d; renderPeriods(); }).catch(()=>{});
     }
     function boot(){
