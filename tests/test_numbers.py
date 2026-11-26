@@ -155,6 +155,22 @@ class TrendMoneyTest(Clean):
         self.assertEqual([p["total_cost"] for p in pts], [1250.0, 1250.0, 1200.0, 1200.0, 1200.0])
         self.assertEqual([p["total_profit"] for p in pts], [0.0, 0.0, 120.0, 120.0, 120.0])
 
+    def test_sp500_comparison_takes_a_pound_account_s_money_at_the_day_s_rate(self):
+        # The pound account puts GBP 1,000 in on day 1, when GBP 1 = EUR 1.25: the
+        # value line rises by EUR 1,250 that day. The same money in the S&P 500
+        # (EUR 100 a unit all week: $100, EUR/USD 1.00) buys 12.5 units = EUR 1,250.
+        # Old code converted the GBP 1,000 at today's EUR 1.20: EUR 1,200 (12 units).
+        gbp = [Trade("2024-01-02", "GB0000000001", "London share", "BUY", 100, 1000.0,
+                     currency="GBP", ticker="XX.L")]
+        close = frame({"XX.L": [10.0] * 5, "EURGBP=X": [0.8, 0.8, 1 / 1.2, 1 / 1.2, 1 / 1.2],
+                       "EURUSD=X": [1.0] * 5, "^GSPC": [100.0] * 5}, DAYS)
+        with rates(GBP=1.2), mock.patch.object(
+                sources, "trade_sources", return_value={"T212 ISA": ("trading212", lambda: gbp)}):
+            pts = self.build(trend._accounts(), close)
+            bench = trend.benchmark(pts)
+        self.assertEqual(pts[0]["total_value"], 1250.0)
+        self.assertEqual(list(bench.values()), [1250.0] * 5)
+
     def test_pound_account_sale_moves_no_profit(self):
         # Same account; it sells all 100 shares at GBP 11 (GBP 1,100) on day 3
         # (GBP 1 = EUR 1.20). Realized = GBP 100 = EUR 120; value falls to 0.

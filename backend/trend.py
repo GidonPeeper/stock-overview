@@ -251,9 +251,14 @@ def build(accts: dict[str, list[Trade]] | None = None, today: date | None = None
             continue
         # the S&P 500 in euros (it is quoted in dollars), for benchmark()
         sp = cols.get(BENCH)
-        sp_eur = float(sp[i]) * rate_on("USD", i) if sp is not None else float("nan")
-        out.append(_point(iso, value, cost, realized,
-                          round(sp_eur, 4) if sp_eur == sp_eur else None, inc_sum))
+        sp_eur = float(sp[i]) * float(rate_on("USD", i)) if sp is not None else float("nan")
+        point = _point(iso, value, cost, realized, round(sp_eur, 4) if sp_eur == sp_eur else None, inc_sum)
+        # the day's rate of each account currency, for benchmark()
+        day_fx = {c: float(rate_on(c, i)) for c in now_rate}
+        day_fx = {c: round(r, 6) for c, r in day_fx.items() if r == r and r > 0}
+        if day_fx:
+            point["fx"] = day_fx
+        out.append(point)
         covered, total_cost_last, unpriced = priced, cost, no_price
 
     cutoff = (today - timedelta(days=DAILY_DAYS)).isoformat()
@@ -273,21 +278,29 @@ def benchmark(hist: list[dict]) -> dict[str, float]:
     """What the money you put in would be worth in the S&P 500: every buy
     (sell) bought (sold) index units at that day's close. {day: EUR value}.
     `sp` on each point is the index in euros (at that day's EUR/USD rate), so
-    a falling dollar lowers it just as it lowers your dollar shares."""
-    pts = [(p["day"], p.get("sp")) for p in hist]
-    if not pts or not any(sp for _, sp in pts):
+    a falling dollar lowers it just as it lowers your dollar shares. Money in
+    an account kept in another currency counts at the day's rate (`fx` on the
+    point), as in the value line; today's live point uses today's rate."""
+    if not hist or not any(p.get("sp") for p in hist):
         return {}
     accts = _accounts()
-    events = sorted((t.when[:10], (1 if t.side == "BUY" else -1) * t.amount)
-                    for ts in accts.values() for t in sources.in_eur(ts))
+    events = sorted((t.when[:10], (1 if t.side == "BUY" else -1) * t.amount, t.currency)
+                    for ts in accts.values() for t in ts)
+
+    def in_eur(amount: float, ccy: str, day_fx: dict) -> float:
+        scale, c = fx.unit(ccy)
+        if c == "EUR":
+            return amount * scale
+        return amount * scale * day_fx[c] if c in day_fx else fx.to_eur(amount, ccy)
+
     out: dict[str, float] = {}
     units, j, last_sp = 0.0, 0, None
-    for day, sp in pts:
-        sp = sp or last_sp
+    for p in hist:
+        day, sp = p["day"], p.get("sp") or last_sp
         last_sp = sp
         # money in (or out) before the first known index level waits for it
         while sp and j < len(events) and events[j][0] <= day:
-            units += events[j][1] / sp
+            units += in_eur(events[j][1], events[j][2], p.get("fx") or {}) / sp
             j += 1
         if sp:
             out[day] = round(units * sp, 2)
