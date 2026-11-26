@@ -652,11 +652,12 @@ def _loads_or_400(text: str) -> dict:
 
 
 # "Add an account": catalog, connected accounts, live connectors, CSV import,
-# and bank links through Enable Banking.
-from . import banklink_api, connections_api  # noqa: E402
+# bank links through Enable Banking, and the Trade Republic sign-in.
+from . import banklink_api, connections_api, traderepublic_api  # noqa: E402
 
 app.include_router(connections_api.router)
 app.include_router(banklink_api.router)
+app.include_router(traderepublic_api.router)
 
 # Claude and other MCP clients: read-only tools at /mcp, behind MCP_TOKEN (MCP.md)
 from . import mcp_server  # noqa: E402

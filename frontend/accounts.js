@@ -141,12 +141,13 @@
       return "File: " + (r.length > 26 ? r.slice(0, 25) + "…" : r);
     }
     if (m.type === "api") return {flex_token_query: "Flex report (API)", token: "API token", oauth: "API (app login)",
-                                  other: "API"}[m.auth] || "API key";
+                                  phone_pin: "Sign in (unofficial)", other: "API"}[m.auth] || "API key";
     return m.type;
   }
 
   function pick(inst) {
     picked = inst; closeList();
+    trRenew = null;             // "Sign in again" sets it after picking
     $("acct-q").value = inst.name;
     const tabs = tabsFor(inst);
     const def = tabs.find(t => t.methods.some(m => m.key === inst.default)) || tabs[0];
@@ -176,6 +177,7 @@
     else renderMethod(box, inst, t.methods[0]);
   }
   const isBankLink = m => m.support === "live" && m.connector === "enablebanking";
+  const isTrLogin = m => m.support === "live" && m.connector === "traderepublic";
 
   /* -------------------------------------------------------- pieces */
   function facts(m) {
@@ -211,6 +213,7 @@
       <input class="ipt" id="cf-label" value="${esc(inst.name)}" maxlength="60" /></label>`;
 
   function renderMethod(box, inst, m) {
+    if (isTrLogin(m)) return trLogin(box, inst, m);
     const head = facts(m) + unverified(m, inst) + stepsHtml(m) + docLink(m) + notes(m);
     if (m.support === "live") {
       box.innerHTML = head + `<div>${labelBox(inst)}
@@ -457,6 +460,163 @@
     if (document.visibilityState === "visible" && wasLinking()) afterChange();
   });
 
+  /* --------------------------------------------- Trade Republic sign-in */
+  // Phone number + PIN, then approve in the Trade Republic app (or enter a code).
+  // The PIN goes to the server once and is cleared from the page at once.
+  let trRenew = null;     // {id, label}: the connection "Sign in again" renews
+  let trState = null;     // the sign-in in progress: {id, step, until}
+  let trTimer = null;
+
+  function trLogin(box, inst, m) {
+    const renew = trRenew;
+    box.innerHTML = facts(m) + stepsHtml(m) +
+      `<div class="note warn">Unofficial: Trade Republic has no public API. This signs in the way Trade Republic's
+        own web app does, like the open-source tool pytr. It may stop working when Trade Republic changes its app,
+        and using it may be against Trade Republic's terms. You decide.</div>
+      <div id="tr-form">
+        ${renew ? `<div class="sub" style="margin:8px 0">Signing in again for “${esc(renew.label)}”.</div>` : labelBox(inst)}
+        <label class="fld"><span>Phone number, with the country code</span>
+          <input class="ipt" id="tr-phone" type="tel" inputmode="tel" autocomplete="tel" placeholder="+49 170 1234567" /></label>
+        <label class="fld"><span>PIN</span>
+          <input class="ipt" id="tr-pin" type="password" inputmode="numeric" autocomplete="off" /></label>
+        <button class="btn" id="tr-go" type="button">Sign in</button>
+      </div>
+      <div id="tr-step"></div>
+      <div class="msg" id="tr-msg"></div>
+      <div class="fine">Your PIN goes to Trade Republic once, to start the sign-in, and is never stored. The app keeps
+        only the sign-in session, on your own computer (encrypted in the backup vault). It can only read: it has no way
+        to trade, move money or change settings.</div>` + docLink(m, "pytr, the open-source tool this follows");
+    $("tr-go").addEventListener("click", () => trStart(inst, m, renew));
+    $("tr-pin").addEventListener("keydown", e => { if (e.key === "Enter") trStart(inst, m, renew); });
+    if (trState) trCancel(true);
+  }
+
+  async function trStart(inst, m, renew) {
+    const msg = $("tr-msg"), btn = $("tr-go"), pin = $("tr-pin");
+    const phone = $("tr-phone").value.trim();
+    if (!phone) return bad(msg, "Enter your phone number.");
+    if (!pin.value) return bad(msg, "Enter your PIN.");
+    const fd = new FormData();
+    fd.append("institution", inst.id); fd.append("method", m.key); fd.append("phone", phone);
+    fd.append("pin", pin.value);
+    fd.append("label", $("cf-label") ? $("cf-label").value.trim() : "");
+    if (renew) fd.append("renew", renew.id);
+    pin.value = "";
+    btn.disabled = true; info(msg, "Contacting Trade Republic…");
+    try {
+      const r = await fetch("/api/traderepublic/login", {method: "POST", body: fd});
+      if (!r.ok) return bad(msg, await detail(r));
+      trShow(await r.json());
+    } catch (e) { bad(msg, "Could not reach the server."); }
+    finally { if (document.body.contains(btn)) btn.disabled = false; }
+  }
+
+  function trShow(s) {
+    trState = {id: s.login, step: s.step, until: Date.now() + (s.expires_in || 120) * 1000};
+    $("tr-form").hidden = true;
+    info($("tr-msg"), "");
+    const box = $("tr-step");
+    if (s.step === "app") {
+      box.innerHTML = `<div class="note"><b>Check your phone.</b> ${esc(s.message)}
+          <span class="cmeta" id="tr-left"></span></div>
+        <button class="btn sm ghost" id="tr-cancel" type="button">Cancel</button>`;
+      setTimeout(trPoll, 1500);
+    } else {
+      const n = s.step === "code" ? 4 : 6;
+      box.innerHTML = `<label class="fld"><span>${esc(s.message)}</span>
+          <input class="ipt" id="tr-code" inputmode="numeric" autocomplete="one-time-code" maxlength="${n}"
+            placeholder="${"0".repeat(n)}" /></label>
+        <button class="btn" id="tr-ok" type="button">Confirm</button>
+        ${s.can_resend ? '<button class="btn ghost" id="tr-sms" type="button">Send it by SMS</button>' : ""}
+        <button class="btn ghost" id="tr-cancel" type="button">Cancel</button>
+        <span class="cmeta" id="tr-left"></span>`;
+      const go = () => trConfirm($("tr-code").value.trim());
+      $("tr-ok").addEventListener("click", go);
+      $("tr-code").addEventListener("keydown", e => { if (e.key === "Enter") go(); });
+      if ($("tr-sms")) $("tr-sms").addEventListener("click", trResend);
+      $("tr-code").focus();
+    }
+    $("tr-cancel").addEventListener("click", () => trCancel(false));
+    clearInterval(trTimer);
+    trTimer = setInterval(trTick, 1000); trTick();
+  }
+
+  function trTick() {
+    const el = $("tr-left");
+    if (!trState || !el) return clearInterval(trTimer);
+    const s = Math.max(0, Math.round((trState.until - Date.now()) / 1000));
+    el.textContent = `(${Math.floor(s / 60)}:${String(s % 60).padStart(2, "0")} left)`;
+  }
+
+  function trPoll() { if (trState && trState.step === "app") trConfirm(""); }
+
+  async function trConfirm(code) {
+    const st = trState; if (!st) return;
+    const msg = $("tr-msg"), btn = $("tr-ok");
+    if (Date.now() > st.until) { trReset(); return bad(msg, "The sign-in expired. Start again."); }
+    const fd = new FormData(); if (code) fd.append("code", code);
+    if (btn) btn.disabled = true;
+    if (code) info(msg, "Checking…");
+    let r;
+    try {
+      r = await fetch(`/api/traderepublic/login/${encodeURIComponent(st.id)}/confirm`, {method: "POST", body: fd});
+    } catch (e) {
+      if (trState === st && st.step === "app") return setTimeout(trPoll, 3000);   // a network blip: keep waiting
+      if (btn && document.body.contains(btn)) btn.disabled = false;
+      return bad(msg, "Could not reach the server.");
+    }
+    if (trState !== st) return;                        // cancelled meanwhile
+    if (btn && document.body.contains(btn)) btn.disabled = false;
+    if (!r.ok) {
+      const text = await detail(r);
+      if (r.status === 404 || /start again/i.test(text)) trReset();
+      return bad(msg, text);
+    }
+    const out = await r.json();
+    if (out.status === "done") return trDone(out.connection);
+    if (out.step !== st.step) return trShow(out);      // e.g. code accepted: now approve in the app
+    if (out.step === "app") setTimeout(trPoll, 500);
+  }
+
+  async function trResend() {
+    const st = trState; if (!st) return;
+    const r = await fetch(`/api/traderepublic/login/${encodeURIComponent(st.id)}/resend`, {method: "POST"}).catch(() => null);
+    if (!r) return bad($("tr-msg"), "Could not reach the server.");
+    if (!r.ok) return bad($("tr-msg"), await detail(r));
+    info($("tr-msg"), "Trade Republic is sending the code by SMS.");
+  }
+
+  function trReset() {
+    trState = null; clearInterval(trTimer);
+    if ($("tr-step")) $("tr-step").innerHTML = "";
+    if ($("tr-form")) $("tr-form").hidden = false;
+  }
+
+  function trCancel(quiet) {
+    const st = trState; trReset();
+    if (st) fetch(`/api/traderepublic/login/${encodeURIComponent(st.id)}`, {method: "DELETE"}).catch(() => {});
+    if (!quiet && $("tr-msg")) info($("tr-msg"), "Sign-in cancelled.");
+  }
+
+  function trDone(c) {
+    trReset(); trRenew = null;
+    const found = String(c.summary || "").split(" · ")[0];
+    ok($("tr-msg"), `✓ Connected “${c.label}”${found ? " — " + found : ""}. Your history is read in the background; ` +
+      "gains and dividends appear within a few minutes." + syncNote());
+    afterChange();
+  }
+
+  // "Sign in again" on a connection whose Trade Republic session has ended.
+  function trSignInAgain(id, label) {
+    const inst = INST.find(i => norm(i.id) === "traderepublic");
+    if (!inst) return;
+    pick(inst);
+    trRenew = {id, label};
+    const t = tabsFor(inst).find(t => t.methods.some(isTrLogin));
+    if (t) { tab = t.key; renderPanel(); }
+    $("add-account").scrollIntoView({behavior: "smooth", block: "start"});
+  }
+
   /* ---------------------------------------------------------- actions */
   async function connect(inst, m) {
     const msg = $("cf-msg"), btn = $("cf-go");
@@ -581,7 +741,8 @@
     if (s < 86400) return `${Math.round(s / 3600)} h ago`;
     return new Date(t).toLocaleDateString("en-GB", {day: "numeric", month: "short", year: "numeric"});
   }
-  const STATUS = {ok: ["live", "OK"], error: ["bad", "Error"], pending: ["sample", "Checking"]};
+  const STATUS = {ok: ["live", "OK"], error: ["bad", "Error"], pending: ["sample", "Checking"],
+                  signin: ["sample", "Signed out"]};
   const day = iso => new Date(iso + "T12:00:00Z").toLocaleDateString("en-GB", {day: "numeric", month: "short", year: "numeric"});
   const days = n => `${n} day${n === 1 ? "" : "s"}`;
 
@@ -611,19 +772,22 @@
     for (const c of d.connections || []) {
       const [cls, word] = STATUS[c.status] || STATUS.pending;
       const csv = c.connector === "generic_csv", link = c.connector === "enablebanking";
+      const tr = c.connector === "traderepublic", signin = c.status === "signin";
       const bank = c.bank || {};
-      const via = link ? ` via Enable Banking${bank.aspsp && norm(bank.aspsp) !== norm(c.institution_name) ? ` (${bank.aspsp})` : ""}` : "";
+      const via = link ? ` via Enable Banking${bank.aspsp && norm(bank.aspsp) !== norm(c.institution_name) ? ` (${bank.aspsp})` : ""}`
+        : tr ? ` · sign-in (unofficial)${c.tr && c.tr.phone ? ", phone " + c.tr.phone : ""}` : "";
       rows.push(`<div class="crow"><div><b>${esc(c.label)}</b>
           ${c.wrapper ? `<span class="pill tag grey">${esc(c.wrapper)}</span>` : ""}
           <span class="pill ${cls}">${word}</span>
           <div class="cmeta">${esc(c.institution_name)}${esc(via)}${c.summary ? " · " + esc(c.summary) : ""}</div>
           <div class="cmeta">Updated ${esc(ago(c.last_sync))} · ${esc((c.updates || "").toLowerCase())}</div>
           ${consentHtml(c)}
-          ${c.error ? `<div class="cerr" ${c.status === "pending" ? 'style="color:#e3b341"' : ""}>${esc(c.error)}</div>` : ""}
+          ${c.error ? `<div class="cerr" ${c.status === "pending" || signin ? 'style="color:#e3b341"' : ""}>${esc(c.error)}</div>` : ""}
           ${dupHtml(c)}</div>
-        <div class="cact"><button class="btn sm ghost" type="button" data-act="${csv ? "file" : "refresh"}" data-id="${esc(c.id)}">${csv ? "New file" : "Refresh"}</button>
+        <div class="cact">${signin ? `<button class="btn sm" type="button" data-act="tr-signin" data-id="${esc(c.id)}" data-label="${esc(c.label)}">Sign in again</button>`
+            : `<button class="btn sm ghost" type="button" data-act="${csv ? "file" : "refresh"}" data-id="${esc(c.id)}">${csv ? "New file" : "Refresh"}</button>`}
           ${link ? `<button class="btn sm ${c.consent && (c.consent.warn || c.consent.expired) ? "" : "ghost"}" type="button" data-act="renew" data-id="${esc(c.id)}">Renew</button>` : ""}
-          <button class="del" type="button" title="Remove" aria-label="Remove ${esc(c.label)}" data-act="remove" data-id="${esc(c.id)}" data-label="${esc(c.label)}" ${link ? 'data-link="1"' : ""}>✕</button></div></div>`);
+          <button class="del" type="button" title="Remove" aria-label="Remove ${esc(c.label)}" data-act="remove" data-id="${esc(c.id)}" data-label="${esc(c.label)}" ${link ? 'data-link="1"' : ""} ${tr ? 'data-tr="1"' : ""}>✕</button></div></div>`);
     }
     for (const s of d.server || []) {
       const [cls, word] = STATUS[s.status] || STATUS.pending;
@@ -634,7 +798,8 @@
     }
     for (const f of d.files || []) {
       rows.push(`<div class="crow"><div><b>${esc(f.label)}</b> <span class="pill live">File</span>
-          <div class="cmeta">Uploaded ${esc(ago(f.updated))} · updates when you upload a new file</div></div>
+          <div class="cmeta">Uploaded ${esc(ago(f.updated))} · updates when you upload a new file</div>
+          ${f.note ? `<div class="cmeta">${esc(f.note)}</div>` : ""}</div>
         <div class="cact"><button class="btn sm ghost" type="button" data-act="upload" data-inst="${esc(f.institution)}">New file</button></div></div>`);
     }
     $("conn-list").innerHTML = rows.join("") ||
@@ -645,8 +810,11 @@
   $("conn-list").addEventListener("click", async e => {
     const b = e.target.closest("button[data-act]"); if (!b) return;
     const id = b.dataset.id;
-    if (b.dataset.act === "remove") {
+    if (b.dataset.act === "tr-signin") {
+      trSignInAgain(id, b.dataset.label);
+    } else if (b.dataset.act === "remove") {
       const what = b.dataset.link ? "The bank link is ended and removed from this app."
+        : b.dataset.tr ? "The saved Trade Republic sign-in and the history read so far are deleted from this app."
         : "Its key is deleted from this app. You can also delete the key at the bank or broker.";
       if (!confirm(`Remove “${b.dataset.label}”? ${what}`)) return;
       const r = await fetch("/api/connections/" + encodeURIComponent(id), {method: "DELETE"});

@@ -216,28 +216,31 @@
       "name": "Trade Republic",
       "kind": "both",
       "countries": [
+        "DE",
         "NL"
       ],
-      "recommended": "upload",
+      "recommended": "api",
       "methods": [
         {
-          "type": "aggregator",
-          "provider": "enablebanking",
-          "covers": [
-            "cash",
-            "transactions"
+          "type": "api",
+          "auth": "phone_pin",
+          "official": false,
+          "read_only": true,
+          "steps": [
+            "Check that the Trade Republic app on your phone is up to date and may show notifications.",
+            "Enter the phone number of your Trade Republic account, with the country code (for example +49), and your PIN.",
+            "Open the Trade Republic app and confirm the sign-in. If you use an authenticator app, first enter its 6-digit code here.",
+            "That's it. Positions and cash update every few minutes. Your full history is read in the background (a few minutes the first time)."
           ],
-          "notes": "Free in restricted mode (accounts you link yourself). PSD2 payment accounts only: balances and transactions, no investments. Clearing/cash account only, not the securities depot. Enable Banking notes (Aug 2026) the bank's PSD2 API returns only amount, currency and booking date per transaction, with no description.",
-          "verified": true
-        },
-        {
-          "type": "aggregator",
-          "provider": "gocardless",
           "covers": [
+            "positions",
             "cash",
-            "transactions"
+            "transactions",
+            "dividends",
+            "interest"
           ],
-          "notes": "GoCardless: existing accounts only (no new sign-ups since July 2025). Coverage for this bank was not re-checked.",
+          "notes": "Unofficial: Trade Republic has no public API. This uses the same sign-in as Trade Republic's web app (app.traderepublic.com), like the open-source tool pytr, and does not log your phone out. Your PIN is sent to Trade Republic once and never stored; the app keeps only the sign-in session, on your own computer (encrypted in the backup vault). Read-only: the app has no code to trade, move money or change settings. It may stop working when Trade Republic changes its app, and using it may be against Trade Republic's terms: you decide. When Trade Republic ends the session, you sign in again; the dashboard keeps the last data meanwhile.",
+          "docs_url": "https://github.com/pytr-org/pytr",
           "verified": false
         },
         {
@@ -257,14 +260,29 @@
             "dividends",
             "cash"
           ],
-          "notes": "Added April 2026; one file covers the securities account and the cash account, including crypto. Reported to be in the web app too from 15 Apr 2026. No positions file: rebuild holdings from trades. German label: Kontoauszüge > Transaktionsexport. No official API.",
+          "notes": "Added April 2026; one file covers the securities account and the cash account, including crypto. Reported to be in the web app too from 15 Apr 2026. No positions file: holdings are rebuilt from the trades. German label: Kontoauszüge > Transaktionsexport. The account statement PDF works too. If you also sign in, the sign-in takes over once it has read your history (only if it is the same account); the file stays as a fallback.",
           "docs_url": "https://www.mobiflip.de/trade-republic-bekommt-neue-export-funktion-und-outbank-zieht-sofort-nach/",
           "verified": false
         },
         {
-          "type": "unofficial",
-          "library": "pytr",
-          "notes": "Unofficial client for Trade Republic's private API. Stores phone number and PIN in a local file; app-login mode logs your phone out; not affiliated with Trade Republic and may break or breach the terms."
+          "type": "aggregator",
+          "provider": "enablebanking",
+          "covers": [
+            "cash",
+            "transactions"
+          ],
+          "notes": "Free in restricted mode (accounts you link yourself). PSD2 payment accounts only: balances and transactions, no investments. Clearing/cash account only, not the securities depot. Enable Banking notes (Aug 2026) the bank's PSD2 API returns only amount, currency and booking date per transaction, with no description. Not needed if you sign in to Trade Republic in the app: the sign-in already reads your cash, and linking both counts it twice.",
+          "verified": true
+        },
+        {
+          "type": "aggregator",
+          "provider": "gocardless",
+          "covers": [
+            "cash",
+            "transactions"
+          ],
+          "notes": "GoCardless: existing accounts only (no new sign-ups since July 2025). Coverage for this bank was not re-checked.",
+          "verified": false
         },
         {
           "type": "manual",
@@ -278,7 +296,10 @@
         "https://www.mobiflip.de/trade-republic-bekommt-neue-export-funktion-und-outbank-zieht-sofort-nach/",
         "https://forum.portfolio-performance.info/t/import-trade-republic-csv-transaktionsexport/39126",
         "https://help.getquin.com/en/articles/14633614",
-        "https://github.com/pytr-org/pytr"
+        "https://github.com/pytr-org/pytr",
+        "https://github.com/pytr-org/pytr/pull/380",
+        "https://github.com/pytr-org/pytr/pull/373",
+        "https://help.finary.com/en/articles/6518702-how-to-add-my-trade-republic-account"
       ]
     },
     {
