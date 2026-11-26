@@ -1,0 +1,184 @@
+{
+  "code": "PL",
+  "name": "Poland",
+  "currency": "EUR",
+  "currency_note": "Poland uses złoty (PLN); the app shows euros. Tax figures below are in złoty.",
+  "timezone": "Europe/Warsaw",
+  "languages": ["pl"],
+  "checked_on": "2026-11-26",
+  "tax_year": {
+    "label": "2026",
+    "starts": "01-01",
+    "ends": "12-31",
+    "return_due": "Gains from shares, funds and crypto go on a separate return, PIT-38, filed between 15 February and 30 April of the next year.",
+    "source": "https://podatki.gov.pl/media/g5ebnm2e/broszura-do-pit-38-za-2025-r.pdf"
+  },
+  "summary": "Poland taxes investment income at a flat 19%, often called the Belka tax. Polish banks and companies withhold it from interest and dividends; gains from selling shares, funds and crypto you declare yourself on the PIT-38 return. Retirement accounts (IKE and IKZE) shelter income from the tax within yearly deposit limits.",
+  "topics": [
+    {
+      "id": "gains",
+      "title": "Profit when you sell",
+      "points": [
+        "Gains from selling shares and other securities, and from redeeming fund units, are taxed at a flat 19%. This income is not added to your salary or other income.",
+        "The gain is the sale price minus the purchase price and costs such as brokerage fees. Amounts in foreign currency are converted at the National Bank of Poland's average rate from the last working day before the sale or purchase.",
+        "If you cannot tell which shares you sold, the ones bought first count as sold first (FIFO), separately for each securities account."
+      ],
+      "figures": [
+        {"label": "Tax on gains", "value": "19%"}
+      ],
+      "sources": [
+        "https://api.sejm.gov.pl/eli/acts/DU/2026/592/text.pdf",
+        "https://podatki.gov.pl/media/g5ebnm2e/broszura-do-pit-38-za-2025-r.pdf"
+      ]
+    },
+    {
+      "id": "dividends",
+      "title": "Dividends",
+      "points": [
+        "Dividends are taxed at a flat 19%, collected at source when a Polish company or broker pays them.",
+        "If no Polish payer withheld the tax (for example on foreign dividends), you work out the 19% yourself and show it on PIT-38."
+      ],
+      "figures": [
+        {"label": "Tax on dividends", "value": "19%"}
+      ],
+      "sources": [
+        "https://api.sejm.gov.pl/eli/acts/DU/2026/592/text.pdf",
+        "https://podatki.gov.pl/media/g5ebnm2e/broszura-do-pit-38-za-2025-r.pdf"
+      ]
+    },
+    {
+      "id": "interest",
+      "title": "Interest on savings",
+      "points": [
+        "Interest on bank accounts and deposits, and interest on bonds, is taxed at a flat 19%, collected at source by the payer."
+      ],
+      "figures": [
+        {"label": "Tax on interest", "value": "19%"}
+      ],
+      "sources": [
+        "https://api.sejm.gov.pl/eli/acts/DU/2026/592/text.pdf"
+      ]
+    },
+    {
+      "id": "funds",
+      "title": "Funds and ETFs",
+      "points": [
+        "When you redeem or sell fund units, the gain is taxed at 19% and declared on PIT-38. Units bought first count as redeemed first (FIFO).",
+        "Payouts a fund makes from its income without redeeming units are taxed at a flat 19%, collected at source."
+      ],
+      "figures": [
+        {"label": "Tax on fund gains and payouts", "value": "19%"}
+      ],
+      "sources": [
+        "https://api.sejm.gov.pl/eli/acts/DU/2026/592/text.pdf",
+        "https://podatki.gov.pl/media/g5ebnm2e/broszura-do-pit-38-za-2025-r.pdf"
+      ]
+    },
+    {
+      "id": "accounts",
+      "title": "Tax-free and tax-deferred accounts",
+      "points": [
+        "Individual retirement account (IKE): income inside it is exempt from the 19% tax if it is paid out under the IKE rules: from age 60 (or 55 with pension rights), and after paying in during at least 5 calendar years or paying in more than half of the money at least 5 years before the payout. You may have only one IKE.",
+        "Taking money out of an IKE early (a return, zwrot) makes the gain taxable at 19%.",
+        "Individual retirement security account (IKZE): deposits are deducted from your taxable income in the year you pay them in. Payouts, possible from age 65 after paying in during at least 5 calendar years, are taxed at a flat 10%.",
+        "Yearly deposit limits for 2026: PLN 28,260 for IKE; PLN 11,304 for IKZE, or PLN 16,956 for people running a non-farm business."
+      ],
+      "figures": [
+        {"label": "IKE deposit limit 2026", "value": "PLN 28,260"},
+        {"label": "IKZE deposit limit 2026", "value": "PLN 11,304"},
+        {"label": "IKZE limit 2026, self-employed", "value": "PLN 16,956"},
+        {"label": "Tax on IKZE payouts", "value": "10%"}
+      ],
+      "sources": [
+        "https://www.gov.pl/web/rodzina/ike-limit-wplat",
+        "https://www.gov.pl/web/rodzina/ikze-limit-wplat",
+        "https://api.sejm.gov.pl/eli/acts/DU/2026/91/text.pdf",
+        "https://api.sejm.gov.pl/eli/acts/DU/2026/592/text.pdf"
+      ]
+    },
+    {
+      "id": "losses",
+      "title": "Losses",
+      "points": [
+        "Gains and losses on shares, securities and funds in the same year are netted on PIT-38.",
+        "A net loss for the year can be deducted from this kind of income in the next five years, using at most 50% of the loss in any one year. Alternatively, up to PLN 5,000,000 can be deducted in one go in one of those years, with the rest under the 50% rule.",
+        "Crypto income is worked out separately, in its own section of PIT-38."
+      ],
+      "figures": [
+        {"label": "Carry-forward period", "value": "5 years"},
+        {"label": "Most of a loss usable in one year", "value": "50%"}
+      ],
+      "sources": [
+        "https://podatki.gov.pl/media/g5ebnm2e/broszura-do-pit-38-za-2025-r.pdf"
+      ]
+    },
+    {
+      "id": "foreign",
+      "title": "Foreign shares",
+      "points": [
+        "Gains on foreign shares are declared on PIT-38 like Polish ones. Tax paid abroad on them can be deducted, but only up to the part of the Polish tax that falls on the foreign income.",
+        "For foreign dividends and interest, you deduct the tax paid abroad from the 19% Polish tax, at most up to 19%. You then pay the difference with PIT-38.",
+        "For gains made abroad, attach a PIT/ZG form for each country."
+      ],
+      "sources": [
+        "https://api.sejm.gov.pl/eli/acts/DU/2026/592/text.pdf",
+        "https://podatki.gov.pl/media/g5ebnm2e/broszura-do-pit-38-za-2025-r.pdf"
+      ]
+    },
+    {
+      "id": "reporting",
+      "title": "What your broker does and what you do",
+      "points": [
+        "A Polish broker prepares an information form (PIT-8C) with your sale proceeds and costs. You copy these into PIT-38 and add any costs it does not show.",
+        "Gains made abroad, or where no PIT-8C was issued, you calculate yourself in złoty and declare on PIT-38, together with any dividends from which no Polish tax was withheld.",
+        "The PIT-38 return is due by 30 April of the next year, and any tax due must be paid by then."
+      ],
+      "sources": [
+        "https://podatki.gov.pl/media/g5ebnm2e/broszura-do-pit-38-za-2025-r.pdf",
+        "https://api.sejm.gov.pl/eli/acts/DU/2026/592/text.pdf"
+      ]
+    },
+    {
+      "id": "crypto",
+      "title": "Crypto",
+      "points": [
+        "Income from selling crypto is taxed at 19%. A sale means exchanging crypto for money, goods, services or other property, or paying a debt with it. Swapping one crypto for another is not a sale.",
+        "The gain is the year's crypto proceeds minus the documented cost of buying crypto. Costs not used up in one year carry over to the next.",
+        "Crypto is declared on PIT-38 in its own section."
+      ],
+      "figures": [
+        {"label": "Tax on crypto gains", "value": "19%"}
+      ],
+      "sources": [
+        "https://api.sejm.gov.pl/eli/acts/DU/2026/592/text.pdf",
+        "https://podatki.gov.pl/media/g5ebnm2e/broszura-do-pit-38-za-2025-r.pdf"
+      ]
+    }
+  ],
+  "dates": [
+    {"when": "02-15", "what": "First day to file PIT-38 for the year before."},
+    {"when": "04-30", "what": "Last day to file PIT-38 and pay the tax for the year before."}
+  ],
+  "official": [
+    {"title": "Ministerstwo Finansów: PIT-38 brochure for 2025", "url": "https://podatki.gov.pl/media/g5ebnm2e/broszura-do-pit-38-za-2025-r.pdf"},
+    {"title": "Personal income tax act (consolidated text, Dz.U. 2026 poz. 592)", "url": "https://api.sejm.gov.pl/eli/acts/DU/2026/592/text.pdf"},
+    {"title": "gov.pl: IKE deposit limit", "url": "https://www.gov.pl/web/rodzina/ike-limit-wplat"},
+    {"title": "gov.pl: IKZE deposit limit", "url": "https://www.gov.pl/web/rodzina/ikze-limit-wplat"},
+    {"title": "Ministerstwo Finansów: Osobiste Konta Inwestycyjne (OKI)", "url": "https://www.gov.pl/web/finanse/osobiste-konta-inwestycyjne--nowa-mozliwosc-inwestowania-i-oszczedzania"}
+  ],
+  "upcoming": [
+    "From 1 January 2027 a personal investment account (Osobiste Konto Inwestycyjne, OKI) becomes available under the Act of 3 July 2026 (Dz.U. 2026 poz. 1098). Income inside it, including gains, interest and dividends, is free of the 19% tax. Instead, a yearly tax on the account's average value applies, 0.85% in 2027, but only above PLN 100,000 of qualifying investments, of which at most PLN 25,000 may be savings-type assets such as deposits and savings bonds.",
+    "The IKE and IKZE deposit limits for 2027 had not yet been announced on gov.pl when this page was checked."
+  ],
+  "not_covered": [
+    "Employee capital plans (PPK) and employee pension programmes (PPE).",
+    "Derivatives, short selling and shares received for a non-cash contribution.",
+    "Shares in real-estate companies and unlisted companies.",
+    "Real estate, and moving to or from Poland."
+  ],
+  "news": [
+    {"name": "Parkiet", "url": "https://www.parkiet.com/rss_main", "language": "pl"},
+    {"name": "Bankier.pl", "url": "https://www.bankier.pl/rss/wiadomosci.xml", "language": "pl"},
+    {"name": "Business Insider Polska: Gospodarka", "url": "https://businessinsider.com.pl/gospodarka.feed", "language": "pl"}
+  ]
+}
