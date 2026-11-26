@@ -255,6 +255,145 @@ class Trading212PdfTest(unittest.TestCase):
         self.assertEqual(st["overview"]["deposits"], 1000.0)
 
 
+# ---- Trade Republic transaction export (made-up rows, real column layout) ----
+TR_HEADER = ["datetime", "date", "account_type", "category", "type", "asset_class", "name", "symbol",
+             "shares", "price", "amount", "fee", "tax", "currency", "original_amount",
+             "original_currency", "fx_rate", "description", "transaction_id"]
+
+
+def tr_csv(*rows: dict, sep: str = ",") -> str:
+    lines = [sep.join(TR_HEADER)]
+    for i, r in enumerate(rows):
+        day = r.get("date", "2026-01-05")
+        full = {"datetime": f"{day}T10:00:00.000000Z", "date": day, "account_type": "DEFAULT",
+                "currency": "EUR", "transaction_id": f"t{i}", **r}
+        lines.append(sep.join(str(full.get(c, "")) for c in TR_HEADER))
+    return "\n".join(lines) + "\n"
+
+
+def tr_trade(day, typ, isin, shares, amount, fee="", tax="", asset="STOCK", cat="TRADING"):
+    return {"date": day, "category": cat, "type": typ, "asset_class": asset, "name": "Made-up AG",
+            "symbol": isin, "shares": shares, "amount": amount, "fee": fee, "tax": tax}
+
+
+def tr_cash(day, typ, amount, tax="", isin="", shares="", asset=""):
+    return {"date": day, "category": "CASH", "type": typ, "asset_class": asset, "symbol": isin,
+            "name": "Made-up AG" if isin else "", "shares": shares, "amount": amount, "tax": tax}
+
+
+ISIN = "DE0005557508"
+
+
+class TradeRepublicCsvTest(unittest.TestCase):
+    def convert(self, *rows, sep=","):
+        from backend.importers import traderepublic_csv
+        return traderepublic_csv.convert(tr_csv(*rows, sep=sep))
+
+    def test_semicolon_export_is_read(self):
+        # Some exports are ;-separated. Before: "Not a Trade Republic export".
+        trades, _, _ = self.convert(tr_trade("2026-01-05", "BUY", ISIN, "15", "-264.96", "-1.00"), sep=";")
+        self.assertEqual(trades["trades"][0]["amount_eur"], 265.96)
+
+    def test_etf_distribution_is_income(self):
+        # A distributing ETF pays 11.46, 2.25 tax withheld: 9.21 received.
+        # Before: DISTRIBUTION rows were not income at all (0).
+        _, income, _ = self.convert(tr_cash("2026-01-05", "DISTRIBUTION", "11.46", "-2.25", ISIN, "24.9", "FUND"))
+        self.assertEqual([(i["type"], i["amount_eur"]) for i in income["income"]], [("dividend", 9.21)])
+
+    def test_interest_is_net_of_tax(self):
+        # 4.77 interest, 1.34 tax withheld: 3.43 received, the same figure as
+        # the statement PDF and the live sync. Before: 4.77 (gross).
+        _, income, report = self.convert(tr_cash("2026-01-05", "INTEREST_PAYMENT", "4.77", "-1.34"))
+        self.assertEqual(income["income"][0]["amount_eur"], 3.43)
+        self.assertEqual(report["cash_balance_eur"], 3.43)
+
+    def test_tax_on_a_buy_is_part_of_its_cost_and_tax_on_a_sale_leaves_the_cash(self):
+        # Buy: 100.00 + 1.00 fee + 0.30 transaction tax = 101.30 paid (before: 101.00).
+        # Sell: 150.00 - 1.00 fee = 149.00 proceeds before tax; 12.50 tax
+        # withheld, so cash grows by 136.50 (before: 149.00).
+        trades, _, report = self.convert(
+            tr_trade("2026-01-05", "BUY", ISIN, "2", "-100.00", "-1.00", "-0.30"),
+            tr_trade("2026-02-05", "SELL", ISIN, "-2", "150.00", "-1.00", "-12.50"))
+        self.assertEqual([t["amount_eur"] for t in trades["trades"]], [101.30, 149.00])
+        self.assertEqual(report["cash_balance_eur"], round(-101.30 + 136.50, 2))
+
+    def test_matured_bond_and_private_market_fund_are_trades(self):
+        # 20 of a bond bought, then paid back (CASH FINAL_MATURITY); 100 units of
+        # a private-market fund bought from cash. Before: the bond stayed held
+        # forever and the fund never appeared.
+        trades, _, report = self.convert(
+            tr_trade("2025-12-15", "BUY", "DE0001141794", "20", "-19.79", "-1.00", asset="BOND"),
+            tr_cash("2026-04-05", "FINAL_MATURITY", "20.00", isin="DE0001141794", shares="20", asset="BOND"),
+            {**tr_cash("2026-04-05", "REDEMPTION", "", isin="DE0001141794", shares="-20", asset="BOND"),
+             "category": "CORPORATE_ACTION"},
+            tr_cash("2026-03-02", "PRIVATE_MARKET_BUY", "-100.00", isin="LU0000000001", shares="100",
+                    asset="PRIVATE_FUND"))
+        self.assertEqual(report["open_positions"], {"LU0000000001": 100.0})
+        self.assertEqual(report["warnings"], [])
+
+    def test_split_adds_the_new_shares_at_no_cost(self):
+        # 0.045566 shares for 40.00 (+2.00 fees), then a 10-for-1 split adds
+        # 0.410094: 0.45566 shares, still costing 42.00. Before: 0.045566.
+        from backend.positions import Trade, compute_positions
+        trades, _, _ = self.convert(
+            tr_trade("2024-12-18", "BUY", "US64110L1061", "0.017085", "-15.00", "-1.00"),
+            tr_trade("2024-12-18", "BUY", "US64110L1061", "0.028481", "-25.00", "-1.00"),
+            {**tr_trade("2025-11-17", "SPLIT", "US64110L1061", "0.410094", ""), "category": "CORPORATE_ACTION"})
+        pos = compute_positions([Trade(t["date"], t["isin"], t["name"], t["side"], t["quantity"],
+                                       t["amount_eur"]) for t in trades["trades"]])["US64110L1061"]
+        self.assertAlmostEqual(pos.quantity, 0.45566)
+        self.assertAlmostEqual(pos.cost, 42.0)
+
+    def test_crypto_is_priced_by_its_coin(self):
+        # Crypto rows carry the coin ("BTC"), not an ISIN. Before: no ticker, no price.
+        trades, _, _ = self.convert(tr_trade("2026-01-05", "BUY", "BTC", "0.0011", "-32.97", "-1.00",
+                                             asset="CRYPTO"))
+        self.assertEqual(trades["trades"][0]["ticker"], "BTC-EUR")
+
+    def test_shares_moving_without_a_trade_are_reported(self):
+        # A free crypto delivery and an unknown corporate action. Before: silently left out.
+        _, _, report = self.convert(
+            {**tr_trade("2026-01-19", "FREE_RECEIPT", "ETH", "0.000491", "", asset="CRYPTO"),
+             "category": "DELIVERY"},
+            {**tr_trade("2026-02-01", "SPIN_OFF", ISIN, "3", ""), "category": "CORPORATE_ACTION"})
+        text = " ".join(report["warnings"])
+        self.assertIn("ETH", text)
+        self.assertIn("CORPORATE_ACTION SPIN_OFF", text)
+
+
+class TradeRepublicCsvMatchesLiveTest(unittest.TestCase):
+    """The same events, once as export rows and once as live timeline
+    records (traderepublic_live.build), give the same trades and income."""
+
+    def test_same_trades_and_income(self):
+        from backend.connectors import traderepublic_live as live
+        from backend.importers import traderepublic_csv
+
+        trades, income, _ = traderepublic_csv.convert(tr_csv(
+            tr_trade("2026-01-05", "BUY", ISIN, "10", "-500.00", "-1.00"),
+            tr_trade("2026-02-05", "SELL", ISIN, "-4", "260.00", "-1.00", "-12.50"),
+            tr_cash("2026-03-05", "DIVIDEND", "8.00", "-2.11", ISIN, "6", "STOCK"),
+            tr_cash("2026-03-31", "INTEREST_PAYMENT", "4.77", "-1.34"),
+            tr_cash("2026-04-01", "BENEFITS_SAVEBACK", "4.51"),
+            tr_trade("2026-04-02", "BUY", ISIN, "0.09", "-4.51")))
+        # what the live sync stores for the same events (cash as booked)
+        rec = lambda i, ts, kind, **kw: (i, {"id": i, "ts": ts, "kind": kind, "isin": ISIN,  # noqa: E731
+                                              "name": "Made-up AG", "currency": "EUR", **kw})
+        events = dict([
+            rec("1", "2026-01-05 10:00:00", "buy", shares=10, amount=501.00, fee=1.0, tax=0.0),
+            rec("2", "2026-02-05 10:00:00", "sell", shares=4, amount=246.50, fee=1.0, tax=12.50),
+            rec("3", "2026-03-05 10:00:00", "dividend", amount=5.89),
+            rec("4", "2026-03-31 10:00:00", "interest", amount=3.43),
+            rec("5", "2026-04-01 10:00:00", "saveback", shares=0.09, amount=4.51)])
+        l_trades, l_divs, l_interest, _, unread = live.build(events)
+        self.assertEqual(unread, 0)
+        self.assertEqual(sorted((t["side"], round(t["quantity"], 6), t["amount_eur"]) for t in trades["trades"]),
+                         sorted((t.side, round(t.quantity, 6), t.amount) for t in l_trades))
+        by_type = lambda t: round(sum(i["amount_eur"] for i in income["income"] if i["type"] == t), 2)  # noqa: E731
+        self.assertEqual(by_type("dividend"), round(sum(d["amount"] for d in l_divs), 2))
+        self.assertEqual(by_type("interest"), round(sum(i["amount"] for i in l_interest), 2))
+
+
 def tr_row(date, typ, text, amount, balance, page=1):
     return {"date": date, "type": typ, "text": text, "money": [amount, balance], "page": page}
 
