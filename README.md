@@ -92,6 +92,7 @@ numbered steps and a link to the official page:
 | Way | Institutions | What it tracks |
 |---|---|---|
 | Read-only key, checked live before saving | Trading 212 (Invest, ISA), Interactive Brokers (Flex token + query ID), eToro ("Read" key), Bitvavo ("View" key), Starling (personal access token), Wise (API token) | positions, trades, dividends and cash for brokers; balances for banks |
+| Sign in with phone number + PIN (unofficial, read-only) | Trade Republic | positions, trades, dividends, interest, taxes and cash |
 | Bank link (Enable Banking, free for personal use) | EU banks: Rabobank, ING, ABN AMRO, bunq, Revolut (EU accounts), Trade Republic (cash), Wise (EU accounts) and other banks in 30 EEA countries | balances, up to 4 times a day |
 | File from the broker | DEGIRO account statement, Trade Republic transaction export, Trading 212 activity statement — plus a **generic positions CSV** for any other broker (columns detected, you confirm) | positions (and trades/dividends where the file has them) |
 | Balance you type in | every bank, savings or pension account | balance |
@@ -100,7 +101,8 @@ Keys are stored in `data/connections.json` on your server (git-ignored, and
 encrypted inside `data/vault.enc` like the other private files); they are
 never sent back to the browser. Only read-only keys are accepted: the steps
 tell you which permissions to tick. Unofficial routes that need your bank or
-broker login (pytr, DEGIRO login) are shown as information only, and
+broker login (such as the DEGIRO login) are shown as information only, except
+the Trade Republic sign-in described below, and
 bank-link services other than Enable Banking are listed as "coming soon". A slow
 or failing institution never blocks the dashboard: its error is shown on the
 connection. The list of institutions is data (`backend/broker_catalog.json`);
@@ -128,6 +130,40 @@ connection shows "renew in N days", warns 14 days before, and has a **Renew**
 button. Banks allow about 4 background reads a day, so balances refresh every
 6 hours, or when you press Refresh. UK accounts (Revolut UK, Wise UK, Monzo,
 Starling…) are not covered: Enable Banking has no UK market.
+
+**Trade Republic (sign in, unofficial).** Trade Republic has no public API,
+so the app signs in the way Trade Republic's own web app does, like the
+open-source tool [pytr](https://github.com/pytr-org/pytr). Settings → Add an
+account → Trade Republic → *Sign in (unofficial)*:
+
+1. Enter your phone number (with the country code, e.g. +49) and your PIN.
+2. Confirm the sign-in in the Trade Republic app on your phone. If you use an
+   authenticator app, enter its 6-digit code first.
+3. Positions and cash then update every few minutes. Your full history (buys,
+   sells, savings plans, Saveback, splits, dividends, interest, taxes) is read
+   in the background, the first time in a few minutes, then only what is new,
+   a few times a day or when you press Refresh.
+
+What to know:
+
+- **Your PIN is never stored.** It goes to Trade Republic once. The app keeps
+  only the sign-in session in `data/connections.json` (git-ignored, encrypted
+  in the vault, never sent to the browser).
+- **Read-only.** The app has no code to trade, move money or change settings.
+- **It does not log your phone out** (it uses the web sign-in, not the app sign-in).
+- **When Trade Republic ends the session**, the account shows *Sign in again*.
+  The dashboard keeps the last data until you do.
+- **Unofficial.** It may stop working when Trade Republic changes its app, and
+  using it may be against Trade Republic's terms. You decide. If the sign-in
+  is refused with a version error, set `TR_APP_VERSION` (and if needed
+  `TR_USER_AGENT`, `TR_PLATFORM`) to the values your browser sends on
+  app.traderepublic.com, as pytr's README explains.
+- **Already uploaded a transaction export?** Once the sign-in has read your
+  history, it replaces the file for the same account, so nothing is counted
+  twice. The file stays as a fallback.
+- The older sign-in with a 4-digit code is behind a bot check that only a real
+  browser passes. The app uses it only if you set `TR_LOGIN=v1` or the normal
+  sign-in is refused, and only with `TR_WAF_TOKEN` or Playwright installed.
 
 You can still drop the broker files on the Settings page or convert them locally:
 

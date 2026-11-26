@@ -8,7 +8,10 @@ Sources:
   * DeGiro       — dividend / withholding tax / interest / securities lending
     rows in the statement CSV, and fees booked outside orders (exchange
     connection fees, ADR custody fees, French transaction tax)
-  * Trade Republic — transcribed from the statement PDF (`data/income_*.json`)
+  * Trade Republic — the live sign-in (dividends, interest, Saveback, and
+    tax withheld or refunded, via connections.py), or the uploaded export /
+    statement (`data/income_trade_republic.json`); one account is counted
+    once (connectors/traderepublic.py decides which one counts)
 
 Fees inside an order (commission, FX fee, stamp duty) are already in the
 trade's cash amount, so in realized and unrealized P/L, not here.
@@ -17,11 +20,10 @@ trade's cash amount, so in realized and unrealized P/L, not here.
 from __future__ import annotations
 
 import csv
-import json
 from pathlib import Path
 
 from . import cache
-from .connectors import trading212
+from .connectors import traderepublic, trading212
 from .datafiles import resolve as _resolve_data
 from .fx import FX_TO_EUR, to_eur
 
@@ -90,27 +92,29 @@ def _degiro() -> dict:
     return {k: round(v, 2) for k, v in out.items()}
 
 
-def _trade_republic() -> dict:
-    f = _resolve_data("income_trade_republic.json")[0]
-    if not f.exists():
-        return _zero()
-    rows = json.loads(f.read_text()).get("income", [])
-    dividends = sum(r["amount_eur"] for r in rows if r["type"] == "dividend")
-    interest = sum(r["amount_eur"] for r in rows if r["type"] == "interest")
-    return {"dividends": round(dividends, 2), "interest": round(interest, 2), "fees": 0.0}
+def _tr_rows() -> tuple[str, list[dict]]:
+    """(label, rows) of the uploaded Trade Republic income, when it counts."""
+    try:
+        return traderepublic.income_rows()
+    except Exception:
+        return traderepublic.LABEL, []
+
+
+def _trade_republic() -> tuple[str, dict]:
+    label, rows = _tr_rows()
+    dividends = sum(float(r.get("amount_eur", 0)) for r in rows if r.get("type") == "dividend")
+    interest = sum(float(r.get("amount_eur", 0)) for r in rows if r.get("type") == "interest")
+    return label, {"dividends": round(dividends, 2), "interest": round(interest, 2), "fees": 0.0}
 
 
 def events() -> list[tuple[str, float]]:
     """(YYYY-MM-DD, EUR) for every dividend, interest payment and fee, all
     accounts — the same items as summary(), dated (for the Performance chart)."""
     out: list[tuple[str, float]] = [(r["date"], r["amount_eur"]) for r in _degiro_rows()]
-    f = _resolve_data("income_trade_republic.json")[0]
-    if f.exists():
-        out += [(str(r.get("date", ""))[:10], float(r.get("amount_eur", 0)))
-                for r in json.loads(f.read_text()).get("income", [])
-                if r.get("type") in ("dividend", "interest")]
+    out += [(str(r.get("date", ""))[:10], float(r.get("amount_eur", 0)))
+            for r in _tr_rows()[1] if r.get("type") in ("dividend", "interest")]
     for x in (trading212.get_dividends() + trading212.get_interest() + trading212.get_fees()
-              + _connections_income()):
+              + _connections_income() + _connections_fees()):
         out.append((str(x.get("date", ""))[:10], float(x["amount_eur"])))
     return sorted(out)
 
@@ -128,11 +132,10 @@ def by_year() -> dict[str, float]:
         if r["kind"] != "fees":
             add(r["date"][:4], r["amount_eur"])
 
-    # Trade Republic: transcribed income file
-    f = _resolve_data("income_trade_republic.json")[0]
-    if f.exists():
-        for r in json.loads(f.read_text()).get("income", []):
-            add(str(r.get("date", ""))[:4], float(r.get("amount_eur", 0)))
+    # Trade Republic: the uploaded income file, when it counts (a live
+    # sign-in's income is part of the accounts added in Settings, below)
+    for r in _tr_rows()[1]:
+        add(str(r.get("date", ""))[:4], float(r.get("amount_eur", 0)))
 
     # Trading 212: dividends + interest, every account; then accounts added in Settings
     for x in trading212.get_dividends() + trading212.get_interest() + _connections_income():
@@ -150,6 +153,16 @@ def _connections_income() -> list[dict]:
         return []
 
 
+def _connections_fees() -> list[dict]:
+    """Fees and taxes outside trades from accounts added in Settings
+    (Trade Republic: tax withheld on sales, Vorabpauschale, refunds)."""
+    try:
+        from . import connections
+        return connections.get_fees()
+    except Exception:
+        return []
+
+
 def _connections_by_account() -> dict[str, dict]:
     try:
         from . import connections
@@ -162,12 +175,13 @@ def _connections_by_account() -> dict[str, dict]:
 # fresh for 5 min and then refreshed in the background.
 @cache.cached(ttl=300, stale=3600, copy=True)
 def summary() -> dict:
-    by_broker = {
-        **_trading212(),
-        "DeGiro": _degiro(),
-        "Trade Republic": _trade_republic(),
-        **_connections_by_account(),
-    }
+    by_broker = {**_trading212(), "DeGiro": _degiro()}
+    # Added, not replaced: a Trade Republic sign-in still reading its history
+    # and the upload that counts meanwhile can share the label "Trade Republic".
+    for label, part in (_trade_republic(), *_connections_by_account().items()):
+        have = by_broker.setdefault(label, _zero())
+        for k in ("dividends", "interest", "fees"):
+            have[k] = round(have.get(k, 0.0) + float(part.get(k, 0.0)), 2)
     dividends = round(sum(b["dividends"] for b in by_broker.values()), 2)
     interest = round(sum(b["interest"] for b in by_broker.values()), 2)
     fees = round(sum(b.get("fees", 0.0) for b in by_broker.values()), 2)

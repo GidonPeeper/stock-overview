@@ -11,9 +11,11 @@
   DELETE /api/connections/{id}           remove (and forget its key)
 
 Bank links (Enable Banking) are added through a trip to the bank instead of
-a key form: see banklink_api.py. Connections that feed cash list
-`manual_duplicates`: balances typed in by hand for the same institution, so
-the UI can suggest removing them (they would be counted twice).
+a key form: see banklink_api.py. A Trade Republic sign-in (phone, PIN,
+approve in the app) has its own endpoints: see traderepublic_api.py.
+Connections that feed cash list `manual_duplicates`: balances typed in by
+hand for the same institution, so the UI can suggest removing them (they
+would be counted twice).
 
 Every edit re-encrypts the vault via github_sync.push_vault_async(). main.py
 registers `after_change` hooks (rebuild the trendline when trade history
@@ -81,12 +83,15 @@ def _read_upload(file: UploadFile | None) -> tuple[bytes, str]:
     return content, os.path.basename(file.filename or "")[:120]
 
 
-def _taken_labels(exclude: str | None = None) -> set[str]:
+def _taken_labels(exclude: str | None = None, free: set[str] | frozenset = frozenset()) -> set[str]:
+    """Labels in use. `free`: fixed labels this connection may take anyway
+    (a Trade Republic sign-in may be called "Trade Republic": the upload of
+    the same account then stops counting, or is renamed)."""
     from .connectors import trading212
 
     labels = {c["label"] for c in connections.load_all() if c["id"] != exclude}
     labels |= {a.label for a in trading212.accounts()}
-    return labels | _FIXED_LABELS
+    return labels | (_FIXED_LABELS - set(free))
 
 
 def _names(conn: dict) -> set[str]:
@@ -152,13 +157,17 @@ def list_connections() -> dict:
                 updated = os.path.getmtime(v["path"])
             except OSError:
                 updated = None
-            files.append({"kind": kind, "institution": inst_id, "label": name, "updated": updated})
+            row = {"kind": kind, "institution": inst_id, "label": name, "updated": updated}
+            if kind == "trade_republic":
+                from .connectors import traderepublic
+                row["note"] = traderepublic.file_note()
+            files.append(row)
     manual = cash.manual_accounts()
     out = []
     for c in conns:
         pub = connections.public(c)
         spec = registry.connector(c.get("connector"))
-        if manual and spec and "cash" in spec.feeds and not spec.extra.get("managed_by"):
+        if manual and connections.feeds_here(spec, "cash"):
             pub["manual_duplicates"] = manual_duplicates(c, manual)
         out.append(pub)
     return {"connections": out, "server": server, "files": files}
@@ -220,6 +229,9 @@ def create(institution: str = Form(...), method: str = Form(...), label: str = F
     if registry.connector(cid).extra.get("flow") == "bank_link":
         raise HTTPException(400, "Link this bank with the Link button: it opens your bank's "
                                  "page to approve access.")
+    if registry.connector(cid).extra.get("flow") == "tr_login":
+        raise HTTPException(400, "Sign in with your phone number and PIN, then approve in the "
+                                 "Trade Republic app.")
     creds = connections.canonical_credentials(cid, _json_form(credentials, "details"),
                                               m.get("fields") or [])
     if any(len(v) > 4096 for v in creds.values()):

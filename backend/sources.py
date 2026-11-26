@@ -1,9 +1,10 @@
 """Every account the dashboard reads, in one place.
 
 Trading 212 can contribute several accounts (e.g. "T212 ISA" and "T212 Invest");
-DeGiro and Trade Republic contribute one each. Realized P/L is computed per
-account, so the same share held in an ISA and in a normal account stays in two
-separate cost pools, as HMRC treats them.
+DeGiro contributes one; Trade Republic one per account (its live sign-in and
+the uploaded export of the same account count once, connectors/traderepublic.py).
+Realized P/L is computed per account, so the same share held in an ISA and in
+a normal account stays in two separate cost pools, as HMRC treats them.
 """
 
 from __future__ import annotations
@@ -26,7 +27,7 @@ def trade_sources() -> dict[str, tuple[bool, Callable[[], list[Trade]]]]:
     """{account label: (is_isa, get_trades)}."""
     out = dict(trading212.trade_sources())
     out["DeGiro"] = (False, degiro.get_trades)
-    out["Trade Republic"] = (False, traderepublic.get_trades)
+    out.update(traderepublic.trade_sources())   # the upload and/or the live sign-in, once
     out.update(connections.trade_sources())
     return out
 

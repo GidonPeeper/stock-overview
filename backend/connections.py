@@ -17,6 +17,14 @@ A bank link (aggregator) also keeps `bank` (bank name, country, account
 names; nothing secret), `consent_expires` (ISO date-time) and `snapshot` (the
 last balances, so a restart does not spend one of the bank's few daily reads).
 
+A Trade Republic sign-in (traderepublic_api.py) keeps only Trade Republic's
+session cookies and the securities account number in `credentials` (never
+the PIN), `tr` (an account fingerprint and the phone's last two digits, for
+the UI), `history` (the timeline items already read, so a sync asks only for
+what is new) and `snapshot` (the last positions and cash). When its session
+can no longer be renewed, status is "signin": the user signs in again, and
+the dashboard keeps the last snapshot meanwhile.
+
 connections.json also holds `apps`: one set of credentials per bank-link
 service (e.g. the Enable Banking application ID and private key), shared by
 all its connections and never sent to the browser. Bank links in progress
@@ -34,14 +42,19 @@ Runtime
 Integration
     holdings() / trade_sources()  -> sources.py
     cash_entries()                -> cash.py ("auto" entries)
-    get_dividends() / get_interest() / income_by_account() -> income.py, uktax.py
+    get_dividends() / get_interest() / get_fees() / income_by_account()
+                                  -> income.py, uktax.py
     t212_accounts()               -> connectors/trading212.py (same code path
                                      as the T212_* env keys)
+    snapshot()                    -> connectors/traderepublic.py (it counts a
+                                     Trade Republic sign-in and an uploaded
+                                     export of the same account once)
 """
 
 from __future__ import annotations
 
 import copy
+import dataclasses
 import functools
 import hashlib
 import json
@@ -69,6 +82,13 @@ STATES_FILE = "bank_link_states.json"
 # A bank link must come back from the bank within this many seconds.
 STATE_TTL = 30 * 60
 
+# ConnectorError.status of a connection whose sign-in has ended (Trade
+# Republic): shown as "Sign in again", not as an error.
+SIGN_IN = "sign_in"
+
+# Never sent to the browser (besides the credentials, which are masked).
+_PRIVATE = ("credentials", "snapshot", "history")
+
 _lock = threading.RLock()
 _pool = ThreadPoolExecutor(max_workers=4, thread_name_prefix="connection")
 _cache: dict[str, tuple[Snapshot, float]] = {}      # id -> (snapshot, fetched_at)
@@ -83,6 +103,19 @@ def _file(name: str) -> Path:
     return path if real else DATA_DIR / name
 
 
+def _copy(data):
+    """A deep copy, except each connection's `history` (Trade Republic: can be
+    thousands of items, read on every page load). It is shared: code replaces
+    it as a whole (save_fields) and never changes it in place."""
+    if not isinstance(data, dict) or not isinstance(data.get("connections"), list):
+        return copy.deepcopy(data)
+    out = {k: copy.deepcopy(v) for k, v in data.items() if k != "connections"}
+    out["connections"] = [
+        {k: (v if k == "history" else copy.deepcopy(v)) for k, v in c.items()}
+        if isinstance(c, dict) else copy.deepcopy(c) for c in data["connections"]]
+    return out
+
+
 def _read(name: str, default):
     path = _file(name)
     try:
@@ -92,13 +125,13 @@ def _read(name: str, default):
     with _lock:
         hit = _read_cache.get(name)
         if hit and hit[0] == mtime:
-            return copy.deepcopy(hit[1])
+            return _copy(hit[1])
         try:
             data = json.loads(path.read_text())
         except (ValueError, OSError):
             return copy.deepcopy(default)
         _read_cache[name] = (mtime, data)
-        return copy.deepcopy(data)
+        return _copy(data)
 
 
 def _write(name: str, data) -> None:
@@ -240,7 +273,8 @@ def remove(conn_id: str) -> dict | None:
 
 
 def _set_state(conn_id: str, **fields) -> None:
-    """Persist status / last_sync / error / summary of one connection."""
+    """Persist status / last_sync / error / summary (or any other stored
+    field) of one connection. Does nothing for an unknown id."""
     with _lock:
         conns = load_all()
         for c in conns:
@@ -250,6 +284,12 @@ def _set_state(conn_id: str, **fields) -> None:
                 c.update(fields)
                 _save_all(conns)
                 return
+
+
+def save_fields(conn_id: str, **fields) -> None:
+    """Store fields a connector renewed during a sync (Trade Republic's
+    session cookies, the history read so far), keeping the cached data."""
+    _set_state(conn_id, **fields)
 
 
 def update(conn_id: str, **fields) -> dict | None:
@@ -291,7 +331,7 @@ def public(conn: dict) -> dict:
     still runs. Every credential is treated as secret unless the connector
     explicitly marks the field as not secret."""
     shown = _shown_fields(conn)
-    out = {k: v for k, v in conn.items() if k not in ("credentials", "snapshot")}
+    out = {k: v for k, v in conn.items() if k not in _PRIVATE}
     out["credentials"] = {k: (v if k in shown else mask(v))
                           for k, v in (conn.get("credentials") or {}).items()}
     spec = registry.connector(conn.get("connector"))
@@ -335,20 +375,41 @@ def _retry_wait(spec, err: ConnectorError | None) -> float:
     return min(spec.retry, spec.ttl)
 
 
-def _persisted(conn: dict) -> tuple[Snapshot, float] | None:
-    """The last balances saved with the connection (connectors with
-    `persist`), as a cache entry."""
+def _persisted(conn: dict, spec=None) -> tuple[Snapshot, float] | None:
+    """The last data saved with the connection (connectors with `persist`), as
+    a cache entry: balances and positions, or what the connector's `restore`
+    rebuilds from them."""
     s = conn.get("snapshot")
     if not isinstance(s, dict) or not s.get("at") or not isinstance(s.get("cash"), list):
         return None
-    return Snapshot(summary=s.get("summary") or "", cash=s["cash"]), float(s["at"])
+    if spec is not None and spec.restore is not None:
+        try:
+            snap = spec.restore(conn)
+        except Exception:
+            snap = None
+        return (snap, float(s["at"])) if snap is not None else None
+    holdings = []
+    for h in s.get("holdings") or []:
+        try:
+            holdings.append(Holding(**h))
+        except TypeError:
+            continue
+    return Snapshot(summary=s.get("summary") or "", cash=s["cash"], holdings=holdings), float(s["at"])
 
 
 def _state_after(spec, snap: Snapshot, at: float) -> dict:
     fields = {"status": "ok", "error": "", "last_sync": _now(), "summary": snap.summary}
     if spec is not None and spec.persist:
         fields["snapshot"] = {"cash": snap.cash, "summary": snap.summary, "at": at}
+        if snap.holdings:
+            fields["snapshot"]["holdings"] = [dataclasses.asdict(h) for h in snap.holdings]
     return fields
+
+
+def _status_of(err: ConnectorError) -> str:
+    if err.status == SIGN_IN:
+        return "signin"
+    return "pending" if err.pending else "error"
 
 
 def _run(conn: dict, validate: bool = False) -> Snapshot:
@@ -363,7 +424,7 @@ def _run(conn: dict, validate: bool = False) -> Snapshot:
         if not validate:
             with _lock:
                 _failed[conn["id"]] = (time.time(), _retry_wait(spec, e))
-            _set_state(conn["id"], status="pending" if e.pending else "error", error=str(e))
+            _set_state(conn["id"], status=_status_of(e), error=str(e))
         raise
     except Exception as e:  # unexpected: never let details (URLs, keys) escape
         err = ConnectorError(f"Something went wrong reading {spec.name} ({type(e).__name__}).")
@@ -406,7 +467,7 @@ def _snapshots(conns: list[dict]) -> dict[str, Snapshot]:
             continue
         hit = _cache.get(c["id"])
         if hit is None and spec.persist:
-            hit = _persisted(c)            # after a restart: the saved balances
+            hit = _persisted(c, spec)      # after a restart: the saved balances
             if hit is not None:
                 with _lock:
                     _cache.setdefault(c["id"], hit)
@@ -434,6 +495,26 @@ def _snapshots(conns: list[dict]) -> dict[str, Snapshot]:
     return out
 
 
+def snapshot(conn: dict) -> Snapshot | None:
+    """The latest snapshot of one live connection (cached, stale while it
+    refreshes, or the saved one), or None. Never raises."""
+    try:
+        return _snapshots([conn]).get(conn["id"])
+    except Exception:
+        return None
+
+
+def fetch_soon(conn_id: str) -> None:
+    """Start a full sync in the background now (e.g. the history after a
+    sign-in), keeping the cached data until it is done."""
+    conn = get(conn_id)
+    if conn is None:
+        return
+    with _lock:
+        _failed.pop(conn_id, None)
+    _start({**conn, "_manual": True})
+
+
 def validate(conn: dict) -> Snapshot:
     """Real read-only test call for a new connection (raises ConnectorError)."""
     spec = registry.connector(conn.get("connector"))
@@ -457,7 +538,8 @@ def remember(conn: dict, snap: Snapshot) -> None:
 
 def refresh(conn_id: str, wait: float = 30.0, psu: dict | None = None) -> dict | None:
     """Fetch again now. `psu`: headers saying the user is online (they asked
-    for this refresh), so a bank does not count it against its daily limit."""
+    for this refresh), so a bank does not count it against its daily limit.
+    The connector sees `_manual` (Trade Republic then also reads new history)."""
     conn = get(conn_id)
     if conn is None:
         return None
@@ -469,7 +551,7 @@ def refresh(conn_id: str, wait: float = 30.0, psu: dict | None = None) -> dict |
         _cache.pop(conn_id, None)
         _failed.pop(conn_id, None)
     try:
-        _start({**conn, "_psu": psu} if psu else conn).result(timeout=wait)
+        _start({**conn, "_manual": True, **({"_psu": psu} if psu else {})}).result(timeout=wait)
     except Exception:
         pass
     return get(conn_id)
@@ -486,14 +568,19 @@ def _clear_t212(conn: dict) -> None:
             pass
 
 
+def feeds_here(spec, feed: str) -> bool:
+    """Does this module feed `feed` for the connector? Not when a connector
+    module handles it (Trading 212 keys: everything; Trade Republic sign-ins:
+    holdings and trades, see registry.Spec `managed_feeds`)."""
+    if spec is None or feed not in spec.feeds:
+        return False
+    if not spec.extra.get("managed_by"):
+        return True
+    return feed not in spec.extra.get("managed_feeds", spec.feeds)
+
+
 def _feeding(feed: str) -> list[dict]:
-    out = []
-    for c in load_all():
-        spec = registry.connector(c.get("connector"))
-        # Trading 212 data flows through connectors/trading212.py itself
-        if spec and feed in spec.feeds and not spec.extra.get("managed_by"):
-            out.append(c)
-    return out
+    return [c for c in load_all() if feeds_here(registry.connector(c.get("connector")), feed)]
 
 
 # -------------------------------------------------------------- integration
@@ -592,7 +679,7 @@ def _income(kind: str) -> list[dict]:
     out = []
     for c in conns:
         snap = snaps.get(c["id"])
-        for x in (getattr(snap, kind) if snap else []):
+        for x in (getattr(snap, kind, None) or [] if snap else []):
             out.append({**x, "account": c["label"], "isa": c.get("wrapper") == "ISA",
                         "amount_eur": round(to_eur(float(x["amount"]), x["currency"]), 2)})
     return out
@@ -608,15 +695,22 @@ def get_interest() -> list[dict]:
     return _income("interest")
 
 
+def get_fees() -> list[dict]:
+    """Fees and taxes charged outside trades (Trade Republic: tax withheld on
+    sales, Vorabpauschale; refunds positive): [{account, isa, date, amount,
+    currency, amount_eur, kind}]."""
+    return _income("fees")
+
+
 def income_by_account() -> dict[str, dict]:
-    out: dict[str, dict] = {c["label"]: {"dividends": 0.0, "interest": 0.0}
-                            for c in _feeding("dividends")}
-    for x in get_dividends():
-        out.setdefault(x["account"], {"dividends": 0.0, "interest": 0.0})["dividends"] += x["amount_eur"]
-    for x in get_interest():
-        out.setdefault(x["account"], {"dividends": 0.0, "interest": 0.0})["interest"] += x["amount_eur"]
-    return {k: {"dividends": round(v["dividends"], 2), "interest": round(v["interest"], 2)}
-            for k, v in out.items()}
+    zero = lambda: {"dividends": 0.0, "interest": 0.0, "fees": 0.0}  # noqa: E731
+    out: dict[str, dict] = {c["label"]: zero() for c in _feeding("dividends")}
+    for kind, rows in (("dividends", get_dividends()), ("interest", get_interest()),
+                       ("fees", get_fees())):
+        for x in rows:
+            out.setdefault(x["account"], zero())[kind] += x["amount_eur"]
+    # "fees" only where there are any (most connectors report none)
+    return {k: {f: round(v, 2) for f, v in d.items() if f != "fees" or v} for k, d in out.items()}
 
 
 def t212_account(conn: dict):

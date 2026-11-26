@@ -567,7 +567,10 @@ class IntegrationTest(Base):
         wise = catalog.find("wise")
         self.assertEqual(catalog.method(wise, wise["default"])["connector"], "wise")
         tr = catalog.find("traderepublic")
-        self.assertEqual(catalog.method(tr, tr["default"])["support"], "import")
+        # the in-app sign-in (unofficial, read-only) is recommended; the upload stays
+        default = catalog.method(tr, tr["default"])
+        self.assertEqual((default["support"], default["connector"]), ("live", "traderepublic"))
+        self.assertTrue(any(m["support"] == "import" for m in tr["methods"]))
         self.assertTrue(any(m.get("connector") == "enablebanking" for m in tr["methods"]))
         rabo = catalog.find("rabobank")
         self.assertEqual([m["support"] for m in rabo["methods"] if m.get("provider") == "gocardless"], ["info"])

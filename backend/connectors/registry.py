@@ -26,7 +26,15 @@ plugs in the same way under its provider id: every catalog method
 TrueLayer, SnapTrade, ...) stay information only ("Coming soon") until they
 get a connector. A bank link has no per-connection fields: its Spec says
 `extra={"flow": "bank_link"}`, and the account is added by the redirect flow
-in backend/banklink_api.py instead of the key form.
+in backend/banklink_api.py instead of the key form. Trade Republic signs in
+with phone number + PIN + approval in its app: `extra={"flow": "tr_login"}`,
+added by backend/traderepublic_api.py.
+
+`managed_by` + `managed_feeds` hand some feeds to a connector module that
+also reads another source for the same account (Trading 212 keys and the
+statement; Trade Republic's sign-in and the uploaded export), so each account
+is counted once; connections.py feeds only the rest. `restore` rebuilds the
+last snapshot saved with a `persist` connection after a restart.
 """
 
 from __future__ import annotations
@@ -35,7 +43,7 @@ import re
 from dataclasses import dataclass, field
 from typing import Callable
 
-from . import bitvavo, enablebanking, etoro, ibkr_flex, starling, wise
+from . import bitvavo, enablebanking, etoro, ibkr_flex, starling, traderepublic_live, wise
 from .live import ConnectorError, Snapshot
 
 
@@ -52,6 +60,7 @@ class Spec:
     validate_wait: float = 45.0     # seconds "Connect" waits for the test call
     retry: float = 120.0            # seconds before retrying after a failure
     persist: bool = False           # keep the last balances in connections.json
+    restore: Callable[[dict], Snapshot | None] | None = None   # rebuild a saved snapshot
     extra: dict = field(default_factory=dict)
 
 
@@ -137,6 +146,17 @@ CONNECTORS: dict[str, Spec] = {
         updates="Up to 4 times a day (a bank limit), and when you press Refresh",
         fetch=enablebanking.fetch, first_wait=10.0,
         extra={"flow": "bank_link", "psu": True}),
+    # Unofficial: Trade Republic's own web sign-in (phone, PIN, approve in the
+    # app). Positions and cash every few minutes, the history a few times a
+    # day. Holdings and trades go through connectors/traderepublic.py, which
+    # also reads the uploaded export and counts the account once.
+    "traderepublic": Spec(
+        id="traderepublic", name="Trade Republic", feeds=("holdings", "trades", "cash", "dividends"),
+        ttl=300, retry=300.0, persist=True, restore=traderepublic_live.restore,
+        updates="Every few minutes (history a few times a day)",
+        fetch=traderepublic_live.fetch, first_wait=8.0, validate_wait=60.0,
+        extra={"flow": "tr_login", "managed_by": "traderepublic",
+               "managed_feeds": ("holdings", "trades")}),
 }
 
 # Upload importers handled by the existing /api/upload/{kind} endpoint, with
@@ -157,7 +177,8 @@ _T212 = [{"type": "api", "auth": "api_key_secret", "connector": "trading212"},
 _IBKR = [{"type": "api", "auth": "flex_token_query", "connector": "ibkr_flex"}]
 _DEGIRO = [{"type": "upload", "report": r"account (statement|overview)|rekeningoverzicht",
             "importer": "degiro"}]
-_TR = [{"type": "upload", "report": r"transa[ck]tions?[ -]?export|account statement|rekeningoverzicht|kontoauszug",
+_TR = [{"type": "api", "auth": "phone_pin", "connector": "traderepublic"},
+       {"type": "upload", "report": r"transa[ck]tions?[ -]?export|account statement|rekeningoverzicht|kontoauszug",
         "importer": "trade_republic"}]
 _STARLING = [{"type": "api", "auth": "token", "connector": "starling"}]
 _WISE = [{"type": "api", "auth": "token", "connector": "wise"}]
