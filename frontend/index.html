@@ -635,7 +635,7 @@
         <div class="col">
           <div class="card">
             <div class="ch"><h2>Net worth</h2><div class="acts"><a href="/settings#cash" class="link-btn">Edit</a></div></div>
-            <div id="money" class="ph" style="--h:260px"></div>
+            <div id="money-body" class="ph" style="--h:260px"></div>
           </div>
         </div>
         <div class="col">
@@ -930,7 +930,7 @@
       });
       if(owned.length) groups.push({type:"things", total:ownedTotal,
         rows:owned.map(a=>({label:a.name, sub:a.category+(a.change_eur!=null?` · ${a.change_eur>=0?"+":"−"}${money0(Math.abs(a.change_eur))} vs price paid`:""), value:a.value_eur}))});
-      const el=$("money"); el.className="";
+      const el=$("money-body"); el.className="";
       const loans=FIN?FIN.loans:[];
       const hint=!(CASH.accounts||[]).length&&!loans.length&&!owned.length
         ?`<div class="empty" style="margin-top:10px">Only your investments are counted so far. <a href="/settings#cash">Add bank, savings and pension balances</a> to see your full net worth.</div>`:"";
