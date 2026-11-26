@@ -20,6 +20,7 @@ from .fx import to_eur
 _FILE = "cash_accounts.json"
 
 TYPES = ("cash", "savings", "retirement", "other")
+INTEREST_TYPES = ("cash", "savings")   # counted in "interest a year" and its average rate
 
 
 def _store_path() -> Path:
@@ -36,7 +37,7 @@ def load() -> dict:
         data = {}
     accounts = [a for a in data.get("accounts", []) if not a.get("auto")]
     accounts += _broker_cash() + _connection_cash()
-    total = interest = 0.0
+    total = interest = banked = 0.0
     by_type: dict[str, float] = {}
     for a in accounts:
         a["type"] = a.get("type") if a.get("type") in TYPES else "cash"
@@ -44,11 +45,16 @@ def load() -> dict:
         a["balance_eur"] = round(to_eur(float(a.get("balance", 0)), a.get("currency", "EUR")), 2)
         a["interest_eur_yr"] = round(a["balance_eur"] * a["rate"] / 100, 2)
         total += a["balance_eur"]
-        interest += a["interest_eur_yr"]
         by_type[a["type"]] = round(by_type.get(a["type"], 0.0) + a["balance_eur"], 2)
+        if a["type"] in INTEREST_TYPES:
+            interest += a["interest_eur_yr"]
+            banked += a["balance_eur"]
+    # Interest and its average rate cover bank and savings accounts only: a
+    # pension pot's growth is not interest on cash, and its balance would pull
+    # the average rate down.
     return {"accounts": accounts, "total_eur": round(total, 2), "by_type": by_type,
             "interest_eur_yr": round(interest, 2),
-            "blended_rate_pct": round(interest / total * 100, 2) if total else 0,
+            "blended_rate_pct": round(interest / banked * 100, 2) if banked else 0,
             "sample": sample, "updated": data.get("updated")}
 
 

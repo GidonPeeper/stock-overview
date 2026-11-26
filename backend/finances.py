@@ -79,10 +79,11 @@ def load(liquid_assets_eur: float | None = None) -> dict:
             while bal > 0 and months < 600:
                 bal = bal * (1 + rate_m) - pay
                 months += 1
-            y, m = divmod((time.localtime().tm_year * 12 + time.localtime().tm_mon - 1
-                           + months), 12)
-            loan["payoff"] = f"{y}-{m + 1:02d}"
-            loan["payoff_months"] = months
+            if bal <= 0:   # not repaid within 50 years: no date rather than a wrong one
+                y, m = divmod((time.localtime().tm_year * 12 + time.localtime().tm_mon - 1
+                               + months), 12)
+                loan["payoff"] = f"{y}-{m + 1:02d}"
+                loan["payoff_months"] = months
 
     tax_info = _apply_tax(data["income"], sample)
     monthly_income = round(sum(float(i["net_monthly_eur"]) for i in data["income"]), 2)
