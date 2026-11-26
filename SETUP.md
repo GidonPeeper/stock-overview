@@ -35,7 +35,7 @@ own. Open **Settings**:
 |---|---|
 | Trading 212 | Add an account → Trading 212 → paste a read-only API key |
 | Trade Republic | Add an account → Trade Republic → upload the **Transaction export**. Or choose **Sign in (unofficial)**: phone number and PIN, then approve in the Trade Republic app |
-| DEGIRO | Upload the **Account statement** PDF (all dates) |
+| DEGIRO | Upload the **Account statement** as PDF or CSV (all dates). Read in English, Dutch, German, French, Spanish, Italian, Portuguese, Czech and Polish |
 | Interactive Brokers, eToro, Bitvavo, Starling, Wise | Add an account, then follow the steps shown |
 | Any other broker | Upload its positions CSV |
 | Bank and savings accounts | Type in the balance |

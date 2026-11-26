@@ -154,7 +154,7 @@
             "dividends",
             "cash"
           ],
-          "notes": "All cash movements: buys and sells, dividends, dividend tax, fees, deposits. Also Excel. Column headers follow the platform language and amounts may use decimal commas. For now the app only recognises trade lines written in Dutch ('Koop'/'Verkoop'); a statement in another language may not import its trades. Each trade in the PDF is checked against the amount DEGIRO booked. DEGIRO has no official API.",
+          "notes": "All cash movements: buys and sells, dividends, dividend tax, fees, deposits. Also Excel. Column headers follow the platform language and amounts may use decimal commas. Each trade in the PDF is checked against the amount DEGIRO booked. DEGIRO has no official API. The app reads statements in English, Dutch, German, French, Spanish, Italian, Portuguese, Czech and Polish; another language is refused with a message, never half imported.",
           "docs_url": "https://www.degiro.com/uk/helpdesk/tax/tax-treaties/which-reports-are-there-and-where-can-i-find-them",
           "verified": true
         },
