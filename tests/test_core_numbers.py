@@ -96,6 +96,35 @@ class AverageCostTest(unittest.TestCase):
         self.assertAlmostEqual(ev["proceeds"], 120.0)   # the proceeds of those 10 shares
         self.assertAlmostEqual(ev["realized"], 20.0)
 
+    def test_sale_of_twice_the_known_shares(self):
+        # (The tax-audit case.) Buy 5 for 500, sell 10 for 1200: the 5
+        # known shares fetch 5/10 x 1200 = 600, cost 500, realized +100
+        # (before: 1200 - 500 = +700). The 5 others are flagged, not priced.
+        trades = [T("2024-01-02", "BUY", 5, 500.0), T("2024-02-01", "SELL", 10, 1200.0)]
+        p = compute_positions(trades)["X"]
+        self.assertAlmostEqual(p.realized, 100.0)
+        self.assertAlmostEqual(p.unmatched, 5.0)
+        ev = realized_events(trades)[0]
+        self.assertEqual((round(ev["realized"], 2), ev["quantity"], ev["unmatched"]), (100.0, 5.0, 5.0))
+        # rounding of fractional shares is not a gap in the history
+        drift = [T("2024-01-02", "BUY", 0.1, 10.0), T("2024-01-03", "BUY", 0.2, 20.0),
+                 T("2024-01-04", "SELL", 0.3000001, 36.0)]
+        self.assertEqual(compute_positions(drift)["X"].unmatched, 0.0)
+
+    def test_realized_summary_lists_the_incomplete_history(self):
+        # Per account: 'Acct A' sold 4 shares it has no purchase for.
+        from backend import realized, sources
+        trades = [T("2024-01-02", "SELL", 4, 40.0), T("2024-02-01", "BUY", 10, 1000.0),
+                  T("2024-03-01", "SELL", 5, 600.0)]
+        cache.clear()
+        self.addCleanup(cache.clear)
+        with mock.patch.object(sources, "trade_sources",
+                               return_value={"Acct A": (False, lambda: trades)}):
+            out = realized.summary()
+        self.assertEqual(out["total_realized_eur"], 100.0)   # 600 - 5 x 100
+        self.assertEqual(out["incomplete"],
+                         [{"broker": "Acct A", "name": "X", "shares_without_purchase": 4.0}])
+
     def test_unmatched_sale_does_not_distort_a_later_round(self):
         # A statement that starts after an earlier purchase: its first sale
         # (4 for 40) has no buy in the file. Then buy 10 for 1000 (avg 100)

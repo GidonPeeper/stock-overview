@@ -37,6 +37,9 @@ class Position:
     cost: float = 0.0          # remaining cost basis of open shares
     realized: float = 0.0      # P/L locked in by sells
     sells: int = 0
+    # shares sold beyond the recorded holding: the history is incomplete
+    # (bought before the statement began, transferred in), see _match
+    unmatched: float = 0.0
 
     @property
     def avg_cost(self) -> float:
@@ -44,7 +47,7 @@ class Position:
 
     @property
     def is_open(self) -> bool:
-        return self.quantity > 1e-4
+        return self.quantity > _OPEN
 
     @property
     def is_closed(self) -> bool:
@@ -52,6 +55,7 @@ class Position:
 
 
 _DUST = 1e-9  # shares: a position this small has nothing left to sell
+_OPEN = 1e-4  # shares: less than this is rounding left over, not a holding
 
 
 def _time_key(when: str) -> str:
@@ -67,17 +71,19 @@ def _chronological(trades: list[Trade]) -> list[Trade]:
     brings them (a statement listed newest first, a date-only file): then
     that moment's buys of the instrument go first, so no sale meets an empty
     position that the next line fills."""
-    ordered = sorted(trades, key=lambda t: _time_key(t.when))
+    keyed = sorted(((_time_key(t.when), t) for t in trades), key=lambda kt: kt[0])
+    if all(keyed[k][0] != keyed[k + 1][0] for k in range(len(keyed) - 1)):
+        return [t for _, t in keyed]    # no two trades at one moment
     out: list[Trade] = []
     held: dict[str, float] = {}
-    i = 0
-    while i < len(ordered):
-        moment = _time_key(ordered[i].when)
+    i, n = 0, len(keyed)
+    while i < n:
+        moment = keyed[i][0]
         j = i + 1
-        while j < len(ordered) and _time_key(ordered[j].when) == moment:
+        while j < n and keyed[j][0] == moment:
             j += 1
-        group = ordered[i:j]
-        if len(group) > 1:
+        group = [kt[1] for kt in keyed[i:j]]
+        if j - i > 1:
             flip = set()
             for key in {t.key for t in group}:
                 mine = [t for t in group if t.key == key]
@@ -126,7 +132,9 @@ def compute_positions(trades: list[Trade]) -> dict[str, Position]:
             p.quantity += t.quantity
             p.cost += t.amount
         else:  # SELL — realize against the running average cost
-            _, proceeds, cost = _match(p.quantity, p.cost, t)
+            sold, proceeds, cost = _match(p.quantity, p.cost, t)
+            if t.quantity - sold > _OPEN:   # not just rounding of fractional shares
+                p.unmatched += t.quantity - sold
             p.realized += proceeds - cost
             p.cost -= cost
             # never below zero: a sale beyond the holding leaves nothing, so
@@ -155,7 +163,9 @@ def realized_events(trades: list[Trade], accounts: dict[int, str] | None = None)
             continue
         ev = {"when": t.when, "key": t.key, "name": t.name,
               "quantity": sold, "proceeds": proceeds,
-              "realized": proceeds - cost, "currency": t.currency}
+              "realized": proceeds - cost, "currency": t.currency,
+              # shares of this sale with no recorded purchase (left out)
+              "unmatched": max(t.quantity - sold, 0.0)}
         if accounts is not None:
             ev["account"] = accounts.get(id(t), "")
         out.append(ev)
