@@ -483,13 +483,19 @@
     /* ---- cash accounts ---- */
     const TYPE_LABEL={cash:"Cash",savings:"Savings",retirement:"Retirement",other:"Other"};
     function renderCash(c){
+      CASH_ROWS=c.accounts||[];
       const el=document.getElementById("cash-list");
       if(!c.accounts.length){ el.innerHTML='<span style="color:var(--faint)">No accounts yet. Add your first one below.</span>'; return; }
       el.innerHTML=(c.sample?'<div class="msg" style="color:var(--amber);margin-bottom:6px">Example accounts shown. Add a real one to replace them.</div>':'')+
-        c.accounts.map(a=>a.auto?`<div class="row"><span>${esc(a.name)}
+        c.accounts.map((a,i)=>a.auto?`<div class="row"><span>${esc(a.name)}
             <span class="pill" style="background:var(--panel2);color:var(--muted);margin-left:4px">updates itself</span>
-            <span class="r-sub">${esc(a.institution)} · ${esc(a.currency)}</span></span>
-          <b>${own0(a.balance,a.currency)}</b></div>`:`<div class="row"><span>${esc(a.name)}
+            <span class="r-sub">${esc(a.institution)} · ${esc(a.currency)} · <b>${own0(a.balance,a.currency)}</b>${a.rate_known?"":' · <span style="color:var(--amber)">interest rate not set</span>'}</span></span>
+          <span style="display:flex;gap:6px;align-items:center;flex-wrap:wrap;justify-content:flex-end">
+            <select class="ipt" id="autot-${i}" aria-label="Kind of account: ${esc(a.name)}" style="width:auto">
+              ${["cash","savings"].map(t=>`<option value="${t}"${a.type===t?" selected":""}>${TYPE_LABEL[t]}</option>`).join("")}</select>
+            <input class="ipt bal" type="number" step="0.01" min="0" max="25" inputmode="decimal" placeholder="Interest %" value="${a.rate_known?a.rate:""}" id="autor-${i}" aria-label="Interest rate a year of ${esc(a.name)}, in percent" />
+            <button class="btn" onclick="saveAuto(${i})">Save</button>
+          </span></div>`:`<div class="row"><span>${esc(a.name)}
             <span class="pill" style="background:var(--panel2);color:var(--muted);margin-left:4px">${TYPE_LABEL[a.type]||"Cash"}</span>
             <span class="r-sub">${esc(a.institution||"—")} · ${esc(a.currency)}${a.rate?` · ${a.rate}% interest`:""}</span></span>
           <span style="display:flex;gap:6px;align-items:center">
@@ -509,10 +515,18 @@
       ids.forEach((id,i)=>{ const el=document.getElementById(id); if(el) el.innerHTML=i?"":
         `<span class="err">${esc(what)} could not load: ${esc(e.message)}</span> <button class="btn" onclick="${retry}">Try again</button>`; });
     }
+    let CASH_ROWS=[];
+    function saveAuto(i){
+      const a=CASH_ROWS[i]; if(!a) return;
+      const fd=new FormData();
+      fd.append("name",a.name); fd.append("rate",document.getElementById("autor-"+i).value);
+      fd.append("type",document.getElementById("autot-"+i).value);
+      postCash(fd,"✓ Interest rate saved for "+a.name,"/api/cash/auto");
+    }
     function loadCash(){ fxReady.then(()=>getJSON("/api/cash")).then(renderCash).catch(e=>loadFailed(["cash-list"],"Your accounts",e,"loadCash()")); }
-    async function postCash(fd, okMsg){
+    async function postCash(fd, okMsg, url){
       const msg=document.getElementById("m-cash");
-      const r=await fetch("/api/cash",{method:"POST",body:fd}).catch(()=>null);
+      const r=await fetch(url||"/api/cash",{method:"POST",body:fd}).catch(()=>null);
       if(!r){ msg.textContent="✗ Could not reach the server."; msg.className="msg err"; return; }
       if(r.ok){ msg.textContent=okMsg; msg.className="msg ok"; renderCash(await r.json()); }
       else{ const e=await r.json().catch(()=>({detail:"Failed"})); msg.textContent="✗ "+e.detail; msg.className="msg err"; }

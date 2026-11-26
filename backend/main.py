@@ -715,6 +715,22 @@ def cash_upsert(name: str = Form(...), institution: str = Form(""),
     return out
 
 
+@app.post("/api/cash/auto")
+@_one_save_at_a_time
+def cash_auto(name: str = Form(...), rate: str = Form(""), type: str = Form("")) -> dict:
+    """Interest rate (blank = not known) and kind of an account that updates
+    itself: Trading 212 cash, Starling, a linked bank."""
+    try:
+        value = float(rate.replace(",", ".")) if rate.strip() else None
+    except ValueError:
+        raise HTTPException(400, "The interest rate must be a number, for example 3.5")
+    if value is not None and not 0 <= value <= 25:
+        raise HTTPException(400, "The interest rate must be between 0 and 25 percent a year")
+    out = cash.set_auto(name, value, type or None)
+    github_sync.push_vault_async()
+    return out
+
+
 @app.delete("/api/cash/{name}")
 @_one_save_at_a_time
 def cash_delete(name: str) -> dict:

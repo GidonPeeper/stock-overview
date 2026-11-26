@@ -75,5 +75,59 @@ class LoanPayoffTest(TempData):
         self.assertNotIn("payoff", loan)
 
 
+
+
+class AutoAccountRateTest(unittest.TestCase):
+    """An account that updates itself (Trading 212 cash, a linked bank) has no
+    interest rate until one is typed in: unknown, not 0%."""
+
+    def setUp(self):
+        import tempfile
+        from pathlib import Path
+        from unittest import mock
+        from backend import cash, fx
+        self.cash = cash
+        self.tmp = tempfile.TemporaryDirectory()
+        self.addCleanup(self.tmp.cleanup)
+        d = Path(self.tmp.name)
+        auto = [{"name": "Bank Easy Saver", "institution": "Bank", "balance": 10000.0, "currency": "EUR",
+                 "type": "cash", "rate": 0.0, "auto": True},
+                {"name": "Bank Personal", "institution": "Bank", "balance": 1000.0, "currency": "EUR",
+                 "type": "cash", "rate": 0.0, "auto": True}]
+        for p in (mock.patch.object(cash, "DATA_DIR", d),
+                  mock.patch.object(cash, "resolve", side_effect=lambda n: (d / n, (d / n).exists())),
+                  mock.patch.object(cash, "_broker_cash", return_value=[]),
+                  mock.patch.object(cash, "_connection_cash", side_effect=lambda: [dict(a) for a in auto]),
+                  mock.patch.object(fx, "_live_rates", return_value={"EUR": 1.0})):
+            p.start()
+            self.addCleanup(p.stop)
+
+    def test_unknown_rate_is_not_zero_percent(self):
+        out = self.cash.load()
+        self.assertEqual(out["interest_eur_yr"], 0.0)
+        self.assertEqual(out["rate_unknown_eur"], 11000.0)       # nothing is claimed about this money
+        self.assertEqual(out["blended_rate_pct"], 0)
+        saver = out["accounts"][0]
+        self.assertFalse(saver["rate_known"])
+        self.assertEqual(saver["type"], "savings")               # from its name
+
+    def test_a_typed_in_rate_counts_and_survives_other_saves(self):
+        # 10,000 at 4% = 400 a year; the 1,000 current account is set to 0% (known)
+        self.cash.set_auto("Bank Easy Saver", 4.0, "savings")
+        out = self.cash.set_auto("bank  personal", 0.0, "cash")   # name matched loosely
+        self.assertEqual(out["interest_eur_yr"], 400.0)
+        self.assertEqual(out["rate_unknown_eur"], 0.0)
+        self.assertEqual(out["blended_rate_pct"], round(400 / 11000 * 100, 2))   # 3.64
+        # adding and removing a typed-in account keeps the rates
+        self.cash.upsert("Old Bank", "Old", 500.0, "EUR", "cash", 1.0)            # 5 a year
+        out = self.cash.load()
+        self.assertEqual(out["interest_eur_yr"], 405.0)
+        out = self.cash.delete("Old Bank")
+        self.assertEqual(out["interest_eur_yr"], 400.0)
+        # a blank rate means not known again
+        out = self.cash.set_auto("Bank Easy Saver", None)
+        self.assertEqual((out["interest_eur_yr"], out["rate_unknown_eur"]), (0.0, 10000.0))
+
+
 if __name__ == "__main__":
     unittest.main()

@@ -35,8 +35,12 @@ def load() -> dict:
     # damaged file raises DataFileError (an error on the card, never a 0)
     data = read_json(path, {}, lists=("accounts",))
     accounts = [a for a in data.get("accounts", []) if not a.get("auto")]
-    accounts += _broker_cash() + _connection_cash()
-    total = interest = banked = 0.0
+    for a in accounts:
+        a["rate_known"] = True              # typed in with the account (0 = pays nothing)
+    auto = _broker_cash() + _connection_cash()
+    _apply_auto_settings(auto, data.get("auto"))
+    accounts += auto
+    total = interest = banked = no_rate = 0.0
     by_type: dict[str, float] = {}
     for a in accounts:
         a["type"] = a.get("type") if a.get("type") in TYPES else "cash"
@@ -46,15 +50,83 @@ def load() -> dict:
         total += a["balance_eur"]
         by_type[a["type"]] = round(by_type.get(a["type"], 0.0) + a["balance_eur"], 2)
         if a["type"] in INTEREST_TYPES:
-            interest += a["interest_eur_yr"]
-            banked += a["balance_eur"]
+            if a["rate_known"]:
+                interest += a["interest_eur_yr"]
+                banked += a["balance_eur"]
+            else:
+                no_rate += a["balance_eur"]
     # Interest and its average rate cover bank and savings accounts only: a
     # pension pot's growth is not interest on cash, and its balance would pull
-    # the average rate down.
+    # the average rate down. An account whose rate nobody has entered is left
+    # out of both and reported as `rate_unknown_eur`: unknown is not 0%.
     return {"accounts": accounts, "total_eur": round(total, 2), "by_type": by_type,
             "interest_eur_yr": round(interest, 2),
             "blended_rate_pct": round(interest / banked * 100, 2) if banked else 0,
+            "rate_unknown_eur": round(no_rate, 2),
             "sample": sample, "updated": data.get("updated")}
+
+
+# Accounts that update themselves (Trading 212 cash, Starling, a linked bank)
+# come without an interest rate: the bank's API does not give one. The rate
+# and the kind of account are typed in once in Settings and kept here, by
+# account name, under "auto" in the same file.
+_SAVINGS_WORDS = ("saver", "saving", "spaar", "sparen", "epargne", "épargne", "tagesgeld", "deposit")
+
+
+def _auto_key(name: str) -> str:
+    return " ".join(str(name).lower().split())
+
+
+def _apply_auto_settings(accounts: list[dict], settings) -> None:
+    settings = settings if isinstance(settings, dict) else {}
+    for a in accounts:
+        mine = settings.get(_auto_key(a.get("name", "")))
+        mine = mine if isinstance(mine, dict) else {}
+        if mine.get("type") in TYPES:
+            a["type"] = mine["type"]
+        elif any(w in _auto_key(a.get("name", "")) for w in _SAVINGS_WORDS):
+            a["type"] = "savings"
+        try:
+            a["rate"] = float(mine["rate"])
+            a["rate_known"] = True
+        except (KeyError, TypeError, ValueError):
+            a["rate"], a["rate_known"] = 0.0, False
+
+
+def set_auto(name: str, rate: float | None, type_: str | None = None) -> dict:
+    """Remember the interest rate (None = not known) and the kind of an
+    account that updates itself."""
+    path = _store_path()
+    data = read_json(path, {}, lists=("accounts",)) if path.exists() else {}
+    auto = data.get("auto") if isinstance(data.get("auto"), dict) else {}
+    entry = dict(auto.get(_auto_key(name)) or {})
+    if rate is None:
+        entry.pop("rate", None)
+    else:
+        entry["rate"] = rate
+    if type_ in TYPES:
+        entry["type"] = type_
+    auto[_auto_key(name)] = entry
+    data["accounts"] = _manual(data.get("accounts", []))
+    data["auto"] = auto
+    data["updated"] = time.strftime("%Y-%m-%d %H:%M")
+    DATA_DIR.mkdir(exist_ok=True)
+    write_atomic(DATA_DIR / _FILE, json.dumps(data, indent=2))
+    return load()
+
+
+def _write(accounts: list[dict]) -> None:
+    """Save the typed-in accounts, keeping the settings of the others."""
+    path, real = resolve(_FILE)
+    kept = read_json(path, {}, lists=("accounts",)).get("auto") if real else None
+    for a in accounts:
+        for k in ("balance_eur", "interest_eur_yr", "rate_known"):
+            a.pop(k, None)
+    out = {"accounts": accounts, "updated": time.strftime("%Y-%m-%d %H:%M")}
+    if isinstance(kept, dict) and kept:
+        out["auto"] = kept
+    DATA_DIR.mkdir(exist_ok=True)
+    write_atomic(DATA_DIR / _FILE, json.dumps(out, indent=2))
 
 
 def _broker_cash() -> list[dict]:
@@ -104,9 +176,6 @@ def upsert(name: str, institution: str, balance: float, currency: str,
     data = load()
     # first real edit starts clean — never carry demo accounts into the real file
     accounts = [] if data.get("sample") else _manual(data["accounts"])
-    for a in accounts:
-        a.pop("balance_eur", None)
-        a.pop("interest_eur_yr", None)
     type_ = type_ if type_ in TYPES else "cash"
     key = name.strip().lower()
     existing = next((a for a in accounts if a["name"].strip().lower() == key), None)
@@ -117,9 +186,7 @@ def upsert(name: str, institution: str, balance: float, currency: str,
         accounts.append({"name": name.strip(), "institution": institution.strip(),
                          "balance": balance, "currency": currency.upper(),
                          "type": type_, "rate": rate})
-    DATA_DIR.mkdir(exist_ok=True)
-    write_atomic(DATA_DIR / _FILE, json.dumps(
-        {"accounts": accounts, "updated": time.strftime("%Y-%m-%d %H:%M")}, indent=2))
+    _write(accounts)
     return load()
 
 
@@ -128,11 +195,7 @@ def delete(name: str) -> dict:
     accounts = [] if data.get("sample") else [
         a for a in _manual(data["accounts"])
         if a["name"].strip().lower() != name.strip().lower()]
-    for a in accounts:
-        a.pop("balance_eur", None)
-        a.pop("interest_eur_yr", None)
-    write_atomic(DATA_DIR / _FILE, json.dumps(
-        {"accounts": accounts, "updated": time.strftime("%Y-%m-%d %H:%M")}, indent=2))
+    _write(accounts)
     return load()
 
 

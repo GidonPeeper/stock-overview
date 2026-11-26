@@ -997,9 +997,14 @@
     };
     function renderCashOpt(){
       const el=$("cashopt"); if(!CASH) return;
-      const rows=(CASH.accounts||[]).filter(a=>(a.type==="cash"||a.type==="savings")&&a.balance_eur>0&&!a.auto)
+      // an account that updates itself counts once its interest rate is entered in Settings
+      const banked=(CASH.accounts||[]).filter(a=>(a.type==="cash"||a.type==="savings")&&a.balance_eur>0);
+      const rows=banked.filter(a=>!a.auto||a.rate_known)
         .map(a=>({...a, prot:PROTECT[(a.institution||"").toLowerCase()]||{ok:null,label:"check your bank's deposit guarantee"}}));
-      if(!rows.length) return empty(el,'Add your bank and savings accounts with their interest rates in <a href="/settings#cash">Settings</a> to see where your cash earns most.');
+      const noRate=banked.filter(a=>a.auto&&!a.rate_known), noRateEur=noRate.reduce((s,a)=>s+a.balance_eur,0);
+      const missing=noRate.length?`<div class="empty" style="text-align:left">The interest rate is not set for ${noRate.map(a=>esc(a.name)).join(", ")} (${money0(noRateEur)} together), so that money is not counted here. <a href="/settings#cash">Enter the rates in Settings</a>.</div>`:"";
+      if(!rows.length){ if(missing){ el.className=""; el.innerHTML=missing; return; }
+        return empty(el,'Add your bank and savings accounts with their interest rates in <a href="/settings#cash">Settings</a> to see where your cash earns most.'); }
       el.className="";
       const cur={}; rows.forEach(a=>{ (cur[a.currency]=cur[a.currency]||[]).push(a); });
       let plans="", totalGain=0, totalGainSafe=0;
@@ -1021,9 +1026,9 @@
           <div class="stat"><div class="k">Earning now</div>
             <div class="v num">${money0(CASH.interest_eur_yr||0)} a year</div><div class="d">${CASH.blended_rate_pct||0}% on average</div></div>
           <div class="stat"><div class="k">Could earn more</div>
-            <div class="v num ${totalGain>1?'pos':''}">${totalGain>1?"+"+money0(totalGain)+" a year":"Nothing ✓"}</div><div class="d">${totalGain>1?`+${money0(totalGainSafe)} using insured banks only`:"already at your best rates"}</div></div>
+            <div class="v num ${totalGain>1?'pos':''}">${totalGain>1?"+"+money0(totalGain)+" a year":(missing?"Not known yet":"Nothing ✓")}</div><div class="d">${totalGain>1?`+${money0(totalGainSafe)} using insured banks only`:(missing?"some rates are missing":"already at your best rates")}</div></div>
         </div>
-        ${plans||'<div class="empty">Your cash is already at your best rates.</div>'}`;
+        ${plans||(missing?"":'<div class="empty">Your cash is already at your best rates.</div>')}${missing}`;
     }
 
     /* ---- finances: loans, income, payments ---- */
