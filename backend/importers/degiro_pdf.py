@@ -10,8 +10,9 @@ synthetic order id, which is exactly how the connector groups an order's real
 EUR cash flow.
 
 Column boundaries come from the header row on each page (not hard-coded x
-positions) so a re-laid-out statement still parses. Long descriptions wrap to a
-continuation line (no date) and are re-joined.
+positions) so a re-laid-out statement still parses; the header may be in any
+language in backend/degiro_lang.py, as may the rows. Long descriptions wrap to
+a continuation line (no date) and are re-joined.
 
 Validation: the statement lists a running balance per currency; `validate()`
 replays every Change against it and reports the mismatches, so a mis-parsed
@@ -27,21 +28,20 @@ import sys
 from collections import Counter, defaultdict
 from dataclasses import dataclass, field
 
+from .. import degiro_lang as lang
+
 _DATE = re.compile(r"^\d{2}-\d{2}-\d{4}$")
 _TIME = re.compile(r"^\d{2}:\d{2}$")
 _ISIN = re.compile(r"^[A-Z]{2}[A-Z0-9]{9}\d$")
-_NUM = re.compile(r"^-?\d{1,3}(\.\d{3})*(,\d+)?$|^-?\d+(,\d+)?$")
 
 HEADER = ["Date", "Time", "Value date", "Product", "ISIN", "Description",
           "FX", "Change", "", "Balance", "", "Order Id"]
 
-# Rows that belong to a trade and therefore get the synthetic order id.
-_FILL = ("Koop ", "Verkoop ")
-_ORDER_SIDE_ROWS = ("Valuta Debitering", "Valuta Creditering",
-                    "DEGIRO Transactiekosten")
+# Rows that belong to a trade and therefore get the synthetic order id:
+# fills (lang.fill) and the currency conversion and fee rows booked with them.
+_ORDER_SIDE_ROWS = lang.ORDER_ROWS
 # Corporate actions / fund conversions are never order rows.
-_NOT_ORDER = ("Conversie geldmarktfonds", "SPLIT AANPASSING", "DELISTING",
-              "PRODUCTWIJZIGING", "WIJZIGING ISIN")
+_NOT_ORDER = lang.MONEY_MARKET + lang.SPLIT + lang.CORPORATE + lang.ISIN_CHANGE
 
 # footer / letterhead words — a line starting with one of these is not data
 _SKIP_FIRST = {"Mr", "Mrs", "Ms", "User", "Account", "Date", "flatexDEGIRO", "SE",
@@ -66,28 +66,50 @@ class Row:
     desc_parts: list[str] = field(default_factory=list)
 
 
-def _num(s: str) -> float:
-    return float(s.replace(".", "").replace(",", ".")) if s else 0.0
+def _mark(rows: list[Row]) -> str:
+    """The statement's decimal mark, from its amount columns ("-1.116,03" or
+    "-1,116.03"; Swiss "1’116.03", French "1 116,03")."""
+    return lang.decimal_mark((x for r in rows for x in (r.change, r.balance, r.fx)), ",")
 
 
-def _plain(s: str) -> str:
-    """'-1.116,03' -> '-1116,03' (what DeGiro's CSV export writes)."""
-    return s.replace(".", "") if s else ""
+_KEYS = ("date", "time", "value", "product", "isin", "desc", "fx", "change", "balance")
+
+
+def _header(words) -> "_Columns | None":
+    """Column anchors if this line is the table header, in any known language.
+    Older statements have no value-date column."""
+    texts = [w["text"] for w in words]
+    if "ISIN" not in texts:
+        return None
+    for titles in lang.PDF_HEADERS.values():
+        x, i = {}, 0
+        for key, title in zip(_KEYS, titles):
+            parts = title.split()
+            got = texts[i:i + len(parts)]
+            # a clipped title ("Uhrze") still counts
+            if len(got) == len(parts) and all(g == t or (len(g) >= 4 and t.startswith(g))
+                                              for g, t in zip(got, parts)):
+                x[key] = words[i]["x0"]
+                i += len(parts)
+            elif key != "value":
+                break
+        else:
+            return _Columns(x)
+    return None
 
 
 class _Columns:
     """x-anchors derived from a page's header line."""
 
-    def __init__(self, words):
-        pos = {w["text"]: w["x0"] for w in words}
-        self.time = pos["Time"]
-        self.value = pos["Value"]
-        self.product = pos["Product"]
-        self.isin = pos["ISIN"]
-        self.desc = pos["Description"]
-        self.fx = pos["FX"]
-        self.change = pos["Change"]
-        self.balance = pos["Balance"]
+    def __init__(self, x: dict[str, float]):
+        self.time = x["time"]
+        self.product = x["product"]
+        self.value = x.get("value", self.product)
+        self.isin = x["isin"]
+        self.desc = x["desc"]
+        self.fx = x["fx"]
+        self.change = x["change"]
+        self.balance = x["balance"]
 
     def bucket(self, x0: float) -> str:
         if x0 < self.time - 5:
@@ -140,8 +162,9 @@ def parse(source) -> list[Row]:
             page.close()
             for words in lines:
                 texts = [w["text"] for w in words]
-                if texts[:2] == ["Date", "Time"] and "Balance" in texts:
-                    cols = _Columns(words)
+                head = _header(words)
+                if head is not None:
+                    cols = head
                     prev = None
                     continue
                 if cols is None or texts[0] in _SKIP_FIRST:
@@ -171,6 +194,9 @@ def parse(source) -> list[Row]:
                             row.product = (row.product + " " + w["text"]).strip()
                     elif b == "description":
                         row.desc_parts.append(w["text"])
+                    elif b in ("fx", "change", "balance"):
+                        # "1 116,03": a space-grouped number comes as two words
+                        setattr(row, b, getattr(row, b) + w["text"])
                     else:
                         setattr(row, b, w["text"])
                 rows.append(row)
@@ -187,10 +213,10 @@ def _assign_order_ids(rows: list[Row]) -> None:
         d = r.description
         if not r.isin or d.startswith(_NOT_ORDER):
             continue
-        if d.startswith(_FILL) or d.startswith(_ORDER_SIDE_ROWS):
+        if lang.fill(d) or d.startswith(_ORDER_SIDE_ROWS):
             groups[(r.date, r.time, r.isin)].append(r)
     for (date, time, isin), members in groups.items():
-        if not any(m.description.startswith(_FILL) for m in members):
+        if not any(lang.fill(m.description) for m in members):
             continue  # FX/fee rows without a fill at that minute: leave ungrouped
         oid = f"{date[6:]}{date[3:5]}{date[:2]}-{time.replace(':', '')}-{isin}"
         for m in members:
@@ -198,13 +224,16 @@ def _assign_order_ids(rows: list[Row]) -> None:
 
 
 def to_csv(rows: list[Row]) -> str:
+    """Amounts as DEGIRO's CSV export writes them: no thousands separators,
+    the statement's own decimal mark ("-1.116,03" -> "-1116,03")."""
+    mark = _mark(rows)
     buf = io.StringIO()
     w = csv.writer(buf, lineterminator="\n")
     w.writerow(HEADER)
     for r in rows:
         w.writerow([r.date, r.time, r.value_date, r.product, r.isin, r.description,
-                    r.fx, r.change_ccy, _plain(r.change), r.balance_ccy,
-                    _plain(r.balance), r.order_id])
+                    r.fx, r.change_ccy, lang.plain(r.change, mark), r.balance_ccy,
+                    lang.plain(r.balance, mark), r.order_id])
     return buf.getvalue()
 
 
@@ -212,6 +241,11 @@ def validate(rows: list[Row]) -> dict:
     """Replay the running balance per currency (oldest -> newest). Rows sharing
     a timestamp may be printed in either order, so a mismatch is only counted
     when it does not resolve within the same minute."""
+    mark = _mark(rows)
+
+    def _num(s: str) -> float:
+        return lang.to_float(s, mark)
+
     mismatches: list[dict] = []
     last: dict[str, float] = {}
     pending: dict[str, list[Row]] = defaultdict(list)
@@ -263,39 +297,43 @@ def validate(rows: list[Row]) -> dict:
     kinds = Counter()
     for r in rows:
         d = r.description
-        kinds["fills" if d.startswith(_FILL) else
-              "corporate" if d.startswith(("SPLIT", "DELISTING", "PRODUCTWIJZIGING", "WIJZIGING ISIN")) else
-              "dividend" if d.lower().startswith("dividend") else
+        kinds["fills" if lang.fill(d) else
+              "corporate" if d.startswith("SPLIT") or lang.corporate(d) else
+              "dividend" if lang.income_kind(d) == "dividends" else
               "other"] += 1
     # Trade-level checks — these are what P/L is built from.
-    fill_re = re.compile(r"(Koop|Verkoop)\s+([\d.,]+)\s+@\s+([\d.,]+)\s+(\w+)")
+    text_mark = lang.Numbers([["", "", "", "", "", r.description] for r in rows]).text_mark
+    # the account's own currency: the one most rows are booked in
+    base = Counter(r.change_ccy for r in rows if r.change_ccy).most_common(1)
+    base = base[0][0] if base else "EUR"
     fill_bad, fx_bad, fx_missing = [], [], 0
     by_order: dict[str, list[Row]] = defaultdict(list)
     for r in rows:
         if r.order_id:
             by_order[r.order_id].append(r)
     for oid, members in by_order.items():
-        fills = [m for m in members if m.description.startswith(_FILL)]
-        for m in fills:
-            g = fill_re.match(m.description)
-            if not g:
+        fills = [(m, g) for m in members if (g := lang.fill(m.description))]
+        for m, g in fills:
+            if not g.price:
                 fill_bad.append(f"{m.date} {m.description}")
                 continue
-            expected = _num(g.group(2)) * _num(g.group(3))
-            if abs(expected - abs(_num(m.change))) > max(0.02, expected * 0.0005) or m.change_ccy != g.group(4):
+            expected = lang.to_float(g.qty, text_mark) * lang.to_float(g.price, text_mark)
+            if abs(expected - abs(_num(m.change))) > max(0.02, expected * 0.0005) or m.change_ccy != g.ccy:
                 fill_bad.append(f"{m.date} {m.description} booked {m.change_ccy} {m.change}")
-        non_eur = any(not m.description.endswith(" EUR") for m in fills)
-        deb = [m for m in members if m.description.startswith("Valuta Debitering")]
-        cred = [m for m in members if m.description.startswith("Valuta Creditering")]
-        if non_eur and not (deb or cred):
+        non_eur = any(g.ccy != base for _, g in fills)
+        deb = [m for m in members if m.description.startswith(lang.FX_DEBIT)]
+        cred = [m for m in members if m.description.startswith(lang.FX_CREDIT)]
+        conv = deb or cred or [m for m in members if m.description.startswith(lang.ORDER_ROWS)
+                               and m.change_ccy != base]
+        if non_eur and not conv:
             fx_missing += 1
         if deb and cred and all(d.fx for d in deb):
             # sum of foreign debits / rate should equal the EUR credits of the order
             # (rate is per-row but identical within one order; use the first)
-            foreign = sum(abs(_num(d.change)) for d in deb if d.change_ccy != "EUR")
-            eur_out = sum(abs(_num(d.change)) for d in deb if d.change_ccy == "EUR")
-            eur_in = sum(abs(_num(c.change)) for c in cred if c.change_ccy == "EUR")
-            foreign_in = sum(abs(_num(c.change)) for c in cred if c.change_ccy != "EUR")
+            foreign = sum(abs(_num(d.change)) for d in deb if d.change_ccy != base)
+            eur_out = sum(abs(_num(d.change)) for d in deb if d.change_ccy == base)
+            eur_in = sum(abs(_num(c.change)) for c in cred if c.change_ccy == base)
+            foreign_in = sum(abs(_num(c.change)) for c in cred if c.change_ccy != base)
             rate = _num(deb[0].fx)
             if foreign and eur_in:          # sell: foreign proceeds -> EUR
                 implied, booked = foreign / rate, eur_in

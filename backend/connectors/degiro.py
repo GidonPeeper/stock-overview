@@ -9,16 +9,21 @@ EUR cash flow** — the statement records the real EUR amounts DeGiro converted 
 (it auto-converts every foreign trade) including transaction fees. So cost basis
 and realized P/L are exact EUR, not a flat-rate approximation. Orders fill in
 multiple pieces sharing one Order Id; we sum those fills.
+
+Statements in any language in backend/degiro_lang.py are read (English, Dutch,
+German, ...); an upload in another one is refused by `check_statement`.
 """
 
 from __future__ import annotations
 
 import csv
-import re
+import io
 from collections import defaultdict
 from pathlib import Path
 
 from .base import Holding
+from .. import degiro_lang as lang
+from ..degiro_lang import Numbers
 from ..fx import to_eur
 from ..instruments import TICKERS, prefetch, price_currency, ticker_for
 from ..positions import Trade, compute_positions
@@ -35,22 +40,40 @@ def _csv_file() -> Path:
 # ISIN -> yfinance ticker (shared table in backend/instruments.py). "" => no live price.
 TICKER = TICKERS
 
-_TRADE_RE = re.compile(r"(Koop|Verkoop)\s+([\d.,]+)\s+@\s+([\d.,]+)\s+(\w+)")
-# Corporate actions that change share count but aren't plain trades:
+# Row wording (buys/sells, corporate actions) and number formats live in
+# backend/degiro_lang.py, for every statement language the app reads.
+# Corporate actions that change share count but aren't plain trades (Dutch
+# wording; the other languages' equivalents are in degiro_lang):
 #   "DELISTING: Verkoop N @ 0"      -> shares removed (often worthless)
 #   "SPLIT AANPASSING: N NAME @ P"  -> reverse/forward split (old ISIN out, new in)
 #   "PRODUCTWIJZIGING : Koop/Verkoop N @ P" -> ISIN/product change
 #   "WIJZIGING ISIN: Verkoop N @ P" + "WIJZIGING ISIN: Koop N @ P" -> pure ISIN
 #     change (e.g. Exxon's 2026 holding-company reorg): the position is re-keyed
 #     to the new ISIN with its cost basis intact — nothing was sold.
-_SPLIT_RE = re.compile(r"SPLIT AANPASSING:\s+([\d.,]+)\s")
-_CORP_PREFIXES = ("DELISTING", "SPLIT AANPASSING", "PRODUCTWIJZIGING", "WIJZIGING ISIN")
-_ISIN_CHANGE = "WIJZIGING ISIN"
 
 
-def _num(s: str) -> float:
-    # Dutch formatting: "1.234,56" -> 1234.56
-    return float(s.replace(".", "").replace(",", ".")) if s else 0.0
+def _rows(csv_file: Path) -> list[list[str]]:
+    """Statement rows (header dropped). A long order id can wrap onto a row of
+    its own (",,,,,,,,,,,b017-a61a6d03c3e7"): it is joined back onto its row.
+    A fill without an order id gets one from its minute and ISIN, shared with
+    the conversion and fee rows booked with it (as the PDF importer does)."""
+    with csv_file.open(encoding="utf-8") as fh:
+        rows = [r for r in csv.reader(fh) if len(r) >= 12][1:]
+    out: list[list[str]] = []
+    for r in rows:
+        if out and r[11] and not any(r[:11]):
+            out[-1] = out[-1][:11] + [out[-1][11] + r[11]] + out[-1][12:]
+        else:
+            out.append(r)
+    groups: dict[tuple, list[list[str]]] = defaultdict(list)
+    for r in out:
+        if not r[11] and r[4] and (lang.fill(r[5]) or r[5].startswith(lang.ORDER_ROWS)):
+            groups[(r[0], r[1], r[4])].append(r)
+    for (date, time, isin), members in groups.items():
+        if any(lang.fill(m[5]) for m in members):
+            for m in members:
+                m[11] = f"{date} {time} {isin}"
+    return out
 
 
 def _price_currency(ticker: str) -> str:
@@ -62,8 +85,8 @@ def get_trades() -> list[Trade]:
     if not csv_file.exists():
         return []
 
-    with csv_file.open(encoding="utf-8") as fh:
-        all_rows = [r for r in csv.reader(fh) if len(r) >= 12][1:]
+    all_rows = _rows(csv_file)
+    num = Numbers(all_rows)
 
     # Group ALL rows of an order together (fills + the EUR Valuta-conversion rows
     # + fees) so the actual EUR cash flow is captured. Rows with no order id, or
@@ -74,7 +97,7 @@ def get_trades() -> list[Trade]:
     for row in all_rows:
         if row[11]:
             orders[row[11]].append(row)
-        elif row[5].startswith(_CORP_PREFIXES):
+        elif lang.corporate(row[5]):
             corporate.append(row)
 
     trades: list[Trade] = []
@@ -84,46 +107,56 @@ def get_trades() -> list[Trade]:
         return f"{r[0][6:]}-{r[0][3:5]}-{r[0][0:2]} {r[1]}"  # "YYYY-MM-DD HH:MM"
 
     for rows in orders.values():
-        fills = [r for r in rows if r[5].startswith(("Koop ", "Verkoop "))]
+        fills = [(r, f) for r in rows if (f := lang.fill(r[5]))]
         if not fills:
             corporate.extend(rows)  # e.g. a delisting/split booked under an order id
             continue
-        first = _TRADE_RE.match(fills[0][5])
-        side = "BUY" if first.group(1) == "Koop" else "SELL"
-        qty = sum(_num(_TRADE_RE.match(f[5]).group(2)) for f in fills)
-        isin, name = fills[0][4], fills[0][3]
-        traded_in.setdefault(isin, first.group(4))
+        row0, first = fills[0]
+        qty = sum(num.text(f.qty) for _, f in fills)
+        isin, name = row0[4], row0[3]
+        if first.ccy:
+            traded_in.setdefault(isin, first.ccy)
         # Actual net EUR cash flow = sum of EUR-currency Change rows (real rate + fees).
-        eur = abs(sum(_num(r[8]) for r in rows if r[7] == "EUR"))
+        eur = abs(sum(num.amount(r[8]) for r in rows if r[7] == "EUR"))
+        if eur < 1e-6 and not any(r[7] == "EUR" for r in rows):
+            # A GBP (or CHF) account books the order's real cash flow, fees
+            # included, in its own currency; foreign legs net to zero against
+            # their FX rows.
+            net: dict[str, float] = defaultdict(float)
+            for r in rows:
+                if r[7]:
+                    net[r[7]] += num.amount(r[8])
+            eur = abs(sum(to_eur(v, c) for c, v in net.items() if abs(v) > 0.005))
         if eur < 1e-6:
-            eur = abs(qty * _num(first.group(3)) * to_eur(1.0, first.group(4)))
+            eur = abs(qty * num.text(first.price) * to_eur(1.0, first.ccy or "EUR"))
         trades.append(Trade(
-            when=_when(fills[0]), key=isin, name=name.title(), side=side,
+            when=_when(row0), key=isin, name=name.title(), side=first.side,
             quantity=qty, amount=round(eur, 2), currency="EUR",
         ))
 
-    # ISIN changes: pair the "Verkoop" (old ISIN) with the "Koop" (new ISIN) row
+    # ISIN changes: pair the sell (old ISIN) with the buy (new ISIN) row
     # booked at the same moment and remember old -> new (name from the new row).
     renames: dict[str, tuple[str, str]] = {}
-    changes = [r for r in corporate if r[5].startswith(_ISIN_CHANGE)]
-    for out in (r for r in changes if "Verkoop" in r[5]):
-        new = next((r for r in changes if "Koop" in r[5] and r[0] == out[0] and r[1] == out[1]
-                    and r[4] != out[4]), None)
+    changes = [(r, lang.find_fill(r[5])) for r in corporate if lang.corporate(r[5]) == "isin_change"]
+    for out, f in changes:
+        if not f or f.side != "SELL":
+            continue
+        new = next((r for r, g in changes if g and g.side == "BUY" and r[0] == out[0]
+                    and r[1] == out[1] and r[4] != out[4]), None)
         if new is not None:
             renames[out[4]] = (new[4], new[3].title())
-    corporate = [r for r in corporate if not r[5].startswith(_ISIN_CHANGE)]
+    corporate = [r for r in corporate if lang.corporate(r[5]) != "isin_change"]
 
     for r in corporate:
-        desc, ccy, change = r[5], r[7], _num(r[8])
-        m = _TRADE_RE.search(desc)
-        if m:                                   # DELISTING / PRODUCTWIJZIGING
-            side = "BUY" if m.group(1) == "Koop" else "SELL"
-            qty = _num(m.group(2))
+        desc, ccy, change = r[5], r[7], num.amount(r[8])
+        f = lang.find_fill(desc)
+        if f:                                   # DELISTING / PRODUCTWIJZIGING
+            side, qty = f.side, num.text(f.qty)
         else:                                   # SPLIT AANPASSING
-            sm = _SPLIT_RE.search(desc)
-            if not sm:
+            sq = lang.split_qty(desc)
+            if not sq:
                 continue
-            qty = _num(sm.group(1))
+            qty = num.text(sq)
             side = "SELL" if change > 0 else "BUY"  # shares leaving vs arriving
         eur = abs(to_eur(change, ccy)) if ccy in ("USD", "EUR", "GBP") else abs(change)
         trades.append(Trade(
@@ -141,6 +174,35 @@ def get_trades() -> list[Trade]:
     for t in trades:
         t.ticker = ticker_for(t.key, traded_in.get(t.key))
     return trades
+
+
+def check_statement(text: str, pdf: bool = False) -> dict:
+    """Refuse an upload the app would read as empty, with a message that names
+    the problem. Returns {"fills", "orders"} for the upload report."""
+    how = "Export it from DEGIRO: Activity → Account statement (PDF or CSV), all dates."
+    rows = [r for r in csv.reader(io.StringIO(text)) if any(c.strip() for c in r)]
+    head = rows[0] if rows else []
+    if len(head) >= 15 and "ISIN" in head[:5]:
+        raise ValueError("That is DEGIRO's Transactions export. Upload the Account statement "
+                         "instead: Activity → Account statement (PDF or CSV), all dates.")
+    if len(head) < 12 or head[4].strip() != "ISIN":
+        raise ValueError("That doesn't look like a DEGIRO account statement. " + how)
+    data = [r for r in rows[1:] if len(r) >= 12 and any(r[:11])]
+    if not data:
+        if pdf:
+            raise ValueError("No statement table found in that PDF. If it is the DEGIRO account "
+                             "statement, it may be in a language the app does not read yet "
+                             f"(it reads {lang.NAMES}). Try the CSV export instead.")
+        raise ValueError("That DEGIRO statement has no rows. " + how)
+    fills = [r for r in data if lang.fill(r[5])]
+    if not fills:
+        odd = next((r[5] for r in data if lang.looks_like_fill(r[5]) and not lang.find_fill(r[5])), None)
+        if odd:
+            raise ValueError("This looks like a DEGIRO statement in a language the app does not "
+                             f'read yet: it cannot read buys and sells such as "{odd[:40]}". '
+                             f"It reads statements in {lang.NAMES}.")
+        raise ValueError("No buys or sells found in that DEGIRO statement. " + how)
+    return {"fills": len(fills), "orders": len({r[11] or (r[0], r[1], r[4]) for r in fills})}
 
 
 def get_holdings() -> list[Holding]:
