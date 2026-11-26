@@ -11,6 +11,12 @@ far + dividends and interest received so far, after fees charged outside trades
 (income.py), the same total return as the dashboard headline. Selling, or
 moving money between brokers, does not move the profit line.
 
+Accounts kept in another currency (a pound Trading 212 account): the dashboard
+counts their cost and realized profit in that currency, shown in euros at
+today's rate. Each past day uses that day's rate instead, the same rate as the
+value, so buying at the market price makes no profit on the day and the last
+day meets today's live point.
+
 Prices: Yahoo's closes are adjusted for later splits. They are turned back into
 the prices quoted on each day, because the trade history holds the share counts
 of the time (DeGiro books a split as shares out and shares in). Without this a
@@ -30,6 +36,7 @@ from . import cache, clock, closes, sources
 from .instruments import TICKERS, prefetch, price_currency, ticker_for
 from .positions import Trade, compute_positions
 from .prices import quote_scale
+from . import fx
 
 log = logging.getLogger("stock_overview.trend")
 
@@ -39,13 +46,25 @@ last_build: dict = {}     # coverage and timing of the last build (datastatus)
 
 
 def _accounts() -> dict[str, list[Trade]]:
-    """{account: its trades in EUR, oldest first} (same input as realized.py)."""
+    """{account: its trades in the currency they were booked in, oldest first}
+    (same input as realized.py, which converts them with sources.in_eur)."""
     out = {}
     for label, (_, get) in sources.trade_sources().items():
         try:
-            out[label] = sorted(sources.in_eur(get()), key=lambda t: t.when)
+            out[label] = sorted(get(), key=lambda t: t.when)
         except Exception:
             continue
+    return out
+
+
+def _booked_in(accts: dict[str, list[Trade]]) -> dict[tuple[str, str], str | None]:
+    """{(account, instrument): the one currency its trades are booked in},
+    None when they mix currencies (then today's rate is used, as before)."""
+    out: dict[tuple[str, str], str | None] = {}
+    for label, ts in accts.items():
+        for t in ts:
+            k, c = (label, t.key), fx.unit(t.currency)[1]
+            out[k] = c if out.get(k, c) == c else None
     return out
 
 
@@ -155,6 +174,8 @@ def build(accts: dict[str, list[Trade]] | None = None, today: date | None = None
 
     t0 = time.time()
     accts = accts if accts is not None else _accounts()
+    booked = _booked_in(accts)
+    accts = {label: sources.in_eur(ts) for label, ts in accts.items()}   # today's rate
     inc = sorted(income_events if income_events is not None else _income_events())
     inc_i, inc_sum = 0, 0.0
     trades = [t for ts in accts.values() for t in ts]
@@ -171,8 +192,12 @@ def build(accts: dict[str, list[Trade]] | None = None, today: date | None = None
     for k in unknown:
         ticker_of[k] = ticker_for(k)
     tickers = sorted({tk for tk in ticker_of.values() if tk})
-    ccys = {price_currency(tk) for tk in tickers} - {"EUR"}
+    # rates for the prices, the accounts' own currencies and the S&P 500 (dollars)
+    ccys = ({price_currency(tk) for tk in tickers} | {c for c in booked.values() if c}
+            | {"USD"}) - {"EUR"}
     fx_pairs = {c: f"EUR{c}=X" for c in ccys}
+    # today's rate for the accounts' own currencies (what sources.in_eur used)
+    now_rate = {c: fx.to_eur(1.0, c) for c in {b for b in booked.values() if b} - {"EUR"}}
     close = _download(tickers + list(fx_pairs.values()) + [BENCH], start=first[:7] + "-01")
 
     cols = {c: close[c].to_numpy() for c in close.columns if close[c].notna().any()}
@@ -180,6 +205,13 @@ def build(accts: dict[str, list[Trade]] | None = None, today: date | None = None
             if first <= ts.date().isoformat() and ts.date() < today]
     scale = {tk: quote_scale(tk) for tk in tickers}
     unit_ccy = {tk: price_currency(tk) for tk in tickers}
+
+    def rate_on(ccy: str, i: int) -> float:
+        """EUR per unit of `ccy` at day i's close (NaN if unknown)."""
+        if ccy == "EUR":
+            return 1.0
+        r = cols.get(fx_pairs.get(ccy, ""), None)
+        return (1.0 / r[i]) if r is not None and r[i] == r[i] and r[i] else float("nan")
 
     state = {label: [0, {}] for label in accts}       # trades applied, positions
     out: list[dict] = []
@@ -190,6 +222,10 @@ def build(accts: dict[str, list[Trade]] | None = None, today: date | None = None
         while inc_i < len(inc) and inc[inc_i][0] <= iso:
             inc_sum += inc[inc_i][1]
             inc_i += 1
+        # cost and realized booked in another currency: from today's rate
+        # (sources.in_eur) to this day's rate; today's rate if it is unknown
+        to_day = {c: rate_on(c, i) / now_rate[c] if now_rate[c] else float("nan") for c in now_rate}
+        to_day = {c: f if f == f and f > 0 else 1.0 for c, f in to_day.items()}
         value = cost = realized = priced = 0.0
         no_price: set[str] = set()
         for label, ts in accts.items():
@@ -200,30 +236,33 @@ def build(accts: dict[str, list[Trade]] | None = None, today: date | None = None
             if n != st[0]:
                 st[0], st[1] = n, compute_positions(ts[:n])
             for key, p in st[1].items():
-                realized += p.realized
+                k = to_day.get(booked.get((label, key)) or "EUR", 1.0)
+                realized += p.realized * k
                 if p.quantity <= 1e-6:
                     continue
-                cost += p.cost
+                p_cost = p.cost * k
+                cost += p_cost
                 tk = ticker_of.get(key, "")
                 px = cols[tk][i] if tk in cols else float("nan")
-                ccy = unit_ccy.get(tk, "EUR")
-                rate = 1.0
-                if ccy != "EUR":
-                    r = cols.get(fx_pairs.get(ccy, ""), None)
-                    rate = (1.0 / r[i]) if r is not None and r[i] == r[i] and r[i] else float("nan")
-                v = px * scale.get(tk, 1.0) * p.quantity * rate
+                v = px * scale.get(tk, 1.0) * p.quantity * rate_on(unit_ccy.get(tk, "EUR"), i)
                 if v == v:                              # not NaN
                     value += v
-                    priced += p.cost
+                    priced += p_cost
                 else:
-                    value += p.cost                     # no price: neither gain nor loss
+                    value += p_cost                     # no price: neither gain nor loss
                     no_price.add(p.name)
         if cost <= 0 and value <= 0 and realized == 0:
             continue
+        # the S&P 500 in euros (it is quoted in dollars), for benchmark()
         sp = cols.get(BENCH)
-        out.append(_point(iso, value, cost, realized,
-                          round(float(sp[i]), 2) if sp is not None and sp[i] == sp[i] else None,
-                          inc_sum))
+        sp_eur = float(sp[i]) * float(rate_on("USD", i)) if sp is not None else float("nan")
+        point = _point(iso, value, cost, realized, round(sp_eur, 4) if sp_eur == sp_eur else None, inc_sum)
+        # the day's rate of each account currency, for benchmark()
+        day_fx = {c: float(rate_on(c, i)) for c in now_rate}
+        day_fx = {c: round(r, 6) for c, r in day_fx.items() if r == r and r > 0}
+        if day_fx:
+            point["fx"] = day_fx
+        out.append(point)
         covered, total_cost_last, unpriced = priced, cost, no_price
 
     cutoff = (today - timedelta(days=DAILY_DAYS)).isoformat()
@@ -242,22 +281,30 @@ def build(accts: dict[str, list[Trade]] | None = None, today: date | None = None
 def benchmark(hist: list[dict]) -> dict[str, float]:
     """What the money you put in would be worth in the S&P 500: every buy
     (sell) bought (sold) index units at that day's close. {day: EUR value}.
-    Approximate: the index is in dollars and no exchange-rate effect is added,
-    as before."""
-    pts = [(p["day"], p.get("sp")) for p in hist]
-    if not pts or not any(sp for _, sp in pts):
+    `sp` on each point is the index in euros (at that day's EUR/USD rate), so
+    a falling dollar lowers it just as it lowers your dollar shares. Money in
+    an account kept in another currency counts at the day's rate (`fx` on the
+    point), as in the value line; today's live point uses today's rate."""
+    if not hist or not any(p.get("sp") for p in hist):
         return {}
     accts = _accounts()
-    events = sorted((t.when[:10], (1 if t.side == "BUY" else -1) * t.amount)
+    events = sorted((t.when[:10], (1 if t.side == "BUY" else -1) * t.amount, t.currency)
                     for ts in accts.values() for t in ts)
+
+    def in_eur(amount: float, ccy: str, day_fx: dict) -> float:
+        scale, c = fx.unit(ccy)
+        if c == "EUR":
+            return amount * scale
+        return amount * scale * day_fx[c] if c in day_fx else fx.to_eur(amount, ccy)
+
     out: dict[str, float] = {}
     units, j, last_sp = 0.0, 0, None
-    for day, sp in pts:
-        sp = sp or last_sp
+    for p in hist:
+        day, sp = p["day"], p.get("sp") or last_sp
         last_sp = sp
-        while j < len(events) and events[j][0] <= day:
-            if sp:
-                units += events[j][1] / sp
+        # money in (or out) before the first known index level waits for it
+        while sp and j < len(events) and events[j][0] <= day:
+            units += in_eur(events[j][1], events[j][2], p.get("fx") or {}) / sp
             j += 1
         if sp:
             out[day] = round(units * sp, 2)
