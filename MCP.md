@@ -28,9 +28,14 @@ Works with Claude Code, Claude Desktop and claude.ai.
 
 ## Set it up
 
-In the commands below, replace `/path/to/stock-overview` with the full path
-of your copy (run `pwd` inside the folder to see it). Install first, as in
-the README: `python3 -m venv .venv && .venv/bin/pip install -r requirements.txt`.
+Start the app once first (`./run.sh`, see [SETUP.md](SETUP.md)), so everything
+is installed.
+
+**Shortcut (Mac or Linux):** run `./run.sh claude` in the folder. It prints
+the commands below with your own path already filled in.
+
+Otherwise, replace `/path/to/stock-overview` below with the full path of your
+copy (run `pwd` inside the folder to see it).
 
 ### Claude Code
 
