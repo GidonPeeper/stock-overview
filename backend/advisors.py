@@ -32,14 +32,16 @@ from dataclasses import dataclass, field
 from datetime import date
 from pathlib import Path
 
+from . import paye as _paye
 from .fx import from_eur, to_eur
 from .instruments import is_valid_isin
 
 # ===========================================================================
 #  UK RATES AND ALLOWANCES, 2026/27. UPDATE AFTER EACH BUDGET.
 #
-#  Checked on gov.uk on 2026-11-14, after the Budget of 28 October 2026. Its
-#  rates annex leaves every 2026/27 figure below unchanged:
+#  Checked on gov.uk on 2026-11-14 and again on 2026-11-26, after the Budget
+#  of 28 October 2026. Its rates annex leaves every 2026/27 figure below
+#  unchanged (and every 2027/28 one too, except savings rates):
 #  https://www.gov.uk/government/publications/budget-2026-overview-of-tax-legislation-and-rates-ootlar/annex-a-rates-and-allowances
 #  What that Budget did change, as far as these checks go:
 #    * tax on savings interest rises 4 points from 6 April 2027 (to 24/44/49%);
@@ -50,7 +52,7 @@ from .instruments import is_valid_isin
 #  tests/test_advisors.py fails if the two drift apart.
 # ===========================================================================
 TAX_YEAR = "2026/27"
-RATES_CHECKED = "2026-11-14"
+RATES_CHECKED = "2026-11-26"
 
 # https://www.gov.uk/individual-savings-accounts/how-isas-work
 ISA_ALLOWANCE = 20_000
@@ -71,10 +73,19 @@ INCOME_RATE = {"basic": 0.20, "higher": 0.40, "additional": 0.45}
 TAPER_FROM = 100_000
 # https://www.gov.uk/apply-tax-free-interest-on-savings/how-much-is-tax-free
 SAVINGS_ALLOWANCE = {"basic": 1_000, "higher": 500, "additional": 0}
+# (same page) up to £5,000 of interest is tax-free when other income is low:
+# every £1 of other income above the personal allowance cuts it by £1
+STARTING_RATE_FOR_SAVINGS = 5_000
 SAVINGS_RATE = {"basic": 0.20, "higher": 0.40, "additional": 0.45}
 SAVINGS_RATE_RISE_APRIL_2027 = 0.04  # Budget 2026 rates annex (link above)
 # https://www.gov.uk/tax-on-your-private-pension/annual-allowance
 PENSION_ANNUAL_ALLOWANCE = 60_000
+# https://www.gov.uk/guidance/pension-schemes-work-out-your-tapered-annual-allowance
+# (threshold income over £200,000 and adjusted income over £260,000: the
+#  allowance falls £1 for every £2 above £260,000, to no less than £10,000)
+TAPER_THRESHOLD_INCOME = 200_000
+TAPER_ADJUSTED_INCOME = 260_000
+TAPERED_ALLOWANCE_MIN = 10_000
 # https://www.gov.uk/government/publications/increasing-normal-minimum-pension-age
 PENSION_ACCESS_AGE = "55 (57 from 6 April 2028)"
 # https://www.gov.uk/tax-on-your-private-pension/pension-tax-relief
@@ -152,6 +163,14 @@ def _personal_allowance(income: float) -> float:
     return max(0.0, PERSONAL_ALLOWANCE - max(0.0, income - TAPER_FROM) / 2)
 
 
+def _annual_allowance(threshold_income: float, adjusted_income: float) -> float:
+    """Pension annual allowance after the taper for high incomes."""
+    if threshold_income <= TAPER_THRESHOLD_INCOME or adjusted_income <= TAPER_ADJUSTED_INCOME:
+        return PENSION_ANNUAL_ALLOWANCE
+    return max(PENSION_ANNUAL_ALLOWANCE - (adjusted_income - TAPER_ADJUSTED_INCOME) / 2,
+               TAPERED_ALLOWANCE_MIN)
+
+
 def _tax_year(d: date) -> tuple[date, date]:
     y = d.year if d >= date(d.year, 4, 6) else d.year - 1
     return date(y, 4, 6), date(y + 1, 4, 5)
@@ -219,11 +238,28 @@ class _Ctx:
         self.fin, self.cash = fin, cash
 
         income = (fin or {}).get("income") or []
-        self.income = round(_gbp(sum(float(i.get("monthly_eur") or 0) for i in income) * 12), 2) \
+        fixed = [i for i in income if i.get("fixed", True) is not False]
+
+        def yearly(rows: list[dict], *keys: str) -> float:
+            return _gbp(sum(float(i.get(k) or 0) for i in rows for k in keys) * 12)
+
+        # The income that sets your tax band and personal allowance (adjusted
+        # net income): pay minus the pension paid from it, as finances.py
+        # worked it out from Settings. Salary sacrifice and net pay count the
+        # amount taken from pay; relief at source also the 25% the provider adds.
+        # https://www.gov.uk/guidance/adjusted-net-income
+        cut = ("pension_monthly_eur", "pension_relief_monthly_eur")
+        self.income_gross = round(yearly(income, "monthly_eur"), 2) if income else None
+        self.income = round(self.income_gross - yearly(income, *cut), 2) if income else None
+        self.income_fixed = round(yearly(fixed, "monthly_eur") - yearly(fixed, *cut), 2) \
             if income else None
-        self.income_fixed = round(_gbp(sum(float(i.get("monthly_eur") or 0) for i in income
-                                           if i.get("fixed", True) is not False) * 12), 2) \
-            if income else None
+        # Pension paid in already this year (yours, its relief, your employer's)
+        # and the parts the tapered annual allowance adds back.
+        self.pension_paid = yearly(income, "pension_pot_monthly_eur")
+        self.employer_pension = yearly(income, "employer_pension_monthly_eur")
+        self.sacrificed = yearly([i for i in income
+                                  if (i.get("pension_type") or "sacrifice") == "sacrifice"],
+                                 "pension_monthly_eur")
         self.band = _band(self.income)
 
         self.taxable = [r for r in inp.rows if not _is_isa(r)]
@@ -271,7 +307,9 @@ class _Ctx:
 
     def add(self, tid: str, title: str, explanation: str, saving_gbp: float, period: str,
             how: str, data_used: list[str], action: str, items: list[dict] | None = None,
-            deadline: bool = False, link: str | None = None, in_total: bool = True) -> None:
+            deadline: bool = False, link: str | None = None, in_total: bool = True,
+            isa_gbp: float = 0.0) -> None:
+        """`isa_gbp`: how much of this year's ISA allowance the tip uses."""
         if saving_gbp < MIN_SAVING_GBP:
             return
         tip = {"id": tid, "title": title, "explanation": explanation,
@@ -283,7 +321,25 @@ class _Ctx:
                "in_total": in_total}  # False: advice to not do something
         if deadline:
             tip.update(self.deadline())
+        if isa_gbp > 0:
+            tip["_isa_gbp"] = isa_gbp
         self.tips.append(tip)
+
+    def isa_room(self) -> float:
+        """ISA allowance left this tax year; the full £20,000 when not tracked
+        (no more can go in within one tax year)."""
+        return self.isa_left if self.isa_left is not None else ISA_ALLOWANCE
+
+    def tax_free_interest(self) -> float:
+        """Interest you can earn before tax: the personal savings allowance,
+        plus (when your income is known) any unused personal allowance and
+        the starting rate for savings."""
+        psa = SAVINGS_ALLOWANCE[self.band]
+        if self.income is None:
+            return psa
+        pa = _personal_allowance(self.income)
+        starting = max(STARTING_RATE_FOR_SAVINGS - max(self.income - pa, 0.0), 0.0)
+        return max(pa - self.income, 0.0) + starting + psa
 
 
 # ================================================================ checks
@@ -349,7 +405,7 @@ def check_isa_allowance(c: _Ctx) -> None:
     c.add("isa_allowance", "Use your ISA allowance before 5 April", explanation, saving, "year",
           how, ["ISA deposits this tax year", "holdings outside the ISA",
                 "dividend forecast" if c.div_by_row is not None else "dividend forecast (loading)"],
-          action, items, deadline=True)
+          action, items, deadline=True, isa_gbp=move)
 
 
 def check_cgt_allowance(c: _Ctx) -> None:
@@ -416,8 +472,8 @@ def check_dividend_allowance(c: _Ctx) -> None:
     rate = DIVIDEND_RATE[c.band]
     tax_now = (total - DIVIDEND_ALLOWANCE) * rate
 
-    # Move the highest yielders first, as far as the ISA allowance reaches.
-    room = c.isa_left if c.isa_left is not None else float("inf")
+    # Move the highest yielders first, as far as this year's ISA allowance reaches.
+    room = start_room = c.isa_room()
     moved_div, items = 0.0, []
     for i, r, d in sorted(payers, key=lambda p: -p[2] / max(_gbp(p[1]["value_eur"]), 1)):
         value = _gbp(r["value_eur"])
@@ -443,11 +499,12 @@ def check_dividend_allowance(c: _Ctx) -> None:
     how = (f"Forecast dividends outside the ISA ({_m(total)}) − £500 allowance, × {c.rate_note('div')}"
            f" = {_m(tax_now)}. Saving = that tax minus what's left after moving the highest "
            "yielders into the ISA" + (f" (limited by the {_m(c.isa_left)} ISA allowance left)."
-                                      if c.isa_left is not None else ".")
+                                      if c.isa_left is not None else
+                                      " (at most the £20,000 a year the ISA allowance takes).")
            + " The forecast is last year's dividends per share × shares you hold.")
     c.add("dividend_allowance", "Shelter dividends above the £500 allowance", explanation,
           saving, "year", how, ["dividend forecast", "holdings outside the ISA"], action, items,
-          deadline=c.isa_left is not None)
+          deadline=c.isa_left is not None, isa_gbp=start_room - room)
 
 
 def check_reporting_funds(c: _Ctx) -> None:
@@ -541,21 +598,41 @@ def check_pension(c: _Ctx) -> None:
     if inc <= HIGHER_FROM:
         c.clear.append("Pension tax relief: at your income it's the standard 20%.")
         return
+    # Room left in the annual allowance: tapered for high incomes (threshold
+    # income = income after pension, salary sacrifice added back; adjusted
+    # income = pay before pension + employer payments), minus what is already
+    # paid in through the pay entered in Settings.
+    allowance = _annual_allowance(inc + c.sacrificed, c.income_gross + c.employer_pension)
+    room = max(allowance - c.pension_paid, 0.0)
+    if room < 1:
+        c.clear.append("Pension tax relief: the pension payments in Settings already use your "
+                       f"{_m(allowance)} annual allowance.")
+        return
     # What you could afford: income minus the monthly payments in Settings, if any.
     totals = (c.fin or {}).get("totals") or {}
     spare = (_gbp(max(float(totals.get("free_cashflow") or 0), 0)) * 12
              if totals.get("monthly_payments") else float("inf"))
-    cap = min(PENSION_ANNUAL_ALLOWANCE, spare)
-    cap_note = (" (capped at the £60,000 annual allowance)" if cap == PENSION_ANNUAL_ALLOWANCE
-                else f" (capped at your spare cash flow of {_m(spare)} a year: income minus "
-                     "monthly payments in Settings)")
+    cap = min(room, spare)
+    if cap < room:
+        cap_note = (f" (capped at your spare cash flow of {_m(spare)} a year: income minus "
+                    "monthly payments in Settings)")
+    elif room == PENSION_ANNUAL_ALLOWANCE:
+        cap_note = " (capped at the £60,000 annual allowance)"
+    else:
+        cap_note = (f" (capped at the {_m(room)} left of your "
+                    + ("tapered " if allowance < PENSION_ANNUAL_ALLOWANCE else "")
+                    + f"{_m(allowance)} annual allowance"
+                    + (f", after the {_m(c.pension_paid)} already going in" if c.pension_paid >= 1 else "")
+                    + ")")
+    income_is = ("Your income after the pension you already pay is about"
+                 if c.income_gross - inc >= 1 else "Your income is about")
     if inc > TAPER_FROM:
         above_add = max(inc - ADDITIONAL_FROM, 0)
         taper = min(inc, ADDITIONAL_FROM) - TAPER_FROM
         pay = min(above_add + taper, cap)
         relief = min(above_add, pay) * INCOME_RATE["additional"] + max(pay - above_add, 0) * 0.60
         title = "Pension payments get about 60% tax relief above £100,000"
-        explanation = (f"Your income is about {_m(inc)}. Between £100,000 and £125,140 you lose "
+        explanation = (f"{income_is} {_m(inc)}. Between £100,000 and £125,140 you lose "
                        "£1 of tax-free personal allowance for every £2 you earn, so that slice is "
                        "taxed at about 60%. Paying into a pension lowers the income that counts, "
                        "and you get the allowance back.")
@@ -572,15 +649,16 @@ def check_pension(c: _Ctx) -> None:
         pay = min(inc - HIGHER_FROM, cap)
         relief = pay * INCOME_RATE["higher"]
         title = "Higher-rate tax relief on pension payments"
-        explanation = (f"Your income is about {_m(inc)}, so part of it is taxed at 40%. Pension "
+        explanation = (f"{income_is} {_m(inc)}, so part of it is taxed at 40%. Pension "
                        "payments from that slice get 40% tax relief: each £100 in your pension "
                        "costs you £60.")
         how = (f"Gross pension payment of {_m(pay)} (your income above £50,270"
                + (cap_note if pay == cap else "") + ") × 40%.")
     explanation += " Scotland has different bands, so the numbers differ there."
-    how += (" Uses the income you entered in Settings × 12 as your yearly income before tax; "
-            "pension payments you already make (and employer payments, which also count "
-            "towards the £60,000 allowance) aren't known here.")
+    how += (" Uses the income you entered in Settings × 12, minus the pension paid from it, as "
+            "your yearly income before tax. Your and your employer's pension payments entered "
+            "there count towards the annual allowance; payments made elsewhere and unused "
+            "allowance carried forward from earlier years aren't known here.")
     action = ("Pay more into your pension: ask your employer about salary sacrifice, or pay "
               "into a personal pension (the provider adds 20%; claim the rest on your Self "
               "Assessment). Before 5 April for this tax year. The money is locked until age "
@@ -607,7 +685,7 @@ def check_loans_vs_cash(c: _Ctx) -> None:
 
     after_tax = best_rate
     if c.uk:
-        if _interest_gbp(accounts) > SAVINGS_ALLOWANCE[c.band]:
+        if _interest_gbp(accounts) > c.tax_free_interest():
             after_tax = best_rate * (1 - SAVINGS_RATE[c.band])
     cash_says = (f"your cash earns at most {best_rate:g}% ({best['name']})"
                  + (f", about {after_tax:.2f}% after tax" if after_tax < best_rate else ""))
@@ -661,31 +739,38 @@ def check_savings_interest(c: _Ctx) -> None:
         return
     interest = _interest_gbp(accounts)
     psa = SAVINGS_ALLOWANCE[c.band]
-    if interest <= psa:
-        c.clear.append(f"Savings interest: about {_m(interest)} a year, inside your "
-                       f"£{psa:,} personal savings allowance.")
+    free = c.tax_free_interest()
+    unused_pa = c.income is not None and c.income < _personal_allowance(c.income)
+    allowance = (f"£{psa:,} personal savings allowance" if free <= psa else
+                 f"{_m(free)} of tax-free interest (the £{psa:,} personal savings allowance plus "
+                 "the starting rate for savings" + (" and your unused personal allowance"
+                                                    if unused_pa else "")
+                 + ", as your other income is low)")
+    if interest <= free:
+        c.clear.append(f"Savings interest: about {_m(interest)} a year, inside your {allowance}.")
         return
     rate = SAVINGS_RATE[c.band]
-    tax = (interest - psa) * rate
+    tax = (interest - free) * rate
     balance = sum(_gbp(float(a.get("balance_eur") or 0)) for a in accounts)
     avg_rate = interest / balance if balance else 0
-    needed = (interest - psa) / avg_rate if avg_rate else 0
-    movable = min(needed, c.isa_left) if c.isa_left is not None else needed
+    needed = (interest - free) / avg_rate if avg_rate else 0
+    movable = min(needed, c.isa_room())
     saving = tax * (movable / needed) if needed else 0
     explanation = (f"Your cash earns about {_m(interest)} a year in interest. Above your "
-                   f"£{psa:,} personal savings allowance it's taxed at {c.rate_note('savings')}: "
+                   f"{allowance} it's taxed at {c.rate_note('savings')}: "
                    f"about {_m(tax)} a year. From April 2027 that rate goes up by 4 points. "
                    "Interest in a cash ISA is tax-free.")
     action = (f"Move about {_m(movable)} into a cash ISA at a similar rate (it uses the same "
               "£20,000 yearly ISA allowance as investing), before 5 April for this year's "
               "allowance. Premium Bonds are another tax-free option.")
-    how = (f"({_m(interest)} interest − £{psa:,} allowance) × {c.rate_note('savings')} = "
+    how = (f"({_m(interest)} interest − {_m(free)} tax-free) × {c.rate_note('savings')} = "
            f"{_m(tax)}. Moving {_m(movable)} at your average rate ({avg_rate * 100:.2f}%) "
-           "takes that interest out of tax" + (", limited by the ISA allowance left." if
-                                               c.isa_left is not None and movable < needed else "."))
+           "takes that interest out of tax"
+           + ((", limited by the ISA allowance left." if c.isa_left is not None else
+               ", limited by the £20,000 a year the ISA allowance takes.") if movable < needed else "."))
     c.add("savings_interest", "Tax on savings interest above your allowance", explanation,
           saving, "year", how, ["cash accounts and rates (Settings)", "income (Settings)"],
-          action, deadline=True, link="/#cashopt")
+          action, deadline=True, link="/#cashopt", isa_gbp=movable)
 
 
 def check_fig_regime(c: _Ctx) -> None:
@@ -715,7 +800,10 @@ def check_fig_regime(c: _Ctx) -> None:
     cgt_saved = (max(gains - CGT_EXEMPT, 0) - (gains - foreign_gain)) * cgt
     div_saved = (max(div_all - DIVIDEND_ALLOWANCE, 0)
                  - max(div_all - div_foreign - DIVIDEND_ALLOWANCE, 0)) * div_rate
-    lost_pa = _personal_allowance(c.income) * INCOME_RATE[c.band]
+    # Extra income tax without a personal allowance (part of it can move into
+    # the 40% band, so not simply allowance × your rate).
+    lost_pa = (_paye.income_tax(c.income, allowance_income=float("inf"))
+               - _paye.income_tax(c.income))
     base = cgt_saved + div_saved - lost_pa
     with_reset = base + unrealised * cgt   # also realise non-UK gains tax-free
     if with_reset < MIN_SAVING_GBP:
@@ -734,9 +822,9 @@ def check_fig_regime(c: _Ctx) -> None:
                         "non-UK holdings this year, which resets their cost tax-free.")
     how = (f"Tax this year without a claim minus with one: CGT on foreign gains realised "
            f"({_m(foreign_gain)} of your {_m(gains)}) {_m(cgt_saved)}, dividend tax on foreign "
-           f"dividends ({_m(div_foreign)} a year) {_m(div_saved)}, minus the personal allowance "
-           f"you'd lose ({_m(_personal_allowance(c.income))} × {_pct(INCOME_RATE[c.band])} = "
-           f"{_m(lost_pa)})"
+           f"dividends ({_m(div_foreign)} a year) {_m(div_saved)}, minus the extra income tax "
+           f"from losing your {_m(_personal_allowance(c.income))} personal allowance "
+           f"({_m(lost_pa)})"
            + (f", plus {_pct(cgt)} of the {_m(unrealised)} unrealised gain on non-UK holdings "
               "outside the ISA, which a sale this year would reset" if reset else "")
            + ". The lost £3,000 CGT allowance is inside the CGT figure. 'Foreign' = ISIN not "
@@ -758,6 +846,26 @@ UK_CHECKS = (check_isa_allowance, check_cgt_allowance, check_dividend_allowance,
 ANYWHERE_CHECKS = (check_fund_fees, check_loans_vs_cash)
 
 
+def _count_isa_once(c: _Ctx) -> dict[str, float]:
+    """Several tips spend the same ISA allowance (Bed & ISA, sheltering
+    dividends, a cash ISA). Each tip shows what it saves on its own; the totals
+    give each pound of allowance to one tip only, best saving per pound first.
+    Returns {tip id: EUR amount counted in the totals} for tips counted in part."""
+    left = c.isa_room()
+    users = sorted((t for t in c.tips if t.get("_isa_gbp")),
+                   key=lambda t: -t["saving_gbp"] / t["_isa_gbp"])
+    out = {}
+    for t in users:
+        use = t.pop("_isa_gbp")
+        share = min(max(left, 0.0) / use, 1.0)
+        left -= use
+        if share < 1:
+            out[t["id"]] = round(t["saving_eur"] * share, 2)
+            t["how"] += (" Other tips here use the same ISA allowance, so the total at the top "
+                         f"counts {share:.0%} of this saving.")
+    return out
+
+
 # ============================================================== public
 def build(inp: Inputs) -> dict:
     """Run every check on `inp`. Pure apart from FX rates, so it's testable."""
@@ -768,10 +876,11 @@ def build(inp: Inputs) -> dict:
             check(c)
         except Exception:  # one broken check must not hide the others
             continue
+    counts = _count_isa_once(c)
     c.tips.sort(key=lambda t: -t["saving_gbp"])
     counted = [t for t in c.tips if t["in_total"]]
-    per_year = sum(t["saving_eur"] for t in counted if t["period"] == "year")
-    once = sum(t["saving_eur"] for t in counted if t["period"] == "once")
+    per_year = sum(counts.get(t["id"], t["saving_eur"]) for t in counted if t["period"] == "year")
+    once = sum(counts.get(t["id"], t["saving_eur"]) for t in counted if t["period"] == "once")
     return {
         "residence": inp.residence,
         "tax_year": (inp.tax or {}).get("tax_year") or TAX_YEAR,
@@ -827,10 +936,9 @@ def _dividend_forecast(rows: list[dict], wait: float = 0.3) -> dict | None:
 
 def _foreign_gains_gbp(since: date, end: date) -> float:
     """Net gains realised this tax year on non-UK assets, outside ISAs."""
-    from . import sources
-    from .positions import realized_events
+    from . import sources, uktax
 
-    # One pool per share across taxable accounts, as in uktax.summary().
+    # Matched across taxable accounts with HMRC's rules, as in uktax.summary().
     pooled = []
     for _, (is_isa, get_trades) in sources.trade_sources().items():
         if is_isa:
@@ -840,7 +948,7 @@ def _foreign_gains_gbp(since: date, end: date) -> float:
         except Exception:
             continue
     total = 0.0
-    for ev in realized_events(pooled):
+    for ev in uktax.match_disposals(pooled, resident_from=uktax._resident_from()):
         key = (ev.get("key") or "").upper()
         try:
             d = date.fromisoformat(ev["when"][:10])

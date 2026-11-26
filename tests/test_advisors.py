@@ -288,9 +288,13 @@ class LoanCashTest(Base):
 
 class SavingsInterestTest(Base):
     def test_interest_above_allowance(self):
+        # £2,000 interest − £500 allowance = £1,500 × 40% = £600 tax. Moving it
+        # all out of tax needs £37,500 in a cash ISA, but one tax year takes at
+        # most £20,000 (ISA not tracked here): £600 × 20,000 / 37,500 = £320.
         out = run(tax=tax(), fin=fin(80_000), cash=cash(("Saver", 50_000, 4.0)))
         t = tip(out, "savings_interest")
-        self.assertAlmostEqual(t["saving_gbp"], (2000 - 500) * 0.40)
+        self.assertAlmostEqual(t["saving_gbp"], (2000 - 500) * 0.40 * 20_000 / 37_500)
+        self.assertIn("£20,000 a year", t["how"])
 
     def test_limited_by_isa_allowance(self):
         out = run(tax=tax(isa_left=20_000), fin=fin(80_000), cash=cash(("Saver", 50_000, 4.0)))
@@ -345,6 +349,132 @@ class FigRegimeTest(Base):
             out = run(self.ROWS, tax=tax(), fin=fin(150_000), resident_from=arrived,
                       foreign_gains_gbp=50_000)
             self.assertIsNone(tip(out, "fig_regime"))
+
+
+def pension_fin(gross, own_pct=0.0, kind="sacrifice", employer_pct=0.0):
+    """Finances as finances.load() returns them for a before-tax salary with a
+    pension (the *_monthly_eur fields come from paye.annual)."""
+    own = gross * own_pct / 100
+    relief = own / 0.8 - own if kind == "relief_at_source" else 0.0
+    employer = gross * employer_pct / 100
+    item = {"name": "Salary", "monthly_eur": eur(gross) / 12, "fixed": True, "tax": "before",
+            "pension_pct": own_pct, "pension_type": kind, "employer_pct": employer_pct,
+            "pension_monthly_eur": eur(own) / 12, "pension_relief_monthly_eur": eur(relief) / 12,
+            "employer_pension_monthly_eur": eur(employer) / 12,
+            "pension_pot_monthly_eur": eur(own + relief + employer) / 12}
+    return {"sample": False, "income": [item], "expenses": [], "loans": [], "totals": {}}
+
+
+class PensionInputsTest(Base):
+    def test_pension_already_paid_lowers_the_income_that_counts(self):
+        # £80,000 with 10% salary sacrifice: taxable pay is £72,000, so only
+        # £72,000 - £50,270 = £21,730 is still taxed at 40% -> relief £8,692
+        # (not £29,730 x 40% = £11,892).
+        t = tip(run(tax=tax(), fin=pension_fin(80_000, 10)), "pension_relief")
+        self.assertAlmostEqual(t["saving_gbp"], 21_730 * 0.40, 1)
+
+    def test_tapered_annual_allowance(self):
+        # gov.uk/guidance/pension-schemes-work-out-your-tapered-annual-allowance:
+        # threshold income over £200,000 and adjusted income over £260,000 ->
+        # £60,000 - (300,000 - 260,000) / 2 = £40,000. All of it above £125,140:
+        # relief £40,000 x 45% = £18,000 (not £60,000 x 45% = £27,000).
+        t = tip(run(tax=tax(), fin=fin(300_000)), "pension_relief")
+        self.assertAlmostEqual(t["saving_gbp"], 40_000 * 0.45, 1)
+
+    def test_contributions_already_made_use_the_allowance(self):
+        # £150,000, 20% salary sacrifice (£30,000) + 10% employer (£15,000):
+        # £45,000 of the £60,000 allowance used, £15,000 left. Income that
+        # counts £120,000, inside the taper band: £15,000 x 60% = £9,000.
+        t = tip(run(tax=tax(), fin=pension_fin(150_000, 20, employer_pct=10)), "pension_relief")
+        self.assertAlmostEqual(t["saving_gbp"], 15_000 * 0.60, 1)
+
+
+class SavingsStartingRateTest(Base):
+    def test_starting_rate_for_savings(self):
+        # gov.uk/apply-tax-free-interest-on-savings/how-much-is-tax-free:
+        # £5,000 starting rate, cut £1 for every £1 of other income above
+        # £12,570. Salary £15,000 -> £2,570 starting rate + £1,000 PSA tax-free.
+        # £100,000 at 4% = £4,000 interest: taxed £430 x 20% = £86 (not
+        # (£4,000 - £1,000) x 20% = £600).
+        out = run(tax=tax(), fin=fin(15_000), cash=cash(("Saver", 100_000, 4.0)))
+        self.assertAlmostEqual(tip(out, "savings_interest")["saving_gbp"], 430 * 0.20, 2)
+
+    def test_tax_free_interest_keeps_full_cash_rate(self):
+        # Same salary, £50,000 at 4% = £2,000 interest: all inside £3,570
+        # tax-free, so cash earns the full 4% and the 6% loan saves 2%.
+        out = run(tax=tax(), fin=fin(15_000, loans=[("Car loan", 6.0, 10_000)], payments=500),
+                  cash=cash(("Saver", 50_000, 4.0)))
+        self.assertIsNone(tip(out, "savings_interest"))
+        self.assertAlmostEqual(tip(out, "loan_payoff:Car loan")["saving_gbp"], 10_000 * 0.02, 2)
+
+
+class IsaSharedTest(Base):
+    def test_allowance_counted_once_in_the_total(self):
+        # £20,000 ISA allowance left, wanted by both the Bed & ISA tip
+        # (£20,000 x 5% x 24% = £240 a year) and the cash ISA tip (£37,500
+        # needed, £20,000 fits: £600 x 20/37.5 = £320). Only one can have it:
+        # the total counts the better one per pound (cash, £320), not £560.
+        out = run([row("Alpha", 50_000, 0)], tax=tax(isa_left=20_000), fin=fin(80_000),
+                  cash=cash(("Saver", 50_000, 4.0)))
+        isa, sav = tip(out, "isa_allowance"), tip(out, "savings_interest")
+        self.assertAlmostEqual(isa["saving_gbp"], 240, 2)
+        self.assertAlmostEqual(sav["saving_gbp"], 320, 2)
+        pension = tip(out, "pension_relief")["saving_gbp"]
+        self.assertAlmostEqual(out["total_per_year_eur"], eur(pension + 320), 1)
+
+    def test_dividend_tip_not_added_twice(self):
+        # £30,000 outside the ISA yielding 5% (£1,500), £10,000 allowance left.
+        # Bed & ISA: £10,000 x (5% x 10.75% + 5% x 18%) = £143.75, which already
+        # includes the dividend tax on what moves. Dividend tip: £53.75 from the
+        # same £10,000. Total: £143.75, not £197.50.
+        rows = [row("Payer", 30_000, ticker="PAY", qty=30)]
+        divs = {"holdings": [{"ticker": "PAY", "annual_eur": eur(1500)}]}
+        out = run(rows, tax=tax(isa_left=10_000), dividends=divs)
+        self.assertAlmostEqual(tip(out, "isa_allowance")["saving_gbp"], 143.75, 2)
+        self.assertAlmostEqual(tip(out, "dividend_allowance")["saving_gbp"], 53.75, 2)
+        self.assertAlmostEqual(out["total_per_year_eur"], eur(143.75), 1)
+
+    def test_untracked_isa_still_limited_to_20000_a_year(self):
+        # ISA not connected: at most the £20,000 yearly allowance can move.
+        # £100,000 yielding 5% = £5,000 a year; moving £20,000 shelters £1,000:
+        # (4,500 - 3,500) x 10.75% = £107.50 (not all £4,500 x 10.75% = £483.75).
+        rows = [row("Payer", 100_000, ticker="PAY", qty=100)]
+        divs = {"holdings": [{"ticker": "PAY", "annual_eur": eur(5000)}]}
+        t = tip(run(rows, tax=tax(), dividends=divs), "dividend_allowance")
+        self.assertAlmostEqual(t["saving_gbp"], 1000 * 0.1075, 2)
+
+
+class FigLostAllowanceTest(Base):
+    def test_lost_allowance_priced_at_the_real_tax(self):
+        # Income £45,000: losing the £12,570 allowance raises income tax from
+        # (45,000 - 12,570) x 20% = £6,486 to 37,700 x 20% + 7,300 x 40% =
+        # £10,460, i.e. £3,974 (not 12,570 x 20% = £2,514).
+        # CGT saved on £20,000 of foreign gains: (20,000 - 3,000) x 18% = £3,060.
+        # 3,060 - 3,974 < 0, so it only pays with the £10,000 unrealised gain
+        # reset: 3,060 - 3,974 + 10,000 x 18% = £886.
+        out = run(FigRegimeTest.ROWS, tax=tax(net_gain=20_000), fin=fin(45_000),
+                  resident_from=date(2026, 9, 1), foreign_gains_gbp=20_000)
+        t = tip(out, "fig_regime")
+        self.assertAlmostEqual(t["saving_gbp"], 3060 - 3974 + 1800, 1)
+
+
+class ForeignGainsTest(Base):
+    def test_uses_hmrc_matching(self):
+        # Same rules as the UK tax card: the sale (£800) is matched with the
+        # rebuy 14 days later (£820), so -£20, not 800 - 1,000 = -£200.
+        from backend import sources
+        from backend.positions import Trade
+
+        def t(when, side, qty, amount):
+            return Trade(when=when, key=AAPL, name="Apple", side=side, quantity=qty,
+                         amount=eur(amount), currency="EUR")
+        trades = [t("2026-05-01", "BUY", 100, 1000), t("2026-10-01", "SELL", 100, 800),
+                  t("2026-10-15", "BUY", 100, 820)]
+        with mock.patch.object(sources, "trade_sources",
+                               return_value={"Broker": (False, lambda: trades)}), \
+                mock.patch.dict("os.environ", {"UK_RESIDENT_FROM": ""}):
+            got = adv._foreign_gains_gbp(date(2026, 4, 6), date(2027, 4, 5))
+        self.assertAlmostEqual(got, -20.0, 2)
 
 
 class OverallTest(Base):
