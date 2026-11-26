@@ -1349,7 +1349,7 @@
             "dividends",
             "interest"
           ],
-          "notes": "For EU (EUR) Invest accounts without an API key. Positions, trades, dividends and interest are read from it and checked against the statement's own totals. A new PDF replaces the one uploaded before, so upload the PDF first and later History CSVs on top.",
+          "notes": "For EU (EUR) Invest accounts without an API key. Positions, trades, dividends and interest are read from it and checked against the statement's own totals. One statement covers at most 18 months, so an older account needs several: upload them in any order and the app joins them (each day taken from one file). It warns when dates between two files are missing, and refuses a file that covers several accounts or does not match the one saved.",
           "verified": true,
           "docs_url": "https://helpcentre.trading212.com/hc/en-us/articles/11700508002845-What-documents-can-I-get-from-Trading-212"
         },
