@@ -404,5 +404,24 @@ class DegiroSplitTest(unittest.TestCase):
         self.assertAlmostEqual(pos["US00000000N2"].cost, 500.0)
 
 
+class DegiroIncomeCurrencyTest(unittest.TestCase):
+    @unittest.expectedFailure
+    def test_a_dividend_in_swedish_kronor(self):
+        # A DeGiro dividend of SEK 110.00 at 11 SEK per EUR is EUR 10.00.
+        # income._degiro_rows converts only currencies in fx.FX_TO_EUR
+        # (EUR/USD/GBP/CHF) and books any other as euros: EUR 110.00.
+        # Fix belongs in backend/income.py (see report).
+        from backend import income
+        csv = ("Date,Time,Value date,Product,ISIN,Description,FX,Change,,Balance,,Order Id\n"
+               '15-05-2024,07:00,14-05-2024,EXAMPLE AB,SE0000000001,Dividend,,SEK,"110,00",SEK,"110,00",\n')
+        with tempfile.TemporaryDirectory() as d:
+            path = Path(d) / "degiro_account.csv"
+            path.write_text(csv)
+            with mock.patch.object(income, "_resolve_data", return_value=(path, True)), \
+                    mock.patch.object(fx, "_live_rates", return_value={**RATES, "SEK": 1 / 11}):
+                rows = income._degiro_rows()
+        self.assertAlmostEqual(rows[0]["amount_eur"], 10.0)
+
+
 if __name__ == "__main__":
     unittest.main()
