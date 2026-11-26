@@ -47,7 +47,7 @@ _VAULT_STATE = github_sync.restore()
 from .connectors import trading212
 from .fx import BASE_CURRENCY, display_rates, from_eur, to_eur
 from .prices import fetch_quotes, quotes_status
-from . import (analytics, cache, cash, datafiles, finances, income, insights, market,
+from . import (analytics, cache, cash, countries, datafiles, finances, income, insights, market,
                periods, prefs, realized, reports, sectors, sources, store, trend, uktax, watch)
 
 
@@ -912,8 +912,8 @@ def fx_rates() -> dict:
 @app.get("/api/uk_tax")
 def uk_tax() -> dict:
     """UK tax year so far: realised gains/losses and dividends outside ISAs,
-    ISA allowance used, and the 30-day rule for recent sales. Only for UK
-    tax residents (TAX_RESIDENCE); otherwise {"applies": false} and the card hides."""
+    ISA allowance used, and the 30-day rule for recent sales. Only when the
+    country chosen in Settings is the UK; otherwise {"applies": false} and the card hides."""
     from .harvest import residence
     if residence() != "UK":
         return {"applies": False}
@@ -941,10 +941,37 @@ def savings() -> dict:
 
 
 @app.get("/api/headlines")
-def headlines_endpoint() -> list[dict]:
-    """Interleaved market headlines from CNBC / MarketWatch / Yahoo Finance
-    (+ NewsAPI when a NEWSAPI_KEY env var is provided)."""
-    return insights.headlines()
+def headlines_endpoint(country: str | None = None) -> list[dict]:
+    """Interleaved market headlines: the news feeds of `country` (default: the
+    country chosen for the news in Settings, else your country; "" for none),
+    then CNBC / MarketWatch / Yahoo Finance (+ NewsAPI when a NEWSAPI_KEY env
+    var is provided). Each has title, url (http/https), source, published_at
+    (ISO, UTC, or null), language and country ("" = international)."""
+    try:
+        code = None if country is None else countries.clean_code(country)
+    except ValueError as e:
+        raise HTTPException(400, str(e))
+    return insights.headlines(code)
+
+
+@app.get("/api/countries")
+def countries_list() -> dict:
+    """Every country for the picker in Settings, with what the app has for
+    each (tax overview, news, tax cards, suggested currency and time zone),
+    and `problems`: country files left out because they break SCHEMA.md."""
+    return {"countries": countries.all(), "tax_cards": list(countries.TAX_CARDS),
+            "problems": countries.problems()}
+
+
+@app.get("/api/country")
+def country_overview(code: str | None = None) -> dict:
+    """How tax on investments works in the chosen country (or `code`):
+    `available` false with a `message` when no country is chosen or there is
+    no file for it yet."""
+    try:
+        return countries.overview(code)
+    except ValueError as e:
+        raise HTTPException(400, str(e))
 
 
 @app.get("/api/earnings")

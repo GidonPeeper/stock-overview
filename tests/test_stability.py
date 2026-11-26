@@ -530,7 +530,7 @@ class SlowFeedsTest(unittest.TestCase):
         with mock.patch.object(insights, "_fetch_rss", slow):
             t = time.perf_counter()
             items = insights.headlines()
-        self.assertEqual(len(items), len(insights.RSS_FEEDS))
+        self.assertEqual(len(items), len(insights.feeds()))      # the country's feeds + the international ones
         self.assertLess(time.perf_counter() - t, 0.6)     # before: 0.9 (one after another)
 
     def test_brief_never_waits_for_headlines(self):

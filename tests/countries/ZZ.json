@@ -1,0 +1,103 @@
+{
+  "code": "ZZ",
+  "name": "Exampleland",
+  "currency": "USD",
+  "currency_note": "Exampleland uses the example crown; the app shows US dollars.",
+  "timezone": "Atlantic/Reykjavik",
+  "languages": ["en", "fr"],
+  "checked_on": "2026-11-26",
+  "tax_year": {
+    "label": "2026/27",
+    "starts": "04-06",
+    "ends": "04-05",
+    "return_due": "File the return online by 31 January after the tax year ends.",
+    "source": "https://tax.example.org/tax-year"
+  },
+  "summary": "Made-up content for tests and screenshots: none of this is a real country's rules. Exampleland taxes profits when you sell and dividends you receive, with a yearly tax-free amount for each. Savings accounts called Example Savers are free of tax.",
+  "topics": [
+    {
+      "id": "gains",
+      "title": "Profit when you sell",
+      "points": [
+        "Profit on shares and funds is taxed in the year you sell.",
+        "Shares held for more than three years are taxed at a lower rate (the long-hold rate, langhold)."
+      ],
+      "figures": [
+        {"label": "Tax rate", "value": "20%"},
+        {"label": "Long-hold rate", "value": "10%"}
+      ],
+      "sources": ["https://tax.example.org/gains"]
+    },
+    {
+      "id": "dividends",
+      "title": "Dividends",
+      "points": ["Your broker takes 15% when the dividend is paid. You settle the rest in your return."],
+      "figures": [{"label": "Taken at source", "value": "15%"}],
+      "sources": ["https://tax.example.org/dividends"]
+    },
+    {
+      "id": "interest",
+      "title": "Interest on savings",
+      "points": ["Interest is added to your other income and taxed at your income tax rate."],
+      "sources": ["https://tax.example.org/interest"]
+    },
+    {
+      "id": "allowances",
+      "title": "Tax-free amounts",
+      "points": ["Each year the first part of your profit and of your dividends is tax-free. An unused amount cannot be carried to the next year."],
+      "figures": [
+        {"label": "Tax-free profit", "value": "$3,000"},
+        {"label": "Tax-free dividends", "value": "$500"}
+      ],
+      "sources": ["https://tax.example.org/allowances"]
+    },
+    {
+      "id": "accounts",
+      "title": "Tax-free and tax-deferred accounts",
+      "points": ["An Example Saver account is free of tax on interest, dividends and profit."],
+      "figures": [{"label": "Yearly limit", "value": "$20,000"}],
+      "sources": ["https://tax.example.org/saver"]
+    },
+    {
+      "id": "losses",
+      "title": "Losses",
+      "points": [
+        "A loss is first set against profit of the same year; the rest is carried forward without a time limit.",
+        "Buying the same shares back within 30 days of the sale cancels the loss for tax."
+      ],
+      "sources": ["https://tax.example.org/losses"]
+    },
+    {
+      "id": "foreign",
+      "title": "Foreign shares",
+      "points": ["Tax taken abroad is credited up to the Exampleland tax on the same dividend."],
+      "sources": ["https://tax.example.org/foreign"]
+    },
+    {
+      "id": "reporting",
+      "title": "What your broker does and what you do",
+      "points": [
+        "A local broker sends the tax office a yearly statement of your sales and dividends.",
+        "With a foreign broker you report every sale yourself."
+      ],
+      "sources": ["https://tax.example.org/reporting"]
+    }
+  ],
+  "dates": [
+    {"when": "01-31", "what": "Last day to file the return for the tax year before."},
+    {"when": "04-05", "what": "Last day of the tax year: the tax-free amounts of this year end."}
+  ],
+  "official": [
+    {"title": "Exampleland Tax Office: investing", "url": "https://tax.example.org/investing"},
+    {"title": "Exampleland Tax Office: the return", "url": "https://tax.example.org/return"}
+  ],
+  "upcoming": ["The tax-free profit falls to $2,000 from 6 April 2027 (announced, not yet law)."],
+  "unverified": [
+    {"point": "Some banks say the Example Saver limit will rise in 2028.", "source": "https://bank.example.com/news"}
+  ],
+  "not_covered": ["Pensions", "Property", "Moving abroad"],
+  "news": [
+    {"name": "Example Times: markets", "url": "https://news.example.org/markets.rss", "language": "en"},
+    {"name": "Le Journal d'Exemple", "url": "https://journal.example.net/economie.xml", "language": "fr"}
+  ]
+}

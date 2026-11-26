@@ -143,7 +143,7 @@ def _apply_tax(income: list[dict], sample: bool) -> dict:
         return {"applied": False, "uk": uk}
     if not uk:
         return {"applied": False, "uk": False,
-                "note": "Tax is only worked out for UK residents (TAX_RESIDENCE=UK). "
+                "note": "Tax is only worked out when your country in Settings is the UK. "
                         "Enter take-home amounts as after tax."}
     from . import paye
     from .fx import from_eur

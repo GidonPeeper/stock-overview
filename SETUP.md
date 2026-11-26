@@ -42,7 +42,12 @@ own. Open **Settings**:
 
 ## 3. Make it yours (optional)
 
-Copy `.env.sample` to `.env` and change what you need, then restart:
+Open **Settings → App and data → Your country** and pick where you live. Your
+country sets the tax overview on the Money tab, the news, and which tax cards
+show. The app then suggests a currency and time zone: keep them or change them.
+
+The `.env` settings below are only the defaults until you choose in Settings.
+To set them, copy `.env.sample` to `.env`, change what you need, then restart:
 
 | Setting | What it does |
 |---|---|

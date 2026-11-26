@@ -116,11 +116,13 @@ Your dashboard password is separate and is not used here.
 | `get_net_worth` | Investments, cash, things you own and loans; your monthly budget |
 | `get_risk_analysis` | Volatility, beta, Sharpe, drawdown, concentration, currencies, sectors, health score |
 | `get_tax_overview` | UK tax-year figures, tax-loss candidates and money-saving tips (estimates, not advice) |
+| `get_country_tax_overview` | How tax on investments works in your country: rules, figures, official sources, the date they were checked (general information, not advice) |
 | `get_data_status` | Which accounts are connected, sample data or not, how fresh the prices are |
 | `get_watchlist` | The shares you watch |
 
-Amounts are in your dashboard currency (`DISPLAY_CURRENCY`) unless you ask
-Claude for another one (EUR, GBP or USD). Tax figures follow `TAX_RESIDENCE`.
+Amounts are in the currency chosen in Settings unless you ask Claude for
+another one (EUR, GBP or USD). Tax figures follow the country chosen in
+Settings.
 
 ## Test it yourself
 

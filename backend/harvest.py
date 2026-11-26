@@ -6,8 +6,10 @@ Works per account (a sale happens in one account), on the rows from
 main._open_holdings_rows(). Amounts come in as EUR and go out in the tax
 currency (GBP for the UK, USD for the US).
 
+The country is the one chosen in Settings (prefs.py; TAX_RESIDENCE in .env is
+the fallback): UK, US or NL; any other country (or none) turns the card off.
+
 Settings (.env, all optional):
-  TAX_RESIDENCE         UK (default), US or NL; anything else (e.g. NONE) turns the card off
   CGT_RATE              your rate in %, default 24 (UK) / 15 (US)
   HARVEST_MIN_LOSS_PCT  smallest loss worth flagging, % of cost (default 10)
   HARVEST_MIN_LOSS      smallest loss worth flagging, in GBP/USD (default 250)
@@ -426,7 +428,8 @@ def suggest(rows: list[dict], *, today: date | None = None, res: str | None = No
     if res == "NL":
         return _netherlands()
     if res not in CURRENCY:
-        msg = "Tax-loss tips cover the UK, the US and the Netherlands (TAX_RESIDENCE)."
+        msg = ("Tax-loss tips cover the UK, the US and the Netherlands. "
+               "Choose your country in Settings.")
         return {"residence": res, "applies": False, "message": msg, "candidates": [],
                 "totals": None, "skipped": [], "notes": [], "how_it_works": [msg], "disclaimer": ""}
 
