@@ -61,17 +61,37 @@ def _patched(closes, row: dict, scale: float, today: date):
     return closes
 
 
+def _exact(row: dict) -> dict:
+    """The row's unrounded amounts (main._open_holdings_rows keeps them)."""
+    return row.get("_exact") or row
+
+
+def today_total(rows: list[dict]) -> float:
+    """Sum of the rows' today changes, unrounded. The dashboard's headline
+    and the "today" period both use this one sum."""
+    return sum(_exact(r)["daily_eur"] for r in rows if r.get("daily_eur") is not None)
+
+
 def move_eur(row: dict, ref: float) -> float | None:
     """EUR change of one holding row since the market price `ref` (same rule
-    as the today change in main._move_eur)."""
+    as the today change in main._move_eur). None for a row the market does
+    not price (valued at cost): its cost against a past price is no move."""
     mkt = row.get("_mkt") or {}
     q_price, q_ccy = mkt.get("price"), mkt.get("currency") or ""
-    if not mkt.get("own_price") or not q_ccy or q_ccy == row["currency"]:
-        return row["value_eur"] - to_eur(ref * row["quantity"], row["currency"])
+    own = mkt.get("own_price")
+    if not own and not q_price:
+        return None
+    value = _exact(row)["value_eur"]
+    if not own or not q_ccy or q_ccy == row["currency"]:
+        if own and q_price and q_price == mkt.get("prev"):
+            # market not traded today: the broker's gap to its last price is
+            # no session's move (as for today), so measure the market's price
+            return to_eur((q_price - ref) * row["quantity"], row["currency"])
+        return value - to_eur(ref * row["quantity"], row["currency"])
     if not q_price:
         return None
     pct = q_price / ref - 1
-    return row["value_eur"] * pct / (1 + pct)
+    return value * pct / (1 + pct)
 
 
 def compute(holdings: list[dict], today: date | None = None) -> dict:
@@ -92,8 +112,7 @@ def compute(holdings: list[dict], today: date | None = None) -> dict:
 
     today = today or clock.today()
     starts = clock.period_starts(today)
-    periods: dict[str, float | None] = {
-        "today": round(sum(h["daily_eur"] for h in holdings if h.get("daily_eur") is not None), 2)}
+    periods: dict[str, float | None] = {"today": round(today_total(holdings), 2)}
     for name in ("week", "month", "year"):
         total, any_ref = 0.0, False
         for h in priceable:

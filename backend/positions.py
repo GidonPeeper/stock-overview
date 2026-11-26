@@ -37,6 +37,9 @@ class Position:
     cost: float = 0.0          # remaining cost basis of open shares
     realized: float = 0.0      # P/L locked in by sells
     sells: int = 0
+    # shares sold beyond the recorded holding: the history is incomplete
+    # (bought before the statement began, transferred in), see _match
+    unmatched: float = 0.0
 
     @property
     def avg_cost(self) -> float:
@@ -44,16 +47,80 @@ class Position:
 
     @property
     def is_open(self) -> bool:
-        return self.quantity > 1e-4
+        return self.quantity > _OPEN
 
     @property
     def is_closed(self) -> bool:
         return self.sells > 0 and not self.is_open
 
 
+_DUST = 1e-9  # shares: a position this small has nothing left to sell
+_OPEN = 1e-4  # shares: less than this is rounding left over, not a holding
+
+
+def _time_key(when: str) -> str:
+    """Sortable time. Trading 212 writes "2024-03-05T09:00:00Z", DeGiro
+    "2024-03-05 15:00"; compared as text "T" sorts after " ", which put a
+    15:00 sale before a 09:00 buy when accounts are pooled."""
+    return when.replace("T", " ", 1)
+
+
+def _chronological(trades: list[Trade]) -> list[Trade]:
+    """Trades oldest first. Trades of one instrument at the same moment keep
+    the order given, unless that order sells shares before the buy that
+    brings them (a statement listed newest first, a date-only file): then
+    that moment's buys of the instrument go first, so no sale meets an empty
+    position that the next line fills."""
+    keyed = sorted(((_time_key(t.when), t) for t in trades), key=lambda kt: kt[0])
+    if all(keyed[k][0] != keyed[k + 1][0] for k in range(len(keyed) - 1)):
+        return [t for _, t in keyed]    # no two trades at one moment
+    out: list[Trade] = []
+    held: dict[str, float] = {}
+    i, n = 0, len(keyed)
+    while i < n:
+        moment = keyed[i][0]
+        j = i + 1
+        while j < n and keyed[j][0] == moment:
+            j += 1
+        group = [kt[1] for kt in keyed[i:j]]
+        if j - i > 1:
+            flip = set()
+            for key in {t.key for t in group}:
+                mine = [t for t in group if t.key == key]
+                q, short = held.get(key, 0.0), False
+                for t in mine:
+                    q = q + t.quantity if t.side == "BUY" else q - t.quantity
+                    short = short or q < -_DUST
+                if short and any(t.side == "BUY" for t in mine):
+                    flip.add(key)
+            if flip:
+                group.sort(key=lambda t: t.key in flip and t.side != "BUY")
+        for t in group:
+            q = held.get(t.key, 0.0)
+            held[t.key] = q + t.quantity if t.side == "BUY" else max(q - t.quantity, 0.0)
+        out.extend(group)
+        i = j
+    return out
+
+
+def _match(quantity: float, cost: float, t: Trade) -> tuple[float, float, float]:
+    """The part of sale `t` that meets the shares held: (shares, their
+    proceeds, their average cost). Shares sold beyond the holding have no
+    recorded purchase (bought before the statement began, transferred in),
+    so their part of the proceeds is left out instead of counted as profit:
+    one sale of 12 from 10 held gives the same result as a sale of 10 and
+    then one of 2 from nothing."""
+    if quantity <= _DUST:
+        return 0.0, 0.0, 0.0
+    sold = max(min(t.quantity, quantity), 0.0)
+    share = sold / t.quantity if t.quantity > 0 else 1.0
+    matched_cost = cost if sold >= quantity else cost / quantity * sold
+    return sold, t.amount * share, matched_cost
+
+
 def compute_positions(trades: list[Trade]) -> dict[str, Position]:
     positions: dict[str, Position] = {}
-    for t in sorted(trades, key=lambda x: x.when):
+    for t in _chronological(trades):
         p = positions.get(t.key)
         if p is None:
             p = positions[t.key] = Position(key=t.key, name=t.name)
@@ -65,12 +132,14 @@ def compute_positions(trades: list[Trade]) -> dict[str, Position]:
             p.quantity += t.quantity
             p.cost += t.amount
         else:  # SELL — realize against the running average cost
-            if p.quantity > 1e-9:
-                avg = p.cost / p.quantity
-                sold = min(t.quantity, p.quantity)
-                p.realized += t.amount - avg * sold
-                p.cost -= avg * sold
-            p.quantity -= t.quantity
+            sold, proceeds, cost = _match(p.quantity, p.cost, t)
+            if t.quantity - sold > _OPEN:   # not just rounding of fractional shares
+                p.unmatched += t.quantity - sold
+            p.realized += proceeds - cost
+            p.cost -= cost
+            # never below zero: a sale beyond the holding leaves nothing, so
+            # a later round trip is booked in full
+            p.quantity = max(p.quantity - t.quantity, 0.0)
             p.sells += 1
     return positions
 
@@ -83,21 +152,21 @@ def realized_events(trades: list[Trade], accounts: dict[int, str] | None = None)
     share one pool and still says which account each sale came from."""
     pools: dict[str, list[float]] = {}  # key -> [quantity, cost]
     out: list[dict] = []
-    for t in sorted(trades, key=lambda x: x.when):
+    for t in _chronological(trades):
         q, c = pools.setdefault(t.key, [0.0, 0.0])
         if t.side == "BUY":
             pools[t.key] = [q + t.quantity, c + t.amount]
             continue
-        if q <= 1e-9:
-            pools[t.key] = [q - t.quantity, c]
+        sold, proceeds, cost = _match(q, c, t)
+        pools[t.key] = [max(q - t.quantity, 0.0), c - cost]
+        if q <= _DUST:
             continue
-        sold = min(t.quantity, q)
-        avg = c / q
         ev = {"when": t.when, "key": t.key, "name": t.name,
-              "quantity": sold, "proceeds": t.amount,
-              "realized": t.amount - avg * sold, "currency": t.currency}
+              "quantity": sold, "proceeds": proceeds,
+              "realized": proceeds - cost, "currency": t.currency,
+              # shares of this sale with no recorded purchase (left out)
+              "unmatched": max(t.quantity - sold, 0.0)}
         if accounts is not None:
             ev["account"] = accounts.get(id(t), "")
         out.append(ev)
-        pools[t.key] = [q - t.quantity, c - avg * sold]
     return out

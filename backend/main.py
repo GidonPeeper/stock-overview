@@ -43,7 +43,7 @@ from . import github_sync
 _VAULT_STATE = github_sync.restore()
 
 from .connectors import trading212
-from .fx import BASE_CURRENCY, display_rates, to_eur
+from .fx import BASE_CURRENCY, display_rates, from_eur, to_eur
 from .prices import fetch_quotes, quotes_status
 from . import (analytics, cache, cash, datafiles, finances, income, insights, market,
                periods, realized, reports, sectors, sources, store, trend, uktax, watch)
@@ -318,19 +318,29 @@ def logout(request: Request):
     request.session.clear()
     return RedirectResponse("/login", status_code=303)
 
-def _move_eur(value_eur: float, price: float, h, q: dict, ref: float | None) -> float | None:
+def _move_eur(value_eur: float, price: float, h, q: dict, ref: float | None,
+              ccy: str | None = None) -> float | None:
     """EUR change in a holding's value since the market price `ref`.
 
     When the price comes from the market data itself, or the broker quotes the
-    same currency, it is (price - ref) x quantity. When the broker quotes
-    another listing in another currency (e.g. a euro line of a US share), the
-    market's % move is applied to the holding's value instead, so the two
-    currencies are never mixed."""
+    same currency, it is (price - ref) x quantity, in `ccy` (the currency the
+    row is valued in, default the holding's). While the market has not
+    traded today its price is still the previous close (prices.py); a broker
+    price that differs from it then (after-hours, another venue, a stale
+    price) is no session's move, so the market's own price counts and a
+    closed market shows no change. When the broker quotes another listing in
+    another currency (e.g. a euro line of a US share), the market's % move is
+    applied to the holding's value instead, so the two currencies are never
+    mixed."""
     if not ref:
         return None
-    mkt, ccy = q.get("price"), q.get("currency") or ""
-    if h.price is None or not ccy or ccy == h.currency:
-        return to_eur((price - ref) * h.quantity, h.currency)
+    mkt, qccy = q.get("price"), q.get("currency") or ""
+    ccy = ccy or h.currency
+    if h.price is None or not qccy or qccy == ccy:
+        now = price
+        if h.price is not None and mkt and mkt == q.get("prev_close"):
+            now = mkt
+        return to_eur((now - ref) * h.quantity, ccy)
     if not mkt:
         return None
     pct = mkt / ref - 1
@@ -342,7 +352,11 @@ def _open_holdings_rows() -> tuple[list[dict], float, float, dict]:
     """Returns (rows, total_value_eur, total_cost_eur, value_by_broker).
     Shared by most endpoints, so it is memoised for 10 s (a page load computes
     it once) and recomputed at once after any upload or edit. Callers get
-    their own copy and may modify it."""
+    their own copy and may modify it.
+
+    Money in a row is rounded to the cent for display; the unrounded amounts
+    are kept in row["_exact"], and every total is summed from those and
+    rounded once, so a total never differs from the exact sum."""
     holdings = sources.holdings()
 
     # Live quotes (price + previous close) for every holding — the previous
@@ -355,8 +369,16 @@ def _open_holdings_rows() -> tuple[list[dict], float, float, dict]:
 
     for h in holdings:
         q = quotes.get(h.ticker, {})
-        price = h.price if h.price is not None else q.get("price", h.buy_price)
-        value_eur = to_eur(price * h.quantity, h.currency)
+        if h.price is not None:          # the broker's own price
+            price, ccy = h.price, h.currency
+        elif q.get("price"):             # the market's, in the market's currency
+            price, ccy = q["price"], q.get("currency") or h.currency
+        else:
+            # No price anywhere: valued at cost (priced_live False flags it).
+            # The cost is in its own currency, so convert it to the row's.
+            ccy = h.currency
+            price = from_eur(to_eur(h.buy_price, h.cost_currency()), ccy)
+        value_eur = to_eur(price * h.quantity, ccy)
         if h.broker_profit_eur is not None:
             # Trust the broker's exact P/L; derive cost from it.
             profit_eur = h.broker_profit_eur
@@ -367,7 +389,7 @@ def _open_holdings_rows() -> tuple[list[dict], float, float, dict]:
 
         # Today's change: value now minus value at the last close before today
         # (calendar day: zero until the market trades today), in EUR.
-        daily_eur = _move_eur(value_eur, price, h, q, q.get("prev_close"))
+        daily_eur = _move_eur(value_eur, price, h, q, q.get("prev_close"), ccy)
 
         total_value += value_eur
         total_cost += cost_eur
@@ -380,7 +402,7 @@ def _open_holdings_rows() -> tuple[list[dict], float, float, dict]:
                 "isin": h.isin,
                 "name": h.name,
                 "quantity": h.quantity,
-                "currency": h.currency,
+                "currency": ccy,         # of `price`
                 "buy_price": round(h.buy_price, 2),
                 "price": round(price, 2),
                 "value_eur": round(value_eur, 2),
@@ -393,6 +415,8 @@ def _open_holdings_rows() -> tuple[list[dict], float, float, dict]:
                 # market quote behind the "today" and period changes (periods.py)
                 "_mkt": {"price": q.get("price"), "prev": q.get("prev_close"),
                          "currency": q.get("currency") or "", "own_price": h.price is not None},
+                "_exact": {"value_eur": value_eur, "cost_eur": cost_eur,
+                           "profit_eur": profit_eur, "daily_eur": daily_eur},
             }
         )
 
@@ -402,7 +426,9 @@ def _open_holdings_rows() -> tuple[list[dict], float, float, dict]:
 
 def _merge_holdings(rows: list[dict]) -> tuple[list[dict], list[dict]]:
     """Merge the same company held at multiple brokers into one holding (by ISIN)
-    and aggregate value by sector for the allocation chart."""
+    and aggregate value by sector for the allocation chart. Sums the rows'
+    unrounded amounts and rounds once, so a merged holding, its sector and
+    the portfolio total agree with each other."""
     sector_map = sectors.get_sectors([r["ticker"] for r in rows if r["ticker"]])
 
     merged: dict[str, dict] = {}
@@ -418,36 +444,40 @@ def _merge_holdings(rows: list[dict]) -> tuple[list[dict], list[dict]]:
                 "profit_eur": 0.0, "daily_eur": 0.0, "_has_daily": False,
                 "priced_live": False,
             }
+        e = r.get("_exact") or r
         m["quantity"] += r["quantity"]
-        m["value_eur"] += r["value_eur"]
-        m["_cost"] += r["cost_eur"]
-        m["profit_eur"] += r["profit_eur"]
+        m["value_eur"] += e["value_eur"]
+        m["_cost"] += e["cost_eur"]
+        m["profit_eur"] += e["profit_eur"]
         if r.get("daily_eur") is not None:
-            m["daily_eur"] += r["daily_eur"]
+            m["daily_eur"] += e["daily_eur"]
             m["_has_daily"] = True
         m["priced_live"] = m["priced_live"] or r["priced_live"]
         if r["broker"] not in m["brokers"]:
             m["brokers"].append(r["broker"])
 
     out = []
+    exact_value: dict[int, float] = {}
     for m in merged.values():
         cost = m.pop("_cost")
         has_daily = m.pop("_has_daily")
+        value, profit, daily = m["value_eur"], m["profit_eur"], m["daily_eur"]
         m["quantity"] = round(m["quantity"], 4)
-        m["value_eur"] = round(m["value_eur"], 2)
-        m["profit_eur"] = round(m["profit_eur"], 2)
-        m["profit_pct"] = round((m["profit_eur"] / cost * 100) if cost else 0, 2)
+        m["value_eur"] = round(value, 2)
+        m["profit_eur"] = round(profit, 2)
+        m["profit_pct"] = round((profit / cost * 100) if cost else 0, 2)
         # today's change: value now vs (value − today's move)
-        prev_val = m["value_eur"] - m["daily_eur"]
-        m["daily_eur"] = round(m["daily_eur"], 2) if has_daily else None
-        m["daily_pct"] = round((m["daily_eur"] / prev_val * 100), 2) \
+        prev_val = value - daily
+        m["daily_eur"] = round(daily, 2) if has_daily else None
+        m["daily_pct"] = round((daily / prev_val * 100), 2) \
             if has_daily and prev_val else None
+        exact_value[id(m)] = value
         out.append(m)
     out.sort(key=lambda x: x["value_eur"], reverse=True)
 
     by_sector: dict[str, float] = defaultdict(float)
     for m in out:
-        by_sector[m["sector"]] += m["value_eur"]
+        by_sector[m["sector"]] += exact_value[id(m)]
     by_sector_list = [
         {"sector": s, "value": round(v, 2)}
         for s, v in sorted(by_sector.items(), key=lambda kv: -kv[1])
@@ -463,8 +493,9 @@ def portfolio() -> dict:
     realized_total = realized.summary()["total_realized_eur"]
     inc = income.summary()
     all_time = unrealized + realized_total
-    daily = round(sum(h["daily_eur"] for h in holdings if h["daily_eur"] is not None), 2)
-    prev_value = total_value - daily
+    daily_exact = periods.today_total(rows)   # the same sum as the Performance card's "today"
+    daily = round(daily_exact, 2)
+    prev_value = total_value - daily_exact
 
     return {
         "base_currency": BASE_CURRENCY,
@@ -481,7 +512,7 @@ def portfolio() -> dict:
             "realized": realized_total,
             "all_time": round(all_time, 2),
             "daily": daily,
-            "daily_pct": round((daily / prev_value * 100), 2) if prev_value else 0,
+            "daily_pct": round((daily_exact / prev_value * 100), 2) if prev_value else 0,
             "dividends": inc["dividends"],
             "interest": inc["interest"],
             "income": inc["total"],
