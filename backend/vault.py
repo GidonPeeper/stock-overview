@@ -25,7 +25,7 @@ VAULT = DATA_DIR / "vault.enc"
 FILES = ["degiro_account.csv", "trades_trade_republic.json",
          "income_trade_republic.json", "trading212_statement.json",
          "cash_accounts.json", "watchlist.json", "finances.json",
-         "connections.json", "manual_holdings.json"]
+         "connections.json", "manual_holdings.json", "settings.json"]
 
 _ITERATIONS = 600_000
 

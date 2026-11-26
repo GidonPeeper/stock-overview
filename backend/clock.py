@@ -1,8 +1,8 @@
 """The dashboard's calendar day.
 
 "Today" means since midnight where you live, not the last 24 hours, so a
-market that has not opened yet today shows no change. The time zone is
-DASHBOARD_TZ (default Europe/London).
+market that has not opened yet today shows no change. The time zone is the
+one chosen in Settings, else DASHBOARD_TZ (default Europe/London).
 """
 
 from __future__ import annotations
@@ -13,8 +13,11 @@ from zoneinfo import ZoneInfo
 
 
 def tz() -> ZoneInfo:
+    """The time zone chosen in Settings, else DASHBOARD_TZ (prefs.py)."""
     try:
-        return ZoneInfo(os.getenv("DASHBOARD_TZ") or "Europe/London")
+        from . import prefs
+
+        return ZoneInfo(prefs.value("timezone") or "Europe/London")
     except Exception:
         return ZoneInfo("Europe/London")
 

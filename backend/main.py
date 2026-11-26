@@ -23,7 +23,7 @@ from contextlib import asynccontextmanager
 from pathlib import Path
 from urllib.parse import urlsplit
 
-from fastapi import FastAPI, File, Form, HTTPException, Request, UploadFile
+from fastapi import Body, FastAPI, File, Form, HTTPException, Request, UploadFile
 from fastapi.staticfiles import StaticFiles
 from starlette.middleware.gzip import GZipMiddleware
 from starlette.middleware.sessions import SessionMiddleware
@@ -48,7 +48,7 @@ from .connectors import trading212
 from .fx import BASE_CURRENCY, display_rates, from_eur, to_eur
 from .prices import fetch_quotes, quotes_status
 from . import (analytics, cache, cash, datafiles, finances, income, insights, market,
-               periods, realized, reports, sectors, sources, store, trend, uktax, watch)
+               periods, prefs, realized, reports, sectors, sources, store, trend, uktax, watch)
 
 
 def _demo() -> bool:
@@ -880,6 +880,26 @@ def brief(ccy: str = "EUR") -> dict:
     port = portfolio()
     ana = analytics.summary(port["holdings"])
     return insights.daily_brief(port, ana, ccy.upper())
+
+
+@app.get("/api/prefs")
+def prefs_get() -> dict:
+    """The choices made in Settings: country, currency, time zone, colours (prefs.py)."""
+    return prefs.get()
+
+
+@app.post("/api/prefs")
+@_one_save_at_a_time
+def prefs_save(changes: dict = Body(...)) -> dict:
+    """Save one or more choices: a JSON object such as {"currency": "USD"}.
+    null forgets a choice."""
+    try:
+        out = prefs.update(changes)
+    except ValueError as e:
+        raise HTTPException(400, str(e))
+    cache.invalidate()                 # country, currency and time zone change what is shown
+    github_sync.push_vault_async()
+    return out
 
 
 @app.get("/api/fx")

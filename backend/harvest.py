@@ -94,9 +94,11 @@ _LIB_FILE = Path(__file__).with_name("replacements.json")
 
 # ------------------------------------------------------------------ settings
 def residence() -> str:
-    """UK (also when blank), US, NL, or OTHER for anywhere else (tax cards off)."""
-    r = (os.getenv("TAX_RESIDENCE") or "UK").strip().upper()
-    r = {"GB": "UK", "USA": "US"}.get(r, r)
+    """UK, US, NL, or OTHER for anywhere else (tax cards off): the country
+    chosen in Settings, else TAX_RESIDENCE, else UK (prefs.py)."""
+    from . import prefs
+
+    r = {"GB": "UK"}.get(prefs.value("country"), prefs.value("country"))
     return r if r in RESIDENCES else "OTHER"
 
 

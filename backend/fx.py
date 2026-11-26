@@ -143,9 +143,11 @@ def from_eur(amount_eur: float, currency: str) -> float:
 
 
 def display_currency() -> str:
-    """Default display currency for the UI (DISPLAY_CURRENCY env, EUR if unset).
-    The viewer can switch it in Settings; this is only the starting point."""
-    c = (os.getenv("DISPLAY_CURRENCY") or BASE_CURRENCY).upper()
+    """Default display currency for the UI: the one chosen in Settings, else
+    DISPLAY_CURRENCY, else EUR (prefs.py)."""
+    from . import prefs
+
+    c = prefs.value("currency")
     return c if c in DISPLAY_CURRENCIES else BASE_CURRENCY
 
 
