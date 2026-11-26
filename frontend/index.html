@@ -1575,6 +1575,9 @@
       $("n-closed").textContent=CLOSED.closed.length?`(${CLOSED.closed.length})`:"";
       let html=CLOSED.closed.map(r=>`<div class="row"><span>${esc(r.name)} <span class="tag">${esc(r.broker)}</span></span><span class="num r-end ${cls(r.realized_eur)}" style="font-weight:600">${signed(r.realized_eur)}</span></div>`).join("");
       if(Math.abs(CLOSED.trims_total_eur)>0.005) html+=`<div class="row"><span class="muted">From selling part of what you still hold</span><span class="num r-end ${cls(CLOSED.trims_total_eur)}" style="font-weight:600">${signed(CLOSED.trims_total_eur)}</span></div>`;
+      // sales the history does not explain: the profit shown for them is incomplete
+      const inc=CLOSED.incomplete||[];
+      if(inc.length) html+=`<div class="row"><span class="muted">Bought before your statements start, so not counted in full: ${inc.map(x=>`${esc(x.name)} (${qty(x.shares_without_purchase)} shares, ${esc(x.broker)})`).join(", ")}. Upload a statement that covers all dates to fix this.</span></div>`;
       const el=$("closed-rows");
       if(!html) empty(el,"You have not sold anything yet."); else { el.className=""; el.innerHTML=html; }
       const t=$("closed-total"); t.textContent=signed(CLOSED.total_realized_eur); t.className="num "+cls(CLOSED.total_realized_eur);
