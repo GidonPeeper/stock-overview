@@ -78,6 +78,17 @@ These files are data. No code change is needed to add a country.
 }
 ```
 
+What the check enforces (`tests/test_countries.py` runs it on every file;
+`backend/countries.py` holds the rules):
+
+- Every key above must be present, except `dates`, `unverified` and a topic's
+  `figures`. Use `""` for an unused `currency_note` and `[]` for an empty
+  `upcoming`. Any other key is an error.
+- `tax_year` is a full year: `ends` is the day before `starts`.
+- Every address is `https`, news feeds included.
+- 2 to 6 `official` links, 2 to 5 `news` feeds, at least one topic.
+- No text is empty, apart from `currency_note`.
+
 Topic ids, in order, and what belongs in each:
 
 | id | Title to use | Content |
