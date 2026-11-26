@@ -448,6 +448,51 @@ class GenericCsvTest(unittest.TestCase):
         self.assertEqual(n("1,000"), 1000)
         self.assertIsNone(n("--"))
 
+    def test_gbp_pence_written_gbp_lowercase_p(self):
+        # "GBp" is pence (Yahoo's and fx.unit's spelling). 400 shares at 625p
+        # are worth £2,500. Before: GBp was upper-cased to GBP, so the price
+        # was £625 and the holding £250,000.
+        text = "Symbol,Quantity,Price,Avg cost,Currency\nRMV.L,400,625,600,GBp\n"
+        m = generic_csv.detect(generic_csv.read_table(text.encode())[0])
+        h = generic_csv.parse(text.encode(), m, "GBP")[0][0]
+        self.assertEqual((h["price"], h["buy_price"], h["cost_currency"]), (6.25, 6.0, "GBP"))
+
+    def test_a_company_called_total_is_not_a_total_row(self):
+        # TotalEnergies starts with "total". Before: skipped as a totals line.
+        text = ("Name,ISIN,Quantity,Value\nTotalEnergies SE,FR0000120271,10,600.00\n"
+                "Total,,10,600.00\nSubtotal,,10,600.00\n")
+        m = generic_csv.detect(generic_csv.read_table(text.encode())[0])
+        holdings, report = generic_csv.parse(text.encode(), m, "EUR")
+        self.assertEqual([h["name"] for h in holdings], ["TotalEnergies SE"])
+        self.assertEqual(report["skipped"], 2)
+
+    def test_change_columns_are_not_taken_for_value_or_price(self):
+        # "Value change %" and "Price change" come first. Before: they were
+        # taken as the market value and the price.
+        header = ["Ticker", "Shares", "Value change %", "Price change", "Market value (EUR)", "Last price (EUR)"]
+        m = generic_csv.detect(header)
+        self.assertEqual((m["value"], m["price"]), ("Market value (EUR)", "Last price (EUR)"))
+
+    def test_thousands_dot_in_a_decimal_comma_file(self):
+        # A European file: 1.234 units of a fund at 12,50 = 15.425,00. Before:
+        # "1.234" was read as 1.234 units (a thousand times too few).
+        text = "Product;ISIN;Quantity;Price\nMade-up Fund;LU0000000001;1.234;12,50\n"
+        m = generic_csv.detect(generic_csv.read_table(text.encode())[0])
+        h = generic_csv.parse(text.encode(), m, "EUR")[0][0]
+        self.assertEqual((h["quantity"], h["price"]), (1234, 12.5))
+        # the same "1.234" in a file that writes decimals with a point stays 1.234
+        text = "Product;ISIN;Quantity;Price\nMade-up Fund;LU0000000001;1.234;12.50\n"
+        h = generic_csv.parse(text.encode(), generic_csv.detect(generic_csv.read_table(text.encode())[0]), "EUR")[0][0]
+        self.assertEqual(h["quantity"], 1.234)
+
+    def test_euro_sign_sets_the_currency(self):
+        # No currency column, values in euros, the default currency is GBP.
+        # Before: €1.200,00 was booked as £1,200.
+        text = "Product;ISIN;Quantity;Value\nMade-up AG;DE0005557508;100;€1.200,00\n"
+        m = generic_csv.detect(generic_csv.read_table(text.encode())[0])
+        h = generic_csv.parse(text.encode(), m, "GBP")[0][0]
+        self.assertEqual((h["cost_currency"], h["price"]), ("EUR", 12.0))
+
     def test_rejects_excel(self):
         with self.assertRaises(ValueError):
             generic_csv.read_table(b"PK\x03\x04 not really a zip")
