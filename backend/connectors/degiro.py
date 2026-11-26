@@ -147,28 +147,75 @@ def get_trades() -> list[Trade]:
             renames[out[4]] = (new[4], new[3].title())
     corporate = [r for r in corporate if lang.corporate(r[5]) != "isin_change"]
 
+    def eur_of(change: float, ccy: str) -> float:
+        return abs(to_eur(change, ccy)) if ccy in ("USD", "EUR", "GBP") else abs(change)
+
+    # A split is booked as two rows at the same moment: the old shares out
+    # (cash +) and the new shares in (cash -), often under a new ISIN. Nothing
+    # is sold: such a pair is kept apart and booked below at the position's
+    # own cost, so it realizes nothing and the new shares carry the cost.
+    moments: dict[tuple, list] = defaultdict(list)
     for r in corporate:
+        if not lang.find_fill(r[5]) and lang.split_qty(r[5]):
+            moments[(r[0], r[1])].append(r)
+    pairs = []
+    for rs in moments.values():
+        outs = [r for r in rs if num.amount(r[8]) > 0]
+        ins = [r for r in rs if num.amount(r[8]) < 0]
+        if len(rs) == 2 and len(outs) == 1 and len(ins) == 1:
+            pairs.append((outs[0], ins[0]))
+            if outs[0][4] != ins[0][4] and outs[0][4] not in renames:
+                renames[outs[0][4]] = (ins[0][4], ins[0][3].title())   # one position, new ISIN
+    paired = {id(r) for pair in pairs for r in pair}
+
+    for r in corporate:
+        if id(r) in paired:
+            continue
         desc, ccy, change = r[5], r[7], num.amount(r[8])
         f = lang.find_fill(desc)
         if f:                                   # DELISTING / PRODUCTWIJZIGING
             side, qty = f.side, num.text(f.qty)
-        else:                                   # SPLIT AANPASSING
+        else:                                   # a split row without its other half
             sq = lang.split_qty(desc)
             if not sq:
                 continue
             qty = num.text(sq)
             side = "SELL" if change > 0 else "BUY"  # shares leaving vs arriving
-        eur = abs(to_eur(change, ccy)) if ccy in ("USD", "EUR", "GBP") else abs(change)
         trades.append(Trade(
             when=_when(r), key=r[4], name=r[3].title(), side=side,
-            quantity=qty, amount=round(eur, 2), currency="EUR",
+            quantity=qty, amount=round(eur_of(change, ccy), 2), currency="EUR",
         ))
 
-    for t in trades:  # follow ISIN changes (possibly chained) to the current ISIN
-        seen = set()
-        while t.key in renames and t.key not in seen:
-            seen.add(t.key)
-            t.key, t.name = renames[t.key]
+    def current(key: str) -> tuple[str, str | None]:
+        """Follow ISIN changes (possibly chained) to the current ISIN."""
+        name, seen = None, set()
+        while key in renames and key not in seen:
+            seen.add(key)
+            key, name = renames[key]
+        return key, name
+
+    for t in trades:
+        key, name = current(t.key)
+        if name is not None:
+            t.key, t.name = key, name
+
+    # the split pairs, oldest first: out and in at what the shares had cost
+    for out, new in sorted(pairs, key=lambda p: _when(p[0])):
+        when, key = _when(out), current(new[4])[0]
+        q_out, q_in = num.text(lang.split_qty(out[5])), num.text(lang.split_qty(new[5]))
+        held = compute_positions(sorted((t for t in trades if t.key == key and t.when <= when),
+                                        key=lambda t: t.when)).get(key)
+        if held is not None and held.quantity > 1e-9 and q_out > 0:
+            cost = held.cost * min(1.0, q_out / held.quantity)
+            amounts = (cost, cost)
+        else:   # no purchase on record: as before, at the value DEGIRO booked
+            amounts = (eur_of(num.amount(out[8]), out[7]), eur_of(num.amount(new[8]), new[7]))
+        name = new[3].title()
+        trades.append(Trade(when=when, key=key, name=name, side="SELL", quantity=q_out,
+                            amount=round(amounts[0], 2), currency="EUR"))
+        trades.append(Trade(when=when, key=key, name=name, side="BUY", quantity=q_in,
+                            amount=round(amounts[1], 2), currency="EUR"))
+
     # the ISIN table, else a Yahoo lookup (instruments.py); "" = no live price
     prefetch({t.key: traded_in.get(t.key) for t in trades})
     for t in trades:

@@ -25,7 +25,7 @@ from pathlib import Path
 from . import cache, degiro_lang
 from .connectors import traderepublic, trading212
 from .datafiles import resolve as _resolve_data
-from .fx import FX_TO_EUR, to_eur
+from .fx import to_eur
 
 DATA_DIR = Path(__file__).resolve().parents[1] / "data"
 
@@ -68,7 +68,7 @@ def _degiro_rows() -> list[dict]:
             continue
         kind = _degiro_kind(row[5])
         if kind:
-            eur = to_eur(num.amount(row[8]), row[7] if row[7] in FX_TO_EUR else "EUR")
+            eur = to_eur(num.amount(row[8]), row[7] or "EUR")   # any currency (fx.py)
             out.append({"date": f"{row[0][6:10]}-{row[0][3:5]}-{row[0][0:2]}",
                         "kind": kind, "amount_eur": eur})
     return out

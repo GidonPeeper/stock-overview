@@ -379,15 +379,13 @@ class QuoteDayTest(unittest.TestCase):
 
 # ------------------------------------------------------------ DeGiro split (not in my files)
 class DegiroSplitTest(unittest.TestCase):
-    @unittest.expectedFailure
     def test_a_split_is_not_a_sale(self):
         # Bought 300 shares for EUR 500. A 1-for-30 reverse split books 300
         # old shares out ("SPLIT AANPASSING", cash +USD 300) and 10 new shares
         # in (cash -USD 300). Nothing was sold: realized must be 0.00 and the
         # 10 new shares must carry the EUR 500 cost (avg 50.00). The
-        # connector feeds the split as a SELL for 300 x 0.8 = EUR 240 and a
-        # BUY for EUR 240, so realized is 240 - 500 = -260.00 and the new
-        # shares cost 240. Fix belongs in backend/connectors/degiro.py (see report).
+        # connector used to feed the split as a SELL for 300 x 0.8 = EUR 240 and
+        # a BUY for EUR 240: realized 240 - 500 = -260.00, new shares at 240.
         from backend.connectors import degiro
         csv = (
             "Date,Time,Value date,Product,ISIN,Description,FX,Change,,Balance,,Order Id\n"
@@ -404,13 +402,37 @@ class DegiroSplitTest(unittest.TestCase):
         self.assertAlmostEqual(pos["US00000000N2"].cost, 500.0)
 
 
+    def test_a_split_under_the_same_isin_then_a_sale(self):
+        # 10 shares for EUR 900, a 3-for-1 split (10 out, 30 in, same ISIN),
+        # then all 30 sold for EUR 1,200: the only real result is
+        # 1,200 - 900 = +300.00, and it is realized on the day of the sale.
+        from backend.connectors import degiro
+        csv = (
+            "Date,Time,Value date,Product,ISIN,Description,FX,Change,,Balance,,Order Id\n"
+            '02-09-2024,10:00,02-09-2024,EXAMPLE INC,US00000000S3,Verkoop 30 @ 40 EUR,,EUR,"1200,00",EUR,"0,00",ord2\n'
+            '29-08-2024,13:29,29-08-2024,EXAMPLE INC,US00000000S3,SPLIT AANPASSING: 30 Example Inc @ 35 EUR,,EUR,"-1050,00",EUR,"0,00",\n'
+            '29-08-2024,13:29,29-08-2024,EXAMPLE INC,US00000000S3,SPLIT AANPASSING: 10 Example Inc @ 105 EUR,,EUR,"1050,00",EUR,"0,00",\n'
+            '02-01-2024,10:00,02-01-2024,EXAMPLE INC,US00000000S3,Koop 10 @ 90 EUR,,EUR,"-900,00",EUR,"0,00",ord1\n')
+        with tempfile.TemporaryDirectory() as d:
+            path = Path(d) / "degiro_account.csv"
+            path.write_text(csv)
+            with mock.patch.object(degiro, "_csv_file", return_value=path), \
+                    mock.patch.object(fx, "_live_rates", return_value=dict(RATES)):
+                trades = sorted(degiro.get_trades(), key=lambda t: t.when)
+        before_sale = compute_positions([t for t in trades if t.when < "2024-09-01"])["US00000000S3"]
+        self.assertAlmostEqual(before_sale.realized, 0.0)        # the split itself: nothing
+        self.assertAlmostEqual(before_sale.quantity, 30.0)
+        self.assertAlmostEqual(before_sale.cost, 900.0)           # EUR 30 a share
+        after = compute_positions(trades)["US00000000S3"]
+        self.assertAlmostEqual(after.realized, 300.0)
+        self.assertAlmostEqual(after.quantity, 0.0)
+
+
 class DegiroIncomeCurrencyTest(unittest.TestCase):
-    @unittest.expectedFailure
     def test_a_dividend_in_swedish_kronor(self):
         # A DeGiro dividend of SEK 110.00 at 11 SEK per EUR is EUR 10.00.
         # income._degiro_rows converts only currencies in fx.FX_TO_EUR
-        # (EUR/USD/GBP/CHF) and books any other as euros: EUR 110.00.
-        # Fix belongs in backend/income.py (see report).
+        # (EUR/USD/GBP/CHF) and booked any other as euros: EUR 110.00.
         from backend import income
         csv = ("Date,Time,Value date,Product,ISIN,Description,FX,Change,,Balance,,Order Id\n"
                '15-05-2024,07:00,14-05-2024,EXAMPLE AB,SE0000000001,Dividend,,SEK,"110,00",SEK,"110,00",\n')
