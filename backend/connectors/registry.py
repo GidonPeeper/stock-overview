@@ -201,13 +201,18 @@ def _rule(institution: dict, method: dict) -> dict:
 
 
 def is_positions_file(method: dict) -> bool:
-    """A CSV-like export that lists holdings (not only transactions)."""
+    """A CSV-like export that is one table of holdings. A statement that also
+    lists transactions (IBKR/LYNX Activity Statement, Revolut stocks statement)
+    has several sections with their own headers: the positions import cannot
+    read it, so it is shown for information only."""
     fmt = (method.get("file_format") or "").lower()
     covers = set(method.get("covers") or [])
     report = method.get("report_name") or ""
-    return fmt in _TEXT_FORMATS and bool(
-        covers & {"positions", "holdings"}
-        or re.search(r"position|holding|portfolio|portefeuille|valuation", report, re.I))
+    if fmt not in _TEXT_FORMATS:
+        return False
+    if re.search(r"position|holding|portfolio|portefeuille|valuation", report, re.I):
+        return True
+    return bool(covers & {"positions", "holdings"}) and "transactions" not in covers
 
 
 def link(institution: dict, method: dict) -> dict:
