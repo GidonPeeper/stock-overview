@@ -1,0 +1,220 @@
+{
+  "code": "SE",
+  "name": "Sweden",
+  "currency": "EUR",
+  "currency_note": "Sweden uses kronor (SEK); the app shows euros. Tax figures below are in kronor.",
+  "timezone": "Europe/Stockholm",
+  "languages": ["sv"],
+  "checked_on": "2026-11-26",
+  "tax_year": {
+    "label": "2026",
+    "starts": "01-01",
+    "ends": "12-31",
+    "return_due": "File the return in spring of the next year; for income year 2025 the last day was 4 May 2026, and Skatteverket publishes the date for 2027 in advance.",
+    "source": "https://www.skatteverket.se/privat/deklaration.4.2b543913a42158acf800013508.html"
+  },
+  "summary": "Investment income (capital income, inkomst av kapital) is taxed at a flat 30%. On an ordinary account you pay 30% on gains, dividends and interest. On an investment savings account (ISK) or a capital insurance (kapitalförsäkring) you instead pay a small yearly tax on the account value, and from 2026 the first SEK 300,000 of these savings together is tax-free.",
+  "topics": [
+    {
+      "id": "gains",
+      "title": "Profit when you sell",
+      "points": [
+        "Outside an ISK or kapitalförsäkring, a gain on shares, funds and bonds is capital income taxed at 30%.",
+        "The gain is the sale price after fees minus the cost (omkostnadsbelopp). The cost is worked out with the average method (genomsnittsmetoden) across all your purchases of the same share.",
+        "For listed shares and listed funds you may instead use the standard method (schablonmetoden): the cost is set at 20% of the sale price after fees, so 80% of the price counts as gain.",
+        "Sales of listed shares are reported on form K4 (bilaga K4) with your return."
+      ],
+      "figures": [
+        {"label": "Tax on capital income", "value": "30%"},
+        {"label": "Standard cost (schablonmetoden)", "value": "20% of the sale price"}
+      ],
+      "sources": [
+        "https://www.skatteverket.se/privat/skatter/beloppochprocent/2026.4.1522bf3f19aea8075ba21.html",
+        "https://www.skatteverket.se/privat/skatter/vardepapper/deklareraaktierochovrigavardepapper/omkostnadsbelopp.4.12815e4f14a62bc048fa7bc.html",
+        "https://www.skatteverket.se/privat/skatter/vardepapper/omaktier.4.50a6b4831275a0376d380001915.html"
+      ]
+    },
+    {
+      "id": "dividends",
+      "title": "Dividends",
+      "points": [
+        "Dividends on shares and fund units held outside an ISK or kapitalförsäkring are taxed at 30%.",
+        "Banks and brokers report dividends to Skatteverket, and the amount is pre-filled in your return."
+      ],
+      "figures": [
+        {"label": "Tax rate", "value": "30%"}
+      ],
+      "sources": [
+        "https://www.skatteverket.se/privat/etjansterochblanketter/svarpavanligafragor/rantorochutdelning/privatrantorfaq/vilkaskattereglergallerforranteinkomsterochutdelningar.5.18e1b10334ebe8bc8000118462.html",
+        "https://www.skatteverket.se/privat/skatter/vardepapper/omovrigavardepapper/fonder.4.19b9f599116a9e8ef36800010782.html"
+      ]
+    },
+    {
+      "id": "interest",
+      "title": "Interest on savings",
+      "points": [
+        "Interest is taxed at 30%.",
+        "A Swedish bank reports the interest to Skatteverket and normally withholds tax on it during the year.",
+        "Cash inside an ISK is covered by the yearly standard tax. Only if the account pays more than the government borrowing rate plus 1 point (or 1.25%, whichever is higher) at some point in the year is that interest taxed separately (rule from 2025)."
+      ],
+      "figures": [
+        {"label": "Tax rate", "value": "30%"}
+      ],
+      "sources": [
+        "https://www.skatteverket.se/privat/etjansterochblanketter/svarpavanligafragor/rantorochutdelning/privatrantorfaq/vilkaskattereglergallerforranteinkomsterochutdelningar.5.18e1b10334ebe8bc8000118462.html",
+        "https://www.skatteverket.se/foretag/skatterochavdrag/kontrolluppgifter/kontrolluppgiftomranteutgiftku25ochranteinkomstku20.4.1df9c71e181083ce6f6349.html",
+        "https://www.skatteverket.se/privat/skatter/vardepapper/investeringssparkontoisk.4.5fc8c94513259a4ba1d800037851.html"
+      ]
+    },
+    {
+      "id": "funds",
+      "title": "Funds and ETFs",
+      "points": [
+        "If you own fund units (fondandelar) outside an ISK or kapitalförsäkring, you are taxed each year on a standard income (schablonintäkt) of 0.4% of their value on 1 January, whether you sold or not. At 30% this is a tax of 0.12% of the value.",
+        "Your bank or fund company calculates the standard income and reports it, together with fund dividends and sales.",
+        "When you sell, the gain or loss is taxed as for shares, at 30%."
+      ],
+      "figures": [
+        {"label": "Standard income on fund units", "value": "0.4% of the value on 1 January"},
+        {"label": "Effective yearly tax", "value": "0.12% of the value"}
+      ],
+      "sources": [
+        "https://www.skatteverket.se/privat/skatter/vardepapper/omovrigavardepapper/fonder.4.19b9f599116a9e8ef36800010782.html",
+        "https://www.skatteverket.se/privat/skatter/beloppochprocent/2026.4.1522bf3f19aea8075ba21.html"
+      ]
+    },
+    {
+      "id": "allowances",
+      "title": "Tax-free amounts",
+      "points": [
+        "From 2026, the first SEK 300,000 of your combined savings in ISK, kapitalförsäkring and PEPP products is tax-free (skattefri grundnivå). In 2025 it was SEK 150,000.",
+        "You get this as an automatic deduction in your return; you do not need to ask for it. The deduction is used against ISK first.",
+        "For 2026 the deduction is at most SEK 10,650 (SEK 300,000 × 3.55%)."
+      ],
+      "figures": [
+        {"label": "Tax-free savings level (2026)", "value": "SEK 300,000"},
+        {"label": "Largest deduction (2026)", "value": "SEK 10,650"}
+      ],
+      "sources": [
+        "https://www.skatteverket.se/privat/skatter/vardepapper/investeringssparkontoisk.4.5fc8c94513259a4ba1d800037851.html",
+        "https://www.skatteverket.se/privat/skatter/beloppochprocent/2026.4.1522bf3f19aea8075ba21.html"
+      ]
+    },
+    {
+      "id": "accounts",
+      "title": "Tax-free and tax-deferred accounts",
+      "points": [
+        "Investment savings account (investeringssparkonto, ISK): gains, dividends and losses inside it are not taxed or declared. Instead you pay tax on a standard income (schablonintäkt) worked out from the account value.",
+        "For 2026 the standard income is 3.55% of the capital base: the government borrowing rate on 30 November 2025 (2.55%) plus 1 point, and never below 1.25%. Taxed at 30%, this is 1.065% of the capital base above the tax-free level.",
+        "The capital base is the account value at the start of each quarter plus all deposits in the year, divided by four. There is no deposit limit.",
+        "Moving shares from an ordinary account into an ISK counts as a sale, so any gain is taxed at that point.",
+        "Capital insurance (kapitalförsäkring): with a Swedish policy the insurer pays a yearly yield tax (avkastningsskatt) and charges it to you, and you declare nothing. With a foreign policy you declare it yourself: the base is the capital times the borrowing rate plus 1 point (at least 1.25%), and the tax is 30% of that base.",
+        "The rate for 2027 depends on the borrowing rate on 30 November 2026, which was not yet known when this page was checked."
+      ],
+      "figures": [
+        {"label": "ISK standard rate (2026)", "value": "3.55%"},
+        {"label": "ISK tax on capital base (2026)", "value": "1.065%"},
+        {"label": "Floor for the standard rate", "value": "1.25%"}
+      ],
+      "sources": [
+        "https://www.skatteverket.se/privat/skatter/vardepapper/investeringssparkontoisk.4.5fc8c94513259a4ba1d800037851.html",
+        "https://www.skatteverket.se/privat/skatter/forsakringar/svenskakapitalforsakringarochpensionssparanden.4.71004e4c133e23bf6db800024545.html",
+        "https://www.skatteverket.se/privat/skatter/forsakringar/utlandskakapitalforsakringarochpensionsforsakringar/utlandskkapitalforsakring.4.3684199413c956649b57c4b.html"
+      ]
+    },
+    {
+      "id": "losses",
+      "title": "Losses",
+      "points": [
+        "A loss on listed shares or listed share funds can be set in full against gains on listed shares and share funds in the same year.",
+        "What is left of the loss after that counts at 70% (kvotering) against your other capital income.",
+        "If your capital income is negative overall (underskott av kapital), you get a reduction of your other tax: 30% of the deficit up to SEK 100,000 and 21% of the part above.",
+        "Skatteverket does the netting itself when it calculates your tax. Gains and losses inside an ISK are not declared at all."
+      ],
+      "figures": [
+        {"label": "Remaining loss deductible", "value": "70%"},
+        {"label": "Tax reduction on a deficit up to SEK 100,000", "value": "30%"},
+        {"label": "Tax reduction on a deficit above SEK 100,000", "value": "21%"}
+      ],
+      "sources": [
+        "https://www.skatteverket.se/privat/skatter/vardepapper/deklareraaktierochovrigavardepapper/kvittningochkvotering.4.7be5268414bea0646945a21.html",
+        "https://www.skatteverket.se/privat/skatter/beloppochprocent/2026.4.1522bf3f19aea8075ba21.html"
+      ]
+    },
+    {
+      "id": "foreign",
+      "title": "Foreign shares",
+      "points": [
+        "Foreign tax withheld on dividends can be credited against Swedish tax. Skatteverket does this automatically when the foreign tax appears in a report (kontrolluppgift) from your bank.",
+        "The credit is usually limited to 15% of the dividend (10% for Austria and 5% for the United Kingdom). Tax withheld above that must be reclaimed from the other country.",
+        "Foreign tax on dividends inside an ISK can also be credited; the income it is set against may not exceed the ISK standard income.",
+        "If the foreign tax was not reported, you can ask for the credit in your return or on form SKV 2703."
+      ],
+      "figures": [
+        {"label": "Usual credit limit on dividends", "value": "15%"}
+      ],
+      "sources": [
+        "https://www.skatteverket.se/privat/internationellt/avrakningavutlandskskatt/automatiskavrakningavutlandskskatt.4.3684199413c956649b512df5.html"
+      ]
+    },
+    {
+      "id": "reporting",
+      "title": "What your broker does and what you do",
+      "points": [
+        "Swedish banks and brokers normally report your sales, dividends, interest and fund standard income to Skatteverket, and the figures are pre-filled in your return.",
+        "For an ISK the bank reports only the standard income; gains and losses inside the account are not declared.",
+        "If a sale was not reported, or you want to correct it, you enter it yourself on form K4 (listed shares in section A).",
+        "Skatteverket's e-service can calculate the cost with the standard method and fill in K4 for you."
+      ],
+      "sources": [
+        "https://www.skatteverket.se/privat/skatter/vardepapper/omaktier.4.50a6b4831275a0376d380001915.html",
+        "https://www.skatteverket.se/privat/skatter/vardepapper/deklareraaktierochovrigavardepapper.4.5c281c7015abecc2e201bbd1.html",
+        "https://www.skatteverket.se/privat/skatter/vardepapper/deklareraaktierochovrigavardepapper/omkostnadsbelopp.4.12815e4f14a62bc048fa7bc.html"
+      ]
+    },
+    {
+      "id": "crypto",
+      "title": "Crypto",
+      "points": [
+        "A gain on selling or exchanging crypto, or paying with it, is taxed at 30%. A loss is deductible at 70%.",
+        "The cost must be worked out with the average method across all your purchases of the same coin, on all exchanges and wallets. The 20% standard method may not be used for crypto.",
+        "Crypto sales go on form K4, section D."
+      ],
+      "figures": [
+        {"label": "Tax on gains", "value": "30%"},
+        {"label": "Loss deductible", "value": "70%"}
+      ],
+      "sources": [
+        "https://www.skatteverket.se/privat/skatter/vardepapper/andratillgangar/kryptovalutor.4.15532c7b1442f256bae11b60.html"
+      ]
+    }
+  ],
+  "dates": [
+    {"when": "01-01", "what": "Fund units are valued on this day for the yearly fund standard income."},
+    {"when": "05-04", "what": "Last day to file the 2025 return in 2026; the 2027 date is set by Skatteverket."},
+    {"when": "11-30", "what": "The government borrowing rate on this day sets next year's ISK and kapitalförsäkring rate."}
+  ],
+  "official": [
+    {"title": "Skatteverket: Investeringssparkonto (ISK)", "url": "https://www.skatteverket.se/privat/skatter/vardepapper/investeringssparkontoisk.4.5fc8c94513259a4ba1d800037851.html"},
+    {"title": "Skatteverket: Belopp och procent 2026", "url": "https://www.skatteverket.se/privat/skatter/beloppochprocent/2026.4.1522bf3f19aea8075ba21.html"},
+    {"title": "Skatteverket: Deklarera aktier och övriga värdepapper", "url": "https://www.skatteverket.se/privat/skatter/vardepapper/deklareraaktierochovrigavardepapper.4.5c281c7015abecc2e201bbd1.html"},
+    {"title": "Skatteverket: Kryptovalutor", "url": "https://www.skatteverket.se/privat/skatter/vardepapper/andratillgangar/kryptovalutor.4.15532c7b1442f256bae11b60.html"},
+    {"title": "Skatteverket: Automatisk avräkning av utländsk skatt", "url": "https://www.skatteverket.se/privat/internationellt/avrakningavutlandskskatt/automatiskavrakningavutlandskskatt.4.3684199413c956649b512df5.html"}
+  ],
+  "upcoming": [
+    "Sweden had no new government after the September 2026 election when this page was checked. The 2027 budget handed to parliament on 12 November 2026 is a caretaker budget meant to contain no new policy, so tax changes for 2027 may follow once a government is formed."
+  ],
+  "not_covered": [
+    "Unlisted shares and closely held companies (fåmansföretag, K10 and K12 rules).",
+    "Pensions and pension savings other than the shared tax-free level.",
+    "Derivatives, options and currency gains.",
+    "Real estate.",
+    "Moving to or from Sweden, and people taxed in Sweden for only part of the year."
+  ],
+  "news": [
+    {"name": "SVT Nyheter Ekonomi", "url": "https://www.svt.se/nyheter/ekonomi/rss.xml", "language": "sv"},
+    {"name": "Dagens industri", "url": "https://www.di.se/rss", "language": "sv"},
+    {"name": "DN Ekonomi", "url": "https://www.dn.se/rss/ekonomi/", "language": "sv"},
+    {"name": "Privata Affärer", "url": "https://www.privataaffarer.se/rss.xml", "language": "sv"}
+  ]
+}
