@@ -740,8 +740,11 @@ async def upload_statement(kind: str, file: UploadFile = File(...)) -> dict:
     import json as _json
 
     content = await file.read()
-    if len(content) > 25_000_000:
-        raise HTTPException(413, "File too large")
+    # A statement of many years is a few MB. Much larger files are something
+    # else, and reading one can use more memory than a small host has.
+    if len(content) > 12_000_000:
+        raise HTTPException(413, "That file is larger than 12 MB, which is more than a broker "
+                                 "statement should be. Export a shorter period, or check it is the right file.")
     is_pdf = content[:5] == b"%PDF-"
     text = "" if is_pdf else _decode_text(content)
     if not is_pdf:
