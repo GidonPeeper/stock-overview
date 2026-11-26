@@ -40,3 +40,6 @@ __pycache__/
 *.pyc
 .venv/
 venv/
+
+# agent worktrees
+.claude/worktrees/

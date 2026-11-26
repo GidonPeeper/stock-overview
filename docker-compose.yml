@@ -1,0 +1,20 @@
+# docker compose up -d   ->  http://127.0.0.1:8000
+services:
+  stock-overview:
+    build: .
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:8000:8000"     # this computer only
+    volumes:
+      - ./data:/app/data          # your data stays in this folder
+    environment:
+      # Reachable from this computer only, so no login is asked.
+      # To open it to other devices: change the port line to "8000:8000",
+      # remove ALLOW_NO_PASSWORD and set the three DASHBOARD_ values.
+      ALLOW_NO_PASSWORD: "1"
+      # DASHBOARD_USER: you
+      # DASHBOARD_PASSWORD: a-long-password
+      # DASHBOARD_SECRET: a-long-random-text
+      # DISPLAY_CURRENCY: EUR       # EUR, GBP or USD
+      # TAX_RESIDENCE: NONE         # UK, US, NL, or NONE to hide the tax cards
+      # DASHBOARD_TZ: Europe/Amsterdam

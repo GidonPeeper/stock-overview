@@ -513,8 +513,11 @@ def datastatus() -> dict:
     out["_t212_accounts"] = trading212.status()
     out["_vault"] = _VAULT_STATE
     out["_trend"] = trend.last_build
+    # disk_kept: on your own computer the data/ folder survives restarts, so
+    # no cloud copy is needed; a free host (Render) wipes its disk.
     out["_sync"] = {**github_sync.last_result, "pending": github_sync.pending(),
-                    "token": bool(os.getenv("GITHUB_TOKEN"))}
+                    "token": bool(os.getenv("GITHUB_TOKEN")),
+                    "disk_kept": not os.getenv("RENDER")}
     return out
 
 
