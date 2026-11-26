@@ -22,16 +22,12 @@ from __future__ import annotations
 import csv
 from pathlib import Path
 
-from . import cache
+from . import cache, degiro_lang
 from .connectors import traderepublic, trading212
 from .datafiles import resolve as _resolve_data
 from .fx import FX_TO_EUR, to_eur
 
 DATA_DIR = Path(__file__).resolve().parents[1] / "data"
-
-
-def _num(s: str) -> float:
-    return float(s.replace(".", "").replace(",", ".")) if s else 0.0
 
 
 def _zero() -> dict:
@@ -49,20 +45,11 @@ def _trading212() -> dict[str, dict]:
     return {k: {f: round(v, 2) for f, v in d.items()} for k, d in out.items()}
 
 
-# DeGiro statement rows outside orders: what each one is
-_DEGIRO_INTEREST = ("rente", "interest", "securities lending", "geldmarktfondsen compensatie")
-_DEGIRO_FEES = ("aansluitingskosten", "adr/gdr externe kosten", "transactiebelasting")
-
-
 def _degiro_kind(desc: str) -> str | None:
-    d = desc.lower()
-    if d.startswith("dividend"):                 # includes Dividendbelasting (tax, negative)
-        return "dividends"
-    if any(w in d for w in _DEGIRO_INTEREST):
-        return "interest"
-    if any(w in d for w in _DEGIRO_FEES):
-        return "fees"
-    return None
+    """DeGiro statement rows outside orders: what each one is, in any statement
+    language (wording in backend/degiro_lang.py). Dividends include the
+    withholding tax (Dividendbelasting, Dividend Tax: negative)."""
+    return degiro_lang.income_kind(desc)
 
 
 def _degiro_rows() -> list[dict]:
@@ -74,14 +61,16 @@ def _degiro_rows() -> list[dict]:
     with csv_file.open(encoding="utf-8") as fh:
         reader = csv.reader(fh)
         next(reader, None)
-        for row in reader:
-            if len(row) < 9 or (len(row) > 11 and row[11]):   # order rows are trades
-                continue
-            kind = _degiro_kind(row[5])
-            if kind:
-                eur = to_eur(_num(row[8]), row[7] if row[7] in FX_TO_EUR else "EUR")
-                out.append({"date": f"{row[0][6:10]}-{row[0][3:5]}-{row[0][0:2]}",
-                            "kind": kind, "amount_eur": eur})
+        rows = list(reader)
+    num = degiro_lang.Numbers(rows)         # "1234,56" or "1234.56", per statement
+    for row in rows:
+        if len(row) < 9 or (len(row) > 11 and row[11]):   # order rows are trades
+            continue
+        kind = _degiro_kind(row[5])
+        if kind:
+            eur = to_eur(num.amount(row[8]), row[7] if row[7] in FX_TO_EUR else "EUR")
+            out.append({"date": f"{row[0][6:10]}-{row[0][3:5]}-{row[0][0:2]}",
+                        "kind": kind, "amount_eur": eur})
     return out
 
 

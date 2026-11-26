@@ -638,14 +638,12 @@ async def upload_statement(kind: str, file: UploadFile = File(...)) -> dict:
     report: dict = {}
     try:
         if kind == "degiro":
+            from .connectors.degiro import check_statement
             if is_pdf:
-                csv_text, report = degiro_pdf.convert(content)
-                if not report.get("fills"):
-                    raise HTTPException(400, "That PDF has no Koop/Verkoop rows — is it the DeGiro account statement?")
-                content = csv_text.encode("utf-8")
-            elif "Koop" not in text and "Verkoop" not in text:
-                raise HTTPException(400, "That doesn't look like a DeGiro account statement "
-                                         "(no Koop/Verkoop rows). Export: Activity → Account statement (PDF or CSV), all dates.")
+                text, report = degiro_pdf.convert(content)
+                content = text.encode("utf-8")
+            # any statement language the app reads; else a 400 that says why
+            report = {**check_statement(text, pdf=is_pdf), **report}
             datafiles.save_upload("degiro", content)
         elif kind == "trade_republic":
             if is_pdf:
