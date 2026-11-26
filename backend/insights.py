@@ -84,14 +84,18 @@ def _newsapi(limit: int = 8) -> list[dict]:
             for a in data.get("articles", []) if a.get("title")]
 
 
+def _try_rss(feed: tuple[str, str]) -> list[dict]:
+    try:
+        return _fetch_rss(*feed)
+    except Exception:
+        return []
+
+
 def headlines() -> list[dict]:
     def build():
-        per_source: list[list[dict]] = []
-        for name, url in RSS_FEEDS:
-            try:
-                per_source.append(_fetch_rss(name, url))
-            except Exception:
-                continue
+        # the feeds at the same time: a slow one costs its timeout once, not per feed
+        with ThreadPoolExecutor(max_workers=len(RSS_FEEDS)) as pool:
+            per_source = [items for items in pool.map(_try_rss, RSS_FEEDS) if items]
         extra = []
         try:
             extra = _newsapi()
@@ -108,6 +112,8 @@ def headlines() -> list[dict]:
                     if key not in seen:
                         seen.add(key)
                         out.append(src[i])
+        if not out and cache.peek(f"{__name__}.headlines")[0]:
+            return None            # every feed down: keep the last headlines
         return out[:18]
     return _cached("headlines", 900, build) or []
 
@@ -234,9 +240,10 @@ def daily_brief(portfolio: dict, analytics_data: dict, ccy: str = "EUR") -> dict
                              f"({'+' if best['daily_pct']>=0 else ''}{best['daily_pct']:.1f}%).")
             if worst["daily_eur"] < 0:
                 paras.append(f"Biggest drag: {worst['name']} ({worst['daily_pct']:.1f}%).")
-    paras.append(
-        f"All-time total return stands at {'−' if t['total_return'] < 0 else ''}{m(t['total_return'])} "
-        f"({'−' if t['all_time'] < 0 else ''}{m(t['all_time'])} capital gains + {m(t['income'])} dividends & interest).")
+    if t.get("total_return") is not None:   # None: the income could not be read just now
+        paras.append(
+            f"All-time total return stands at {'−' if t['total_return'] < 0 else ''}{m(t['total_return'])} "
+            f"({'−' if t['all_time'] < 0 else ''}{m(t['all_time'])} capital gains + {m(t['income'])} dividends & interest).")
     beta = analytics_data.get("beta")
     vol = analytics_data.get("volatility_pct")
     if beta is not None and vol is not None:
@@ -250,5 +257,15 @@ def daily_brief(portfolio: dict, analytics_data: dict, ccy: str = "EUR") -> dict
     return {
         "date": date.today().strftime("%A %d %B %Y"),
         "summary": paras,
-        "headlines": headlines()[:8],
+        "headlines": _headlines_now()[:8],
     }
+
+
+def _headlines_now() -> list[dict]:
+    """The headlines when they were fetched before; else none for now (and
+    they are fetched in the background), so the brief never waits on a feed."""
+    if cache.peek(f"{__name__}.headlines")[0]:
+        return headlines()
+    import threading
+    threading.Thread(target=headlines, name="headlines", daemon=True).start()
+    return []

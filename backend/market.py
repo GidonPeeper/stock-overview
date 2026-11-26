@@ -26,6 +26,8 @@ _SPARK_TTL = 1800  # 30 min
 _news_cache: dict[str, tuple[list[dict], float]] = {}
 _NEWS_TTL = 1800
 
+_MAX_KEYS = 300  # per small cache below: any ticker can be asked for, memory stays bounded
+
 
 def indices() -> list[dict]:
     try:
@@ -96,6 +98,7 @@ def _sparklines(tickers: list[str]) -> dict[str, list[float]]:
                     if vals:
                         out[t] = vals
                         _spark_cache[t] = (vals, now)
+                        cache.trim(_spark_cache, _MAX_KEYS)
                 except Exception:
                     continue
         except Exception:
@@ -132,6 +135,7 @@ def ticker_history(ticker: str, rng: str) -> list[float]:
         pass
     if vals:
         _hist_cache[key] = (vals, now)
+        cache.trim(_hist_cache, _MAX_KEYS)   # any ticker can be asked for: stay bounded
     return vals
 
 
@@ -171,7 +175,11 @@ def news(ticker: str, limit: int = 6) -> list[dict]:
     try:
         import yfinance as yf
 
-        for item in (yf.Ticker(ticker).news or [])[:limit]:
+        items = list(yf.Ticker(ticker).news or [])[:limit]
+    except Exception:
+        return c[0] if c else []   # Yahoo did not answer: try again next time, keep the old ones
+    for item in items:
+        try:
             # yfinance news schema has shifted; support both shapes.
             content = item.get("content", item)
             title = content.get("title")
@@ -181,7 +189,8 @@ def news(ticker: str, limit: int = 6) -> list[dict]:
             publisher = provider.get("displayName") if isinstance(provider, dict) else item.get("publisher")
             url = (content.get("canonicalUrl") or {}).get("url") if isinstance(content.get("canonicalUrl"), dict) else item.get("link")
             out.append({"title": title, "publisher": publisher or "", "url": url or ""})
-    except Exception:
-        pass
+        except (AttributeError, TypeError):   # an item of an unexpected shape
+            continue
     _news_cache[ticker] = (out, now)
+    cache.trim(_news_cache, _MAX_KEYS)
     return out

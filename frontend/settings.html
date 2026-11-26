@@ -499,10 +499,21 @@
           </span></div>`).join("")+
         `<div class="row"><span style="font-weight:650">Total (all accounts)</span><span style="font-weight:650">${money0(c.total_eur)}</span></div>`;
     }
-    function loadCash(){ fxReady.then(()=>fetch("/api/cash")).then(r=>r.json()).then(renderCash); }
+    // A list that could not load says why (the server's reason) and offers a retry; never "Loading…" for ever.
+    async function getJSON(url){
+      const r=await fetch(url), b=await r.json().catch(()=>null);
+      if(!r.ok||!b) throw new Error((b&&typeof b.detail==="string"&&b.detail)||"The server did not answer. Try again in a minute.");
+      return b;
+    }
+    function loadFailed(ids,what,e,retry){
+      ids.forEach((id,i)=>{ const el=document.getElementById(id); if(el) el.innerHTML=i?"":
+        `<span class="err">${esc(what)} could not load: ${esc(e.message)}</span> <button class="btn" onclick="${retry}">Try again</button>`; });
+    }
+    function loadCash(){ fxReady.then(()=>getJSON("/api/cash")).then(renderCash).catch(e=>loadFailed(["cash-list"],"Your accounts",e,"loadCash()")); }
     async function postCash(fd, okMsg){
       const msg=document.getElementById("m-cash");
-      const r=await fetch("/api/cash",{method:"POST",body:fd});
+      const r=await fetch("/api/cash",{method:"POST",body:fd}).catch(()=>null);
+      if(!r){ msg.textContent="✗ Could not reach the server."; msg.className="msg err"; return; }
       if(r.ok){ msg.textContent=okMsg; msg.className="msg ok"; renderCash(await r.json()); }
       else{ const e=await r.json().catch(()=>({detail:"Failed"})); msg.textContent="✗ "+e.detail; msg.className="msg err"; }
     }
@@ -523,8 +534,10 @@
       postCash(fd, savedMsg()); ["c-name","c-bal","c-rate"].forEach(id=>document.getElementById(id).value="");
     }
     async function delAccount(name){
-      const r=await fetch("/api/cash/"+encodeURIComponent(name),{method:"DELETE"});
-      if(r.ok) renderCash(await r.json());
+      const msg=document.getElementById("m-cash");
+      const r=await fetch("/api/cash/"+encodeURIComponent(name),{method:"DELETE"}).catch(()=>null);
+      if(r&&r.ok) return renderCash(await r.json());
+      const e=r?await r.json().catch(()=>({})):{}; msg.textContent="✗ "+(e.detail||"Could not reach the server."); msg.className="msg err";
     }
     loadCash();
 
@@ -612,7 +625,7 @@
     function saveAsset(name,id,cat,cur,paid,bought){
       postAsset(assetForm(name,document.getElementById(id).value,cat,cur,paid,bought));
     }
-    function loadFin(){ fxReady.then(()=>fetch("/api/finances")).then(r=>r.json()).then(renderFin); }
+    function loadFin(){ fxReady.then(()=>getJSON("/api/finances")).then(renderFin).catch(e=>loadFailed(["fin-loans","fin-income","fin-expenses"],"Your loans, income and payments",e,"loadFin()")); }
     async function postFin(kind, fd, ok){
       const msg=document.getElementById("m-fin");
       const r=await fetch("/api/finances/"+kind,{method:"POST",body:fd});
@@ -649,8 +662,10 @@
       postFin(kind, fd, savedMsg());
     }
     async function delFin(kind,name){
-      const r=await fetch("/api/finances/"+kind+"/"+encodeURIComponent(name),{method:"DELETE"});
-      if(r.ok) renderFin(await r.json());
+      const msg=document.getElementById("m-fin");
+      const r=await fetch("/api/finances/"+kind+"/"+encodeURIComponent(name),{method:"DELETE"}).catch(()=>null);
+      if(r&&r.ok) return renderFin(await r.json());
+      const e=r?await r.json().catch(()=>({})):{}; if(msg){ msg.textContent="✗ "+(e.detail||"Could not reach the server."); msg.className="msg err"; }
     }
     loadFin();
 

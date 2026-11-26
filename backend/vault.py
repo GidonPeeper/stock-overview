@@ -60,7 +60,8 @@ def encrypt() -> list[str]:
             bundled[name] = base64.b64encode(f.encrypt(p.read_bytes())).decode()
     if not bundled:
         raise SystemExit("No private data files found to encrypt.")
-    VAULT.write_text(json.dumps({
+    from .datafiles import write_atomic   # a crash mid-save never leaves half a vault
+    write_atomic(VAULT, json.dumps({
         "salt": base64.b64encode(salt).decode(),
         "created": time.strftime("%Y-%m-%d %H:%M"),
         "files": bundled,
@@ -81,6 +82,7 @@ def unlock(replace_older_than: float | None = None) -> dict:
         if f is None:
             result["error"] = "no key material (DATA_KEY / DASHBOARD_SECRET unset)"
             return result
+        from .datafiles import write_atomic
         DATA_DIR.mkdir(exist_ok=True)
         for name, enc in blob.get("files", {}).items():
             if name not in FILES:
@@ -90,7 +92,7 @@ def unlock(replace_older_than: float | None = None) -> dict:
                                   or dest.stat().st_mtime >= replace_older_than):
                 result["skipped"].append(name)   # a newer upload/local file wins
                 continue
-            dest.write_bytes(f.decrypt(base64.b64decode(enc)))
+            write_atomic(dest, f.decrypt(base64.b64decode(enc)))
             result["unlocked"].append(name)
     except Exception as e:  # wrong key, corrupt file — never break the app
         result["error"] = type(e).__name__

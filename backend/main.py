@@ -12,6 +12,8 @@ Open: http://127.0.0.1:8000
 
 from __future__ import annotations
 
+import errno
+import functools
 import ipaddress
 import os
 import sys
@@ -25,7 +27,7 @@ from fastapi import FastAPI, File, Form, HTTPException, Request, UploadFile
 from fastapi.staticfiles import StaticFiles
 from starlette.middleware.gzip import GZipMiddleware
 from starlette.middleware.sessions import SessionMiddleware
-from starlette.responses import FileResponse, RedirectResponse, Response
+from starlette.responses import FileResponse, JSONResponse, RedirectResponse, Response
 
 try:
     from dotenv import load_dotenv
@@ -259,6 +261,36 @@ async def _cache_hooks(request: Request, call_next):
 app.add_middleware(GZipMiddleware, minimum_size=1024, compresslevel=6)
 
 
+# disk full, read-only, missing folder... (not every name exists on Windows)
+_FILE_ERRNOS = {getattr(errno, n) for n in ("ENOSPC", "EDQUOT", "EACCES", "EPERM", "EROFS", "ENOENT",
+                                            "EISDIR", "ENOTDIR", "EIO") if hasattr(errno, n)}
+
+
+def _problem_text(exc: BaseException) -> str:
+    """What the browser shows when an /api/ call fails unexpectedly: plain
+    words, no stack trace (that goes to the server log)."""
+    from .connectors.live import ConnectorError
+    if isinstance(exc, (datafiles.DataFileError, ConnectorError)):
+        return str(exc)
+    if isinstance(exc, OSError) and exc.errno in _FILE_ERRNOS:
+        return (f"A file on the server could not be read or saved ({exc.strerror or type(exc).__name__}). "
+                "Check that the data folder exists, can be written to, and that the disk is not full. "
+                "Nothing was changed.")
+    return ("This could not be worked out just now: a data source did not answer or sent "
+            f"something unexpected ({type(exc).__name__}). The rest of the dashboard is not "
+            "affected. Try again in a minute; if it keeps happening, the server log says more.")
+
+
+@app.exception_handler(Exception)
+async def _unexpected_error(request: Request, exc: Exception):
+    """Any error an endpoint did not handle. /api/ calls get a JSON answer
+    ({"detail": ...}, like HTTPException) the card can show."""
+    if request.url.path.startswith("/api/"):
+        return JSONResponse({"detail": _problem_text(exc)}, status_code=500)
+    return Response("Something went wrong. Reload the page in a minute.", status_code=500,
+                    media_type="text/plain")
+
+
 @app.api_route("/healthz", methods=["GET", "HEAD"], include_in_schema=False)
 async def healthz():
     """Cheap liveness check for keep-alive pings: no auth, no data, no work.
@@ -317,6 +349,20 @@ def login(request: Request, username: str = Form(...), password: str = Form(...)
 def logout(request: Request):
     request.session.clear()
     return RedirectResponse("/login", status_code=303)
+
+# Saves that read a file, change it and write it back (balances, budget,
+# watchlist) run one at a time, so two saves at once never lose one of them.
+# Reads are never held up. (Uploads run on the event loop, one at a time.)
+_save_lock = threading.Lock()
+
+
+def _one_save_at_a_time(fn):
+    @functools.wraps(fn)
+    def run(*args, **kwargs):
+        with _save_lock:
+            return fn(*args, **kwargs)
+    return run
+
 
 def _move_eur(value_eur: float, price: float, h, q: dict, ref: float | None) -> float | None:
     """EUR change in a holding's value since the market price `ref`.
@@ -455,13 +501,21 @@ def _merge_holdings(rows: list[dict]) -> tuple[list[dict], list[dict]]:
     return out, by_sector_list
 
 
+def _fx_live(rows: list[dict]) -> bool:
+    """Were live exchange rates used for every non-EUR holding? (fx.py keeps
+    the last live rate per currency; without one it uses a fixed fallback.)"""
+    from . import fx
+    need = {fx.unit(r["currency"])[1] for r in rows} - {"EUR"}
+    return need <= set(fx._cache)
+
+
 @app.get("/api/portfolio")
 def portfolio() -> dict:
     rows, total_value, total_cost, by_broker = _open_holdings_rows()
     holdings, by_sector = _merge_holdings(rows)
     unrealized = total_value - total_cost
     realized_total = realized.summary()["total_realized_eur"]
-    inc = income.summary()
+    inc = _income_summary()
     all_time = unrealized + realized_total
     daily = round(sum(h["daily_eur"] for h in holdings if h["daily_eur"] is not None), 2)
     prev_value = total_value - daily
@@ -472,7 +526,13 @@ def portfolio() -> dict:
         "demo_mode": _demo(),
         # {as_of, refreshing}: quotes older than a minute are shown while a
         # background refresh runs; the UI then says "updating…" and re-polls.
-        "quotes": quotes_status([r["ticker"] for r in rows]),
+        # `unpriced`: holdings without a live price (valued at what was paid);
+        # `fx_live`: False while exchange rates are the built-in fallback.
+        "quotes": {**quotes_status([r["ticker"] for r in rows]),
+                   "unpriced": sum(1 for r in rows if not r["priced_live"]),
+                   "fx_live": _fx_live(rows)},
+        # sources that could not be read just now, in plain words (sources.py)
+        "problems": sources.problems(),
         "totals": {
             "value": round(total_value, 2),
             "cost": round(total_cost, 2),
@@ -488,7 +548,9 @@ def portfolio() -> dict:
             "fees": inc["fees"],
             # everything you made: price gains (realized + unrealized) +
             # dividends + interest, after fees charged outside trades
-            "total_return": round(all_time + inc["total"] + inc["fees"], 2),
+            # (None, shown as "—", when the income could not be read)
+            "total_return": round(all_time + inc["total"] + inc["fees"], 2)
+            if inc["total"] is not None else None,
         },
         "income_by_broker": inc["by_broker"],
         "by_broker": [
@@ -498,6 +560,20 @@ def portfolio() -> dict:
         "by_sector": by_sector,
         "holdings": holdings,
     }
+
+
+def _income_summary() -> dict:
+    """income.summary(), or (when a damaged statement makes it fail) every
+    part None with the reason in problems(): the dashboard then shows "—" and
+    says why, instead of failing as a whole or counting the income as 0."""
+    try:
+        out = income.summary()
+        sources._clear("income")
+        return out
+    except Exception as exc:
+        sources._note("income", "Dividends and interest", f"{sources._why(exc, 'They')}. "
+                      "They are left out of the total return for now.")
+        return {"by_broker": {}, "dividends": None, "interest": None, "total": None, "fees": None}
 
 
 @app.get("/api/closed")
@@ -597,6 +673,7 @@ def cash_get() -> dict:
 
 
 @app.post("/api/cash")
+@_one_save_at_a_time
 def cash_upsert(name: str = Form(...), institution: str = Form(""),
                 balance: float = Form(...), currency: str = Form("EUR"),
                 type: str = Form("cash"), rate: float = Form(0)) -> dict:
@@ -608,6 +685,7 @@ def cash_upsert(name: str = Form(...), institution: str = Form(""),
 
 
 @app.delete("/api/cash/{name}")
+@_one_save_at_a_time
 def cash_delete(name: str) -> dict:
     out = cash.delete(name)
     github_sync.push_vault_async()
@@ -634,7 +712,9 @@ async def upload_statement(kind: str, file: UploadFile = File(...)) -> dict:
     if len(content) > 25_000_000:
         raise HTTPException(413, "File too large")
     is_pdf = content[:5] == b"%PDF-"
-    text = "" if is_pdf else content.decode("utf-8-sig", errors="replace")
+    text = "" if is_pdf else _decode_text(content)
+    if not is_pdf:
+        content = text.encode("utf-8")   # saved as UTF-8, so it can always be read back
     report: dict = {}
     try:
         if kind == "degiro":
@@ -697,6 +777,15 @@ async def upload_statement(kind: str, file: UploadFile = File(...)) -> dict:
     out = datafiles.status()
     out["_report"] = report
     return out
+
+
+def _decode_text(content: bytes) -> str:
+    """An uploaded text file as text: UTF-8 (with or without a byte-order
+    mark), else Windows-1252, which spreadsheet programs often save CSVs in."""
+    try:
+        return content.decode("utf-8-sig")
+    except UnicodeDecodeError:
+        return content.decode("cp1252", errors="replace")
 
 
 def _loads_or_400(text: str) -> dict:
@@ -841,13 +930,14 @@ def annual_report() -> dict:
     return reports.annual_report()
 
 
-def _liquid_assets() -> float:
-    """Investments + cash (the holdings are cached for the dashboard anyway)."""
+def _liquid_assets() -> float | None:
+    """Investments + cash (the holdings are cached for the dashboard anyway).
+    None when either cannot be read: Freedom Day is then left out rather than
+    worked out from a 0."""
     try:
-        invest = _open_holdings_rows()[1]
+        return _open_holdings_rows()[1] + (cash.load().get("total_eur") or 0.0)
     except Exception:
-        invest = 0.0
-    return invest + (cash.load().get("total_eur") or 0.0)
+        return None
 
 
 @app.get("/api/finances")
@@ -857,6 +947,7 @@ def finances_get() -> dict:
 
 
 @app.post("/api/finances/{kind}")
+@_one_save_at_a_time
 def finances_upsert(kind: str, name: str = Form(...), balance: float = Form(0),
                     rate: float = Form(0), monthly_payment: float = Form(0),
                     monthly_eur: float = Form(0), currency: str = Form("EUR"),
@@ -893,6 +984,7 @@ def finances_upsert(kind: str, name: str = Form(...), balance: float = Form(0),
 
 
 @app.delete("/api/finances/{kind}/{name}")
+@_one_save_at_a_time
 def finances_delete(kind: str, name: str) -> dict:
     if kind not in finances.KINDS:
         raise HTTPException(404, "Unknown kind")
@@ -908,6 +1000,7 @@ def watchlist_get() -> dict:
 
 
 @app.post("/api/watchlist")
+@_one_save_at_a_time
 def watchlist_add(ticker: str = Form(...), name: str = Form("")) -> dict:
     out = watch.add(ticker.strip(), name.strip() or ticker.strip())
     github_sync.push_vault_async()
@@ -915,6 +1008,7 @@ def watchlist_add(ticker: str = Form(...), name: str = Form("")) -> dict:
 
 
 @app.delete("/api/watchlist/{ticker}")
+@_one_save_at_a_time
 def watchlist_remove(ticker: str) -> dict:
     out = watch.remove(ticker)
     github_sync.push_vault_async()

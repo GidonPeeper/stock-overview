@@ -14,7 +14,7 @@ import json
 import time
 from pathlib import Path
 
-from .datafiles import DATA_DIR, resolve
+from .datafiles import DATA_DIR, DataFileError, read_json, resolve, write_atomic
 from .fx import to_eur
 
 _FILE = "cash_accounts.json"
@@ -30,10 +30,9 @@ def _store_path() -> Path:
 def load() -> dict:
     path, real = resolve(_FILE)
     sample = not real and path.exists()   # the bundled demo file (demo mode only)
-    try:   # no typed-in balances yet: still show cash in connected accounts
-        data = json.loads(path.read_text()) if path.exists() else {}
-    except ValueError:
-        data = {}
+    # no typed-in balances yet: still show cash in connected accounts; a
+    # damaged file raises DataFileError (an error on the card, never a 0)
+    data = read_json(path, {}, lists=("accounts",))
     accounts = [a for a in data.get("accounts", []) if not a.get("auto")]
     accounts += _broker_cash() + _connection_cash()
     total = interest = 0.0
@@ -88,8 +87,8 @@ def manual_accounts() -> list[dict]:
     if not real:
         return []
     try:
-        data = json.loads(path.read_text())
-    except (OSError, ValueError):
+        data = read_json(path, {}, lists=("accounts",))
+    except DataFileError:
         return []
     return [a for a in _manual(data.get("accounts", [])) if isinstance(a, dict)]
 
@@ -113,7 +112,7 @@ def upsert(name: str, institution: str, balance: float, currency: str,
                          "balance": balance, "currency": currency.upper(),
                          "type": type_, "rate": rate})
     DATA_DIR.mkdir(exist_ok=True)
-    (DATA_DIR / _FILE).write_text(json.dumps(
+    write_atomic(DATA_DIR / _FILE, json.dumps(
         {"accounts": accounts, "updated": time.strftime("%Y-%m-%d %H:%M")}, indent=2))
     return load()
 
@@ -126,7 +125,7 @@ def delete(name: str) -> dict:
     for a in accounts:
         a.pop("balance_eur", None)
         a.pop("interest_eur_yr", None)
-    (DATA_DIR / _FILE).write_text(json.dumps(
+    write_atomic(DATA_DIR / _FILE, json.dumps(
         {"accounts": accounts, "updated": time.strftime("%Y-%m-%d %H:%M")}, indent=2))
     return load()
 

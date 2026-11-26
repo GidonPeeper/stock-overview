@@ -59,6 +59,13 @@ TEXT
 fi
 
 URL="http://127.0.0.1:$PORT"
+# Something already answers on this port (often Stock Overview itself, started
+# earlier): say so plainly instead of failing with a Python error.
+if .venv/bin/python -c "import socket,sys; s=socket.socket(); s.settimeout(1); sys.exit(s.connect_ex(('127.0.0.1', int(sys.argv[1]))) != 0)" "$PORT" 2>/dev/null; then
+  echo "Port $PORT is already in use. Stock Overview may already be running: open $URL"
+  echo "Or start this copy on another port:  PORT=$((PORT + 1)) ./run.sh"
+  exit 1
+fi
 echo "Stock Overview: $URL   (stop with Ctrl+C)"
 if [ -z "$NO_BROWSER" ]; then
   ( sleep 3

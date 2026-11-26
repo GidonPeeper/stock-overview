@@ -26,7 +26,7 @@ import json
 import time
 from pathlib import Path
 
-from .datafiles import DATA_DIR, resolve
+from .datafiles import DATA_DIR, read_json, resolve, write_atomic
 from .fx import to_eur
 
 _FILE = "finances.json"
@@ -39,17 +39,14 @@ def _load_raw() -> tuple[dict, bool]:
     real = real or not path.exists()     # "sample" = the bundled demo file only
     if not path.exists():
         return {k: [] for k in KINDS}, not real
-    try:
-        data = json.loads(path.read_text())
-    except ValueError:
-        return {k: [] for k in KINDS}, not real
+    data = read_json(path, {}, lists=KINDS)   # damaged: DataFileError, never empty
     return {k: data.get(k, []) for k in KINDS}, not real
 
 
 def _save(data: dict) -> None:
     DATA_DIR.mkdir(exist_ok=True)
     data["updated"] = time.strftime("%Y-%m-%d %H:%M")
-    (DATA_DIR / _FILE).write_text(json.dumps(data, indent=2))
+    write_atomic(DATA_DIR / _FILE, json.dumps(data, indent=2))
 
 
 def load(liquid_assets_eur: float | None = None) -> dict:
