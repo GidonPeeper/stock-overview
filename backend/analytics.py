@@ -23,10 +23,13 @@ import math
 from . import market, trend
 
 _RF_ANNUAL = 0.02  # assumed risk-free rate
+MIN_STEP_VALUE = 500.0  # below this a step's return is noise (one trade dwarfs the move)
 
 
-def _step_returns(hist: list[dict], min_value: float = 500.0) -> list[tuple[str, float]]:
-    """(day, return since the previous point) for every point after the first."""
+def _step_returns(hist: list[dict], min_value: float = MIN_STEP_VALUE) -> list[tuple[str, float]]:
+    """(day, return since the previous point) for every point after the first:
+    the change in total profit over the value at the start of the step (money
+    added or taken out changes the value, not the profit)."""
     out = []
     for a, b in zip(hist, hist[1:]):
         base = a["total_value"]
@@ -69,6 +72,10 @@ def summary(holdings: list[dict], hist: list[dict] | None = None) -> dict:
     out: dict = {"months": len(rets)}
 
     if len(rets) >= 6:
+        # volatility = sample standard deviation of the monthly returns
+        #   (divided by n - 1) x sqrt(12), the usual annualisation of monthly data;
+        # Sharpe = (mean monthly return - risk-free rate / 12) / monthly standard
+        #   deviation x sqrt(12).
         vals = [r for _, r in rets]
         mean = sum(vals) / len(vals)
         var = sum((v - mean) ** 2 for v in vals) / (len(vals) - 1)
@@ -77,7 +84,8 @@ def summary(holdings: list[dict], hist: list[dict] | None = None) -> dict:
         if vol_m > 0:
             out["sharpe"] = round((mean - _RF_ANNUAL / 12) / vol_m * math.sqrt(12), 2)
 
-        # beta vs S&P 500 (monthly closes)
+        # beta = cov(portfolio, S&P 500) / var(S&P 500), over the same months
+        # (the slope of a least-squares line through the monthly returns)
         try:
             sp = market.benchmark(hist[0]["day"][:7] + "-01")
             sp_ret = {}
@@ -85,15 +93,14 @@ def summary(holdings: list[dict], hist: list[dict] | None = None) -> dict:
             for p, c in zip(ms, ms[1:]):
                 if sp[p]:
                     sp_ret[c] = sp[c] / sp[p] - 1
-            pairs = [(r, sp_ret[m]) for m, r in rets if m in sp_ret]
+            pairs = [(r, sp_ret[m]) for m, r in rets if m in sp_ret]   # (portfolio, S&P)
             if len(pairs) >= 6:
-                py = [p[0] for p in pairs]
-                px = [p[1] for p in pairs]
-                mx, my = sum(px) / len(px), sum(py) / len(py)
-                cov = sum((x - mx) * (y - my) for x, y in pairs)
-                varx = sum((x - mx) ** 2 for x in px)
-                if varx > 0:
-                    out["beta"] = round(cov / varx, 2)
+                mp = sum(p for p, _ in pairs) / len(pairs)
+                ms_ = sum(s for _, s in pairs) / len(pairs)
+                cov = sum((p - mp) * (s - ms_) for p, s in pairs)
+                var_s = sum((s - ms_) ** 2 for _, s in pairs)
+                if var_s > 0:
+                    out["beta"] = round(cov / var_s, 2)
         except Exception:
             pass
 

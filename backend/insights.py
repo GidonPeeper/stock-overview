@@ -234,9 +234,15 @@ def daily_brief(portfolio: dict, analytics_data: dict, ccy: str = "EUR") -> dict
                              f"({'+' if best['daily_pct']>=0 else ''}{best['daily_pct']:.1f}%).")
             if worst["daily_eur"] < 0:
                 paras.append(f"Biggest drag: {worst['name']} ({worst['daily_pct']:.1f}%).")
+    # the parts add up to the total: total_return = all_time + income + fees
+    fees = t.get("fees") or 0.0
+    parts = (f"{'−' if t['all_time'] < 0 else ''}{m(t['all_time'])} capital gains "
+             f"{'−' if t['income'] < 0 else '+'} {m(t['income'])} dividends & interest")
+    if round(from_eur(fees, ccy)):
+        parts += f" {'−' if fees < 0 else '+'} {m(fees)} fees"
     paras.append(
         f"All-time total return stands at {'−' if t['total_return'] < 0 else ''}{m(t['total_return'])} "
-        f"({'−' if t['all_time'] < 0 else ''}{m(t['all_time'])} capital gains + {m(t['income'])} dividends & interest).")
+        f"({parts}).")
     beta = analytics_data.get("beta")
     vol = analytics_data.get("volatility_pct")
     if beta is not None and vol is not None:

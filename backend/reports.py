@@ -15,9 +15,10 @@ from concurrent.futures import ThreadPoolExecutor
 
 from .fx import to_eur
 from .prices import quote_scale
-from . import analytics, cache, income, sources
+from . import analytics, cache, clock, income, sources
 
 DATA = True  # derived from your holdings: an upload recomputes it
+_STOPPED_DAYS = 456  # 15 months without a dividend: it has stopped
 
 
 def _cached(key: str, ttl: int, fn, data: bool = DATA):
@@ -147,6 +148,11 @@ def income_projection(holdings: list[dict]) -> dict:
         with ThreadPoolExecutor(max_workers=8) as pool:  # one Yahoo call per ticker, in parallel
             divs = dict(zip(tickers, pool.map(dividends, tickers)))
 
+        import pandas as pd
+
+        from .instruments import price_currency
+
+        today = clock.today()
         rows = []
         total_annual = 0.0
         for h in holdings:
@@ -157,12 +163,23 @@ def income_projection(holdings: list[dict]) -> dict:
                 div = divs.get(t)
                 if div is None or len(div) == 0:
                     continue
-                last12 = float(div[div.index >= div.index.max() - __import__("pandas").Timedelta(days=365)].sum())
+                last = div.index.max()
+                # Nothing paid for 15 months: even a once-a-year payer has
+                # skipped a payment, so the dividend has stopped.
+                if (today - last.date()).days > _STOPPED_DAYS:
+                    continue
+                # the 12 months up to the latest payment (a payment a few days
+                # late is still counted)
+                last12 = float(div[div.index >= last - pd.Timedelta(days=365)].sum())
                 last12 *= quote_scale(t)  # pence -> pounds for London shares
                 if last12 <= 0:
                     continue
-                annual_eur = to_eur(last12 * h["quantity"], h["currency"])
-                yield_pct = (to_eur(last12, h["currency"]) /
+                # Yahoo pays out in the share's own trading currency, which
+                # can differ from the line the broker holds (a euro line of a
+                # US share)
+                ccy = price_currency(t)
+                annual_eur = to_eur(last12 * h["quantity"], ccy)
+                yield_pct = (to_eur(last12, ccy) /
                              (h["value_eur"] / h["quantity"])) * 100 if h["quantity"] else 0
                 total_annual += annual_eur
                 rows.append({"name": h["name"], "ticker": t,
@@ -174,7 +191,9 @@ def income_projection(holdings: list[dict]) -> dict:
         return {"holdings": rows, "projected_annual_eur": round(total_annual, 2),
                 "projected_monthly_eur": round(total_annual / 12, 2),
                 "method": "Trailing 12-month dividends per share × shares held, "
-                          "converted at today's rate. A projection, not a promise."}
+                          "before any tax withheld, converted at today's rate. "
+                          "A share that has paid nothing for 15 months is left out. "
+                          "A projection, not a promise."}
     key = "incomeproj:" + ",".join(sorted(h.get("ticker", "") for h in holdings))
     return _cached(key, 12 * 3600, build) or {"holdings": [], "projected_annual_eur": 0}
 
@@ -220,10 +239,34 @@ def annual_report() -> dict:
 # -------------------------------------------------------------- hindsight
 HINDSIGHT_METHOD = (
     "For every position you exited, the shares you sold are revalued at "
-    "today's price: (quantity sold × price now) − what you sold them for. "
-    "Positive = selling early cost you money; negative = the exit saved you "
-    "money. FX at today's rate; delisted names count as zero now."
+    "today's price: (quantity sold, times any share split since, × price now) "
+    "− what you sold them for. Positive = selling early cost you money; "
+    "negative = the exit saved you money. FX at today's rate; delisted names "
+    "count as zero now."
 )
+
+
+def _splits(ticker: str) -> list[tuple[str, float]]:
+    """[(YYYY-MM-DD, ratio)]: the share's splits on Yahoo (2.0 = 2-for-1,
+    1/30 = 1-for-30 reverse). Cached for a day; [] when unknown."""
+    def build():
+        import yfinance as yf
+        s = yf.Ticker(ticker).splits
+        return [(ts.date().isoformat(), float(r)) for ts, r in s.items() if r and r > 0]
+    return _cached("splits:" + ticker, 24 * 3600, build, data=False) or []
+
+
+def _shares_now(sales: list[tuple[str, float]], splits: list[tuple[str, float]]) -> float:
+    """What the shares sold (day, quantity) would be in today's shares: a
+    split on a later day multiplies them (10 shares before a 10-for-1 split
+    are 100 now)."""
+    total = 0.0
+    for day, qty in sales:
+        for split_day, ratio in splits:
+            if split_day > day:
+                qty *= ratio
+        total += qty
+    return total
 
 
 def hindsight() -> dict:
@@ -232,27 +275,33 @@ def hindsight() -> dict:
     from .prices import fetch_quotes
 
     trades = sources.all_trades()
-    # per instrument: total qty sold + proceeds (EUR)
+    # A split or ISIN change booked as shares out and shares in at the same
+    # moment (DeGiro) is not a sale.
+    booked_in = {(t.key, t.when) for t in trades if t.side == "BUY"}
+    # per instrument: the sales (day, qty) + proceeds (EUR)
     sold: dict[str, dict] = {}
     for t in sorted(trades, key=lambda x: x.when):
-        if t.side != "SELL":
+        if t.side != "SELL" or (t.key, t.when) in booked_in:
             continue
-        s = sold.setdefault(t.key, {"name": t.name, "qty": 0.0, "proceeds": 0.0, "ticker": ""})
+        s = sold.setdefault(t.key, {"name": t.name, "sales": [], "proceeds": 0.0, "ticker": ""})
         s["name"] = t.name
         s["ticker"] = s["ticker"] or t.ticker
-        s["qty"] += t.quantity
+        s["sales"].append((t.when[:10], t.quantity))
         s["proceeds"] += to_eur(t.amount, t.currency)
 
     tickers = {isin: HIST_TICKER[isin] if isin in HIST_TICKER else (s["ticker"] or ticker_for(isin))
                for isin, s in sold.items()}
     quotes = fetch_quotes([tk for tk in tickers.values() if tk])
+    priced = sorted({tk for tk in tickers.values() if tk and tk in quotes})
+    with ThreadPoolExecutor(max_workers=8) as pool:  # one Yahoo call per share, in parallel
+        splits = dict(zip(priced, pool.map(_splits, priced)))
 
     rows = []
     for isin, s in sold.items():
         tk = tickers.get(isin, "")
         if tk and tk in quotes:
             ccy = price_currency(tk)  # quotes are already in pounds, not pence
-            value_now = to_eur(quotes[tk]["price"] * s["qty"], ccy)
+            value_now = to_eur(quotes[tk]["price"] * _shares_now(s["sales"], splits.get(tk, [])), ccy)
         elif tk == "":
             value_now = 0.0  # delisted / worthless now
         else:
@@ -289,12 +338,13 @@ def projection(start_value: float | None = None) -> dict:
     months = sorted(by_month)[-25:]
     flows = [by_month[b] - by_month[a] for a, b in zip(months, months[1:])]
     pos = sorted(f for f in flows if f > 0)
-    contrib = round(pos[len(pos) // 2], 2) if pos else 0.0
+    n = len(pos)   # median: the middle value, or the average of the two middle ones
+    contrib = round(pos[n // 2] if n % 2 else (pos[n // 2 - 1] + pos[n // 2]) / 2, 2) if pos else 0.0
 
     scenarios = {"cautious": 0.03, "expected": 0.06, "optimistic": 0.09}
     out = {}
-    from datetime import date
-    y0, m0 = date.today().year, date.today().month
+    today = clock.today()
+    y0, m0 = today.year, today.month
     for name, rate in scenarios.items():
         v = start
         pts = []

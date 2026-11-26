@@ -233,14 +233,14 @@ def _thin(points: list, n: int) -> list:
 def _time_weighted_pct(points: list[dict]) -> float | None:
     """Return over the points with deposits and withdrawals taken out: each
     step's gain (change in total profit) divided by the value at its start,
-    compounded (the app's analytics use the same rule)."""
-    growth, used = 1.0, False
-    for a, b in zip(points, points[1:]):
-        if a["total_value"] > 500:
-            r = (b["total_profit"] - a["total_profit"]) / a["total_value"]
-            growth *= 1 + max(-0.4, min(r, 0.4))
-            used = True
-    return round((growth - 1) * 100, 2) if used else None
+    compounded: the steps of the app's analytics (analytics._step_returns)."""
+    from . import analytics
+    if not any(a["total_value"] > analytics.MIN_STEP_VALUE for a in points[:-1]):
+        return None                      # too little money in the range to say
+    growth = 1.0
+    for _, r in analytics._step_returns(points):
+        growth *= 1 + r
+    return round((growth - 1) * 100, 2)
 
 
 def get_performance(
@@ -259,9 +259,15 @@ def get_performance(
     start, end = _date(start_date, "start_date"), _date(end_date, "end_date") or today
     if start is None:
         starts = clock.period_starts(today)
+        # Each range is measured from the close of the day before it starts, so a
+        # rolling range starts the day after "30 days / 12 months ago".
+        try:
+            year_ago = today.replace(year=today.year - 1)
+        except ValueError:               # 29 February
+            year_ago = today.replace(year=today.year - 1, day=28)
         start = {"today": today, "week": starts["week"], "month": starts["month"],
-                 "year": starts["year"], "last_30_days": today - timedelta(days=30),
-                 "last_12_months": today - timedelta(days=365), "all": None}[period]
+                 "year": starts["year"], "last_30_days": today - timedelta(days=29),
+                 "last_12_months": year_ago + timedelta(days=1), "all": None}[period]
         label = period
     else:
         label = "custom"
@@ -365,9 +371,10 @@ def _income_by_year() -> dict[str, dict[str, float]]:
 
     for r in income._degiro_rows():
         add(r["date"], r["kind"], r["amount_eur"])
-    path, _ = datafiles.resolve("income_trade_republic.json")
-    if path.exists():
-        for r in json.loads(path.read_text()).get("income", []):
+    # the uploaded Trade Republic file only when it counts (not when a sign-in
+    # covers the same account), and only its dividends and interest, as income.summary
+    for r in income._tr_rows()[1]:
+        if r.get("type") in ("dividend", "interest"):
             add(r.get("date"), "dividends" if r.get("type") == "dividend" else "interest",
                 r.get("amount_eur"))
     for kind, rows in (("dividends", trading212.get_dividends()), ("interest", trading212.get_interest()),
@@ -376,7 +383,8 @@ def _income_by_year() -> dict[str, dict[str, float]]:
             add(x.get("date"), kind, x.get("amount_eur"))
     try:
         for kind, rows in (("dividends", connections.get_dividends()),
-                           ("interest", connections.get_interest())):
+                           ("interest", connections.get_interest()),
+                           ("fees", connections.get_fees())):
             for x in rows:
                 add(x.get("date"), kind, x.get("amount_eur"))
     except Exception:
