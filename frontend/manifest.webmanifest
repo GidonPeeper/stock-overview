@@ -1,12 +1,12 @@
 {
   "name": "Stock Overview",
   "short_name": "Stocks",
-  "description": "Combined portfolio across Trading 212, DeGiro & Trade Republic",
+  "description": "All your investments, savings and net worth in one place, with live prices",
   "start_url": "/",
   "scope": "/",
   "display": "standalone",
-  "background_color": "#0f1419",
-  "theme_color": "#0f1419",
+  "background_color": "#0a0d10",
+  "theme_color": "#0a0d10",
   "icons": [
     { "src": "/icon-192.png", "sizes": "192x192", "type": "image/png" },
     { "src": "/icon-512.png", "sizes": "512x512", "type": "image/png" },

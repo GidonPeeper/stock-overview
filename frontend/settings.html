@@ -4,61 +4,95 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
   <title>Settings — Stock Overview</title>
-  <meta name="theme-color" content="#0b0e11" />
+  <meta name="theme-color" content="#0a0d10" />
   <link rel="apple-touch-icon" href="/icon-180.png" />
-  <script>document.documentElement.dataset.theme=localStorage.getItem("theme")||(matchMedia("(prefers-color-scheme: light)").matches?"light":"dark");</script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" media="print" onload="this.media='all'">
+  <script>(function(){ let t=null; try{ t=localStorage.getItem("theme"); }catch(e){}
+    document.documentElement.dataset.theme=t||(matchMedia("(prefers-color-scheme: light)").matches?"light":"dark");
+    if(document.documentElement.dataset.theme==="light") document.querySelector('meta[name="theme-color"]').content="#f4f6f9"; })();</script>
   <style>
-    :root{ --bg:#0b0e11; --panel:#151a21; --panel2:#1c232d; --text:#e8edf2; --muted:#8b98a9;
-      --faint:#5b6673; --green:#26a862; --red:#f0616d; --accent:#4c8dff; --border:#232b36; }
-    :root[data-theme="light"]{ --bg:#f4f6f9; --panel:#ffffff; --panel2:#eef1f5; --text:#17202b;
-      --muted:#5b6673; --faint:#93a0af; --green:#118a53; --red:#d43d4f; --accent:#2f6fed; --border:#e4e9ef; }
+    /* same tokens as the dashboard */
+    :root{ --bg:#0a0d10; --panel:#12171e; --panel2:#1a212b; --panel3:#243040; --text:#eef2f6; --muted:#9aa6b5;
+      --faint:#7d8998; --green:#34c77b; --red:#f2707b; --accent:#5b97ff; --amber:#e3b341; --border:#1f2833;
+      --green-bg:rgba(52,199,123,.13); --red-bg:rgba(242,112,123,.13); --accent-bg:rgba(91,151,255,.15); --amber-bg:rgba(227,179,65,.14); }
+    :root[data-theme="light"]{ --bg:#f4f6f9; --panel:#ffffff; --panel2:#eff2f6; --panel3:#e1e7ef; --text:#151d28;
+      --muted:#526070; --faint:#667384; --green:#0f7f4c; --red:#c8323f; --accent:#2563eb; --amber:#8f5d00; --border:#e2e7ee;
+      --green-bg:rgba(15,127,76,.10); --red-bg:rgba(200,50,63,.09); --accent-bg:rgba(37,99,235,.10); --amber-bg:rgba(143,93,0,.10); }
+    html{ color-scheme:dark; } :root[data-theme="light"]{ color-scheme:light; }
     *{ box-sizing:border-box; }
+    [hidden]{ display:none !important; }
     body{ margin:0; background:var(--bg); color:var(--text);
-      font:15px/1.55 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif; }
-    .wrap{ max-width:660px; margin:0 auto; padding:22px 16px 60px; padding-top:calc(18px + env(safe-area-inset-top)); }
-    a.back{ color:var(--accent); text-decoration:none; font-size:14px; }
-    h1{ font-size:21px; margin:10px 0 4px; }
-    .sub{ color:var(--muted); font-size:13.5px; margin-bottom:20px; }
-    .card{ background:var(--panel); border:1px solid var(--border); border-radius:16px; padding:18px; margin-bottom:14px; }
-    .card h2{ font-size:12px; color:var(--muted); margin:0 0 12px; text-transform:uppercase; letter-spacing:.05em; }
-    .row{ display:flex; justify-content:space-between; align-items:center; gap:10px; padding:10px 0; border-bottom:1px solid var(--border); }
+      font:15px/1.55 "Inter",-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif; -webkit-font-smoothing:antialiased; }
+    a{ color:var(--accent); }
+    :focus-visible{ outline:2px solid var(--accent); outline-offset:2px; }
+    .wrap{ max-width:780px; margin:0 auto; padding:14px 16px 80px; padding-top:calc(12px + env(safe-area-inset-top)); }
+    a.back{ display:inline-flex; align-items:center; min-height:44px; color:var(--accent); text-decoration:none; font-size:14.5px; font-weight:600; }
+    h1{ font-size:24px; margin:2px 0 4px; letter-spacing:-.02em; }
+    .sub{ color:var(--muted); font-size:13.5px; margin-bottom:16px; }
+    /* in-page navigation */
+    .toc{ position:sticky; top:0; z-index:5; display:flex; gap:6px; overflow-x:auto; scrollbar-width:none; padding:8px 0; margin:0 0 6px;
+      background:var(--bg); border-bottom:1px solid var(--border); }
+    .toc::-webkit-scrollbar{ display:none; }
+    .toc a{ flex:0 0 auto; display:inline-flex; align-items:center; min-height:40px; padding:0 14px; border-radius:20px; background:var(--panel2);
+      border:1px solid var(--border); color:var(--muted); font-size:13.5px; font-weight:600; text-decoration:none; }
+    .toc a:hover{ color:var(--text); }
+    .sec{ scroll-margin-top:64px; }
+    .sec > h2.st{ font-size:12px; text-transform:uppercase; letter-spacing:.08em; color:var(--muted); margin:28px 2px 10px; font-weight:650; display:flex; gap:8px; align-items:center; }
+    .sec > h2.st .n{ width:20px; height:20px; border-radius:50%; background:var(--accent-bg); color:var(--accent); display:grid; place-items:center; font-size:11px; letter-spacing:0; }
+    .card{ background:var(--panel); border:1px solid var(--border); border-radius:18px; padding:18px; margin-bottom:14px; scroll-margin-top:64px; }
+    .card h2{ font-size:16px; margin:0 0 6px; font-weight:650; letter-spacing:-.01em; }
+    .card > .sub{ margin-bottom:12px; }
+    .welcome-hint{ border-color:color-mix(in srgb, var(--amber) 45%, var(--border)); background:var(--amber-bg); }
+    .welcome-hint p{ margin:0; font-size:14px; }
+    .row{ display:flex; justify-content:space-between; align-items:center; gap:10px; padding:10px 0; border-bottom:1px solid var(--border); min-height:44px; }
     .row:last-child{ border-bottom:none; }
-    .pill{ font-size:11px; padding:3px 10px; border-radius:20px; font-weight:600; }
-    .live{ background:rgba(38,168,98,.15); color:var(--green); }
-    .sample{ background:rgba(227,179,65,.15); color:#e3b341; }
-    .up{ margin-top:8px; }
-    .up input[type=file]{ font-size:12px; color:var(--muted); max-width:210px; }
-    .up button{ background:var(--accent); border:none; color:#fff; padding:7px 14px; border-radius:9px;
-      font-size:13px; font-weight:600; cursor:pointer; }
-    .msg{ font-size:12.5px; margin-top:6px; min-height:16px; }
+    .pill{ font-size:11px; padding:3px 10px; border-radius:20px; font-weight:650; white-space:nowrap; }
+    .live{ background:var(--green-bg); color:var(--green); }
+    .sample{ background:var(--amber-bg); color:var(--amber); }
+    .bad{ background:var(--red-bg); color:var(--red); }
+    .up{ margin-top:10px; display:flex; gap:8px; flex-wrap:wrap; align-items:center; }
+    .up input[type=file]{ font-size:13px; color:var(--muted); max-width:100%; }
+    input[type=file]::file-selector-button{ font:inherit; font-size:13px; font-weight:600; min-height:40px; padding:0 14px; margin-right:10px;
+      border-radius:10px; border:1px solid var(--border); background:var(--panel2); color:var(--text); cursor:pointer; }
+    .up button{ background:var(--accent); border:none; color:#fff; min-height:40px; padding:0 16px; border-radius:10px;
+      font-size:14px; font-weight:650; cursor:pointer; font-family:inherit; }
+    .msg{ font-size:13px; margin-top:6px; min-height:18px; }
     .ok{ color:var(--green); } .err{ color:var(--red); }
-    code{ background:var(--panel2); padding:1px 6px; border-radius:5px; font-size:12px; }
-    .files{ font-size:12px; color:var(--faint); margin-top:10px; }
-    .ipt{ background:var(--panel2); border:1px solid var(--border); color:var(--text);
-      border-radius:9px; padding:8px 10px; font-size:13.5px; font-family:inherit; }
+    code{ background:var(--panel2); padding:1px 6px; border-radius:5px; font-size:12px; overflow-wrap:anywhere; }
+    .files{ font-size:12px; color:var(--faint); margin-top:10px; overflow-wrap:anywhere; }
+    .ipt{ background:var(--panel2); border:1px solid var(--border); color:var(--text); min-height:40px;
+      border-radius:10px; padding:0 11px; font-size:14px; font-family:inherit; }
+    textarea.ipt{ padding:8px 11px; }
     .ipt:focus{ outline:none; border-color:var(--accent); }
-    .btn{ background:var(--accent); border:none; color:#fff; padding:8px 15px; border-radius:9px;
-      font-size:13px; font-weight:600; cursor:pointer; font-family:inherit; }
-    .bal{ width:100px; text-align:right; }
-    .del{ background:none; border:none; color:var(--faint); cursor:pointer; font-size:14px; padding:4px; }
-    .del:hover{ color:var(--red); }
+    .btn{ background:var(--accent); border:none; color:#fff; min-height:40px; padding:0 16px; border-radius:10px;
+      font-size:14px; font-weight:650; cursor:pointer; font-family:inherit; display:inline-flex; align-items:center; justify-content:center; }
+    .bal{ width:110px; text-align:right; }
+    .del{ background:none; border:none; color:var(--faint); cursor:pointer; font-size:15px; min-width:40px; min-height:40px; border-radius:10px; }
+    .del:hover{ color:var(--red); background:var(--panel2); }
+    .form{ display:flex; gap:8px; flex-wrap:wrap; align-items:center; margin:12px 0 4px; }
+    .label{ font-size:12px; text-transform:uppercase; letter-spacing:.05em; color:var(--muted); margin:16px 0 2px; font-weight:650; }
+    .r-sub{ display:block; font-size:12px; color:var(--faint); }
     /* ---- Add an account / Connected accounts (accounts.js) ---- */
     .combo{ position:relative; }
-    .combo .ipt.q{ width:100%; font-size:16px; padding:10px 12px; }
+    .combo .ipt.q{ width:100%; font-size:16px; min-height:46px; padding:0 13px; }
     .combo-list{ position:absolute; left:0; right:0; top:100%; margin-top:4px; z-index:20; background:var(--panel);
       border:1px solid var(--border); border-radius:12px; max-height:min(360px,60vh); overflow:auto; box-shadow:0 10px 28px rgba(0,0,0,.28); }
     .grp{ font-size:11px; text-transform:uppercase; letter-spacing:.05em; color:var(--muted); padding:9px 12px 3px; }
-    .opt{ display:flex; align-items:center; gap:8px; padding:9px 12px; cursor:pointer; }
+    .opt{ display:flex; align-items:center; gap:8px; padding:9px 12px; min-height:44px; cursor:pointer; }
     .opt.act, .opt:hover{ background:var(--panel2); }
     .opt-name{ flex:1; min-width:0; }
     .opt-meta{ display:block; font-size:11.5px; color:var(--faint); }
-    .tag{ font-size:10.5px; padding:2px 8px; border-radius:20px; background:rgba(76,141,255,.15); color:var(--accent);
-      font-weight:600; white-space:nowrap; }
+    .tag{ font-size:10.5px; padding:2px 8px; border-radius:20px; background:var(--accent-bg); color:var(--accent);
+      font-weight:650; white-space:nowrap; }
     .tag.grey{ background:var(--panel2); color:var(--muted); }
     .chips{ display:flex; gap:6px; flex-wrap:wrap; margin:10px 0 0; }
-    .chip{ border:1px solid var(--border); background:var(--panel2); color:var(--muted); border-radius:20px; padding:5px 12px;
-      font-size:12.5px; cursor:pointer; font-family:inherit; }
+    .chip{ border:1px solid var(--border); background:var(--panel2); color:var(--muted); border-radius:20px; padding:0 13px; min-height:38px;
+      font-size:13px; cursor:pointer; font-family:inherit; display:inline-flex; align-items:center; gap:6px; }
+    .chip:hover{ color:var(--text); }
     .chip.on{ background:var(--accent); border-color:var(--accent); color:#fff; }
+    .chip.on .pill{ background:rgba(255,255,255,.22); color:#fff; }
     .chip.dim{ opacity:.65; }
     .acct-head{ margin-top:16px; padding-top:14px; border-top:1px solid var(--border); }
     .acct-head b{ font-size:16px; }
@@ -66,14 +100,14 @@
     .steps{ margin:8px 0; padding-left:22px; }
     .steps li{ margin:5px 0; font-size:13.5px; }
     .note{ font-size:12.5px; color:var(--muted); background:var(--panel2); border-radius:10px; padding:8px 11px; margin:8px 0; }
-    .note.warn{ color:#e3b341; }
+    .note.warn{ color:var(--amber); }
     .fine{ font-size:12px; color:var(--faint); margin-top:8px; }
     .doc{ color:var(--accent); font-size:13px; text-decoration:none; }
     .fld{ display:flex; flex-direction:column; gap:3px; font-size:12px; color:var(--muted); margin:9px 0; }
     .fld .ipt{ width:100%; font-size:15px; }
-    .chk{ display:flex; gap:8px; align-items:center; font-size:13.5px; margin:9px 0; }
+    .chk{ display:flex; gap:8px; align-items:center; font-size:13.5px; margin:9px 0; min-height:40px; }
     .btn.ghost{ background:var(--panel2); color:var(--text); border:1px solid var(--border); }
-    .btn.sm{ padding:6px 11px; font-size:12.5px; }
+    .btn.sm{ min-height:36px; padding:0 12px; font-size:13px; }
     .btn:disabled{ opacity:.6; cursor:default; }
     .map{ display:grid; grid-template-columns:repeat(auto-fill,minmax(150px,1fr)); gap:0 10px; }
     .pvwrap{ overflow-x:auto; margin-top:6px; }
@@ -87,256 +121,361 @@
     select.ipt{ max-width:100%; }
     .crow{ display:flex; justify-content:space-between; gap:10px; padding:11px 0; border-bottom:1px solid var(--border); }
     .crow:last-child{ border-bottom:none; }
-    .cmeta{ font-size:11.5px; color:var(--faint); }
+    .cmeta{ font-size:12px; color:var(--faint); }
     .cerr{ font-size:12px; color:var(--red); margin-top:2px; }
     .cact{ display:flex; gap:4px; align-items:flex-start; flex-shrink:0; }
-    .bad{ background:rgba(240,97,109,.15); color:var(--red); }
     .flash{ animation:flash 1.6s ease-out; }
     @keyframes flash{ 0%{ box-shadow:0 0 0 3px var(--accent); } 100%{ box-shadow:0 0 0 0 transparent; } }
+    details.adv{ margin-top:14px; border-top:1px solid var(--border); padding-top:10px; }
+    details.adv > summary, details.more > summary{ cursor:pointer; font-size:13.5px; color:var(--muted); min-height:40px; display:flex; align-items:center; }
+    details.adv > summary:hover, details.more > summary:hover{ color:var(--text); }
+    details.adv > summary::before, details.more > summary::before{ content:"▸"; margin-right:8px; transition:transform .15s; display:inline-block; }
+    details.adv[open] > summary::before, details.more[open] > summary::before{ transform:rotate(90deg); }
+    .state{ display:flex; gap:10px; align-items:flex-start; font-size:14px; }
+    .state .d{ width:10px; height:10px; border-radius:50%; margin-top:6px; flex:0 0 10px; }
+    /* phones: every control at least 44px tall */
+    @media(max-width:640px){
+      .ipt,.btn,.up button,.chip,.del,input[type=file]::file-selector-button{ min-height:44px; }
+      .btn.sm{ min-height:44px; }
+      .del{ min-width:44px; }
+      .form > .ipt{ flex:1 1 40% !important; min-width:0 !important; width:auto !important; }
+      .form > .ipt:first-child{ flex-basis:100% !important; }
+      .form > label{ flex:1 1 100%; }
+      .form .btn{ flex:1 1 100%; }
+      /* a row with a balance box and buttons: name on top, controls below it when space runs out */
+      .row{ flex-wrap:wrap; }
+      .row > span:first-child{ flex:1 1 150px; min-width:0; }
+      .row > :last-child{ margin-left:auto; }
+    }
   </style>
 </head>
 <body>
   <div class="wrap">
     <a class="back" href="/">← Back to dashboard</a>
-    <h1>Data sources</h1>
-    <div class="sub">Upload your broker statements here — changes apply instantly. On free
-      hosting the disk resets on each redeploy, so re-upload after updates (or add the same
-      files as Render Secret Files to make them permanent).</div>
+    <h1>Settings</h1>
+    <div class="sub" style="margin-bottom:10px">Add your accounts, upload statements and type in balances. Changes show on the dashboard straight away.</div>
+    <nav class="toc" aria-label="Settings sections">
+      <a href="#accounts">Accounts</a>
+      <a href="#upload">Statements</a>
+      <a href="#money">Money and things you own</a>
+      <a href="#app">App and data</a>
+    </nav>
 
-    <div class="card" id="add-account">
-      <h2>Add an account</h2>
-      <div class="sub" style="margin-bottom:10px">Pick your broker or bank. You'll see the simplest way to
-        track it: a read-only key, a file from the broker, or a balance you type in.</div>
-      <div class="combo">
-        <input id="acct-q" class="ipt q" type="search" placeholder="Search brokers and banks…" autocomplete="off"
-          role="combobox" aria-expanded="false" aria-controls="acct-list" aria-autocomplete="list" />
-        <div id="acct-list" class="combo-list" role="listbox" hidden></div>
-      </div>
-      <div id="acct-chips" class="chips"></div>
-      <div id="acct-panel"></div>
+    <div class="card welcome-hint" id="demo-hint" hidden style="margin-top:16px">
+      <p><b>You are looking at example data.</b> Add your first account below. The examples disappear as soon as you add something of your own.</p>
     </div>
 
-    <div class="card" id="connected">
-      <h2>Connected accounts</h2>
-      <div id="conn-list"><span style="color:var(--faint)">Loading…</span></div>
-      <input type="file" id="conn-file" accept=".csv,.txt,.tsv" hidden />
-    </div>
-
-    <div class="card">
-      <h2>Status</h2>
-      <div id="status"><span style="color:var(--faint)">Loading…</span></div>
-      <div class="files" id="files"></div>
-    </div>
-
-    <div class="card">
-      <h2>Cloud persistence</h2>
-      <div id="sync-status" class="sub" style="margin-bottom:8px">Checking…</div>
-      <div class="sub" style="margin:0">Free hosting wipes its disk on every restart. With a GitHub
-        token set, every edit here is encrypted into the vault and committed to a
-        <code>data-sync</code> branch automatically — so balances and uploads survive restarts and
-        deploys. Setup: GitHub → Settings → Developer settings → Fine-grained tokens → new token
-        with <b>Contents: read &amp; write</b> on this repo only → add it as env var
-        <code>GITHUB_TOKEN</code> on the host.</div>
-    </div>
-
-    <div class="card">
-      <h2>DeGiro — account statement (PDF or CSV)</h2>
-      <div class="sub" style="margin-bottom:8px">DeGiro → Activity → Account statement → all dates since account
-        opening → download as <b>PDF</b> or export as CSV. Either file works; the PDF is converted here and every
-        trade is checked against its booked amount.</div>
-      <div class="up"><input type="file" id="f-degiro" accept=".pdf,.csv" />
-        <button onclick="up('degiro')">Upload</button></div>
-      <div class="msg" id="m-degiro"></div>
-    </div>
-
-    <div class="card">
-      <h2>Trade Republic — account statement (PDF) or transaction export (CSV)</h2>
-      <div class="sub" style="margin-bottom:8px">Trade Republic app → Profile → <b>Account statements</b>: the
-        account statement PDF from the day you opened the account, or the transaction export (CSV).
-        One file covers everything: trades, dividends and interest are all read from it, and every
-        PDF row is checked against the running balance.</div>
-      <div class="up"><input type="file" id="f-trade_republic" accept=".pdf,.csv,.json" />
-        <button onclick="up('trade_republic')">Upload</button></div>
-      <div class="msg" id="m-trade_republic"></div>
-    </div>
-
-    <div class="card">
-      <h2>Trade Republic — dividends &amp; interest (JSON, optional)</h2>
-      <div class="sub" style="margin-bottom:8px">Filled automatically from the transaction export above; only
-        needed for hand-transcribed data — format in <code>income_trade_republic.sample.json</code>.</div>
-      <div class="up"><input type="file" id="f-tr_income" accept=".json" />
-        <button onclick="up('tr_income')">Upload</button></div>
-      <div class="msg" id="m-tr_income"></div>
-    </div>
-
-    <div class="card">
-      <h2>Trading 212 — API accounts or activity statement (PDF)</h2>
-      <div class="sub" style="margin-bottom:8px">Live via the read-only API. Each Trading 212 account (Invest, Stocks ISA)
-        has its own key pair: set <code>T212_INVEST_API_KEY</code> + <code>T212_INVEST_API_SECRET</code> and
-        <code>T212_ISA_API_KEY</code> + <code>T212_ISA_API_SECRET</code> on the host (or one plain
-        <code>T212_API_KEY</code> + <code>T212_API_SECRET</code>). Accounts with "ISA" in the name are treated as tax-free.</div>
-      <div id="t212-accounts"></div>
-      <div class="sub" style="margin:8px 0">For an account without a key, such as a closed EU account, upload its statement
-        (EUR): Trading 212 → Menu → History → <b>Export / Activity statement</b> (PDF, full period the account was open).
-        It is shown next to your live accounts, so its trades, dividends and interest stay in your history.
-        A History CSV export (12 months at most) uploaded after it is added on.
-        Don't upload a statement for an account that also has a key: it would count twice.</div>
-      <div class="up"><input type="file" id="f-t212_statement" accept=".pdf,.csv,.json" />
-        <button onclick="up('t212_statement')">Upload</button></div>
-      <div class="msg" id="m-t212_statement"></div>
-    </div>
-
-    <div class="card" id="cash">
-      <h2>Bank, savings &amp; retirement accounts</h2>
-      <div class="sub" style="margin-bottom:10px">Cash, savings and pension pots — 401(k), IRA,
-        pensioen, lijfrente. Type in a balance here and edit it in seconds. Banks in the EU (Rabobank,
-        ING, ABN AMRO, bunq, EU Revolut…) can also update on their own: add them above under
-        Add an account → Bank link.</div>
-      <div id="cash-list"><span style="color:var(--faint)">Loading…</span></div>
-      <div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:14px;align-items:center">
-        <input id="c-name" placeholder="Account name" style="flex:2;min-width:110px" class="ipt" />
-        <input id="c-inst" placeholder="Institution (e.g. Starling)" style="flex:2;min-width:110px" class="ipt" />
-        <input id="c-bal" placeholder="Balance" type="number" step="0.01" style="flex:1;min-width:80px" class="ipt" />
-        <input id="c-rate" placeholder="Interest %" type="number" step="0.01" style="width:92px" class="ipt" />
-        <select id="c-cur" class="ipt ccy-default" style="width:74px"><option>GBP</option><option>EUR</option><option>USD</option></select>
-        <select id="c-type" class="ipt" style="width:150px">
-          <option value="cash">Cash</option>
-          <option value="savings">Savings</option>
-          <option value="retirement">Retirement / 401(k)</option>
-          <option value="other">Other account</option>
-        </select>
-        <button class="btn" onclick="addAccount()">Add</button>
-      </div>
-      <div class="msg" id="m-cash"></div>
-    </div>
-
-    <div class="card" id="fin">
-      <h2>Loans, income &amp; monthly payments</h2>
-      <div class="sub" style="margin-bottom:10px">Powers your net worth (assets − debt) and cash
-        flow. Re-adding a name updates it. Stored like your bank accounts — encrypted and
-        cloud-synced when the token is set.</div>
-
-      <div style="font-size:11.5px;text-transform:uppercase;letter-spacing:.05em;color:var(--muted);margin:8px 0 2px">Loans</div>
-      <div id="fin-loans"><span style="color:var(--faint)">Loading…</span></div>
-      <div style="display:flex;gap:6px;flex-wrap:wrap;margin:8px 0 14px">
-        <input id="l-name" placeholder="Loan name" class="ipt" style="flex:2;min-width:110px" />
-        <input id="l-bal" placeholder="Balance" type="number" step="0.01" class="ipt" style="flex:1;min-width:85px" />
-        <input id="l-rate" placeholder="Rate %" type="number" step="0.01" class="ipt" style="width:80px" />
-        <input id="l-pay" placeholder="Per month" type="number" step="0.01" class="ipt" style="width:90px" />
-        <select id="l-cur" class="ipt ccy-default" style="width:74px"><option>GBP</option><option>EUR</option><option>USD</option></select>
-        <button class="btn" onclick="addFin('loans')">Add</button>
+    <!-- 1. Accounts -->
+    <section class="sec" id="accounts">
+      <h2 class="st"><span class="n">1</span>Accounts</h2>
+      <div class="card" id="add-account">
+        <h2>Add an account</h2>
+        <div class="sub">Pick your broker or bank. You'll see the simplest way to
+          track it: a read-only key, a file from the broker, or a balance you type in.</div>
+        <div class="combo">
+          <input id="acct-q" class="ipt q" type="search" placeholder="Search brokers and banks…" autocomplete="off"
+            role="combobox" aria-expanded="false" aria-controls="acct-list" aria-autocomplete="list" aria-label="Search brokers and banks" />
+          <div id="acct-list" class="combo-list" role="listbox" hidden></div>
+        </div>
+        <div id="acct-chips" class="chips"></div>
+        <div id="acct-panel"></div>
       </div>
 
-      <div style="font-size:11.5px;text-transform:uppercase;letter-spacing:.05em;color:var(--muted);margin:8px 0 2px">Expected income</div>
-      <div id="fin-income"><span style="color:var(--faint)">Loading…</span></div>
-      <div style="display:flex;gap:6px;flex-wrap:wrap;margin:8px 0 6px">
-        <input id="i-name" placeholder="Source (e.g. Salary)" class="ipt" style="flex:2;min-width:130px" />
-        <input id="i-amt" placeholder="Per month" type="number" step="0.01" class="ipt" style="width:100px" />
-        <select id="i-cur" class="ipt ccy-default" style="width:74px"><option>GBP</option><option>EUR</option><option>USD</option></select>
-        <select id="i-fixed" class="ipt" style="width:112px"><option value="1">Fixed</option><option value="0">Variable</option></select>
-        <select id="i-tax" class="ipt" style="width:118px" title="Salary and commission: before tax"><option value="before">Before tax</option><option value="after">After tax</option></select>
+      <div class="card" id="connected">
+        <h2>Connected accounts</h2>
+        <div class="sub">Accounts that update on their own or from a file. Refresh, renew or remove them here.</div>
+        <div id="conn-list"><span style="color:var(--faint)">Loading…</span></div>
+        <input type="file" id="conn-file" accept=".csv,.txt,.tsv" hidden />
       </div>
-      <div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center;margin:0 0 14px">
-        <input id="i-pen" placeholder="Pension %" type="number" step="0.1" min="0" max="100" class="ipt" style="width:96px" title="% of pay deducted for your pension on the payslip" />
-        <select id="i-pentype" class="ipt" style="width:150px" title="How your pension is paid (see your payslip)">
-          <option value="relief_at_source">After tax (relief at source, e.g. NEST)</option>
-          <option value="sacrifice">Salary sacrifice</option>
-          <option value="net_pay">Before tax (net pay)</option>
-        </select>
-        <input id="i-emp" placeholder="Employer %" type="number" step="0.1" min="0" max="100" class="ipt" style="width:104px" title="What your employer pays into your pension, % of pay" />
-        <label class="sub" style="margin:0;font-size:12.5px">Started <input id="i-start" type="month" class="ipt" style="width:150px" title="First payslip month. Only matters in your first tax year." /></label>
-        <button class="btn" onclick="addFin('income')">Add</button>
-      </div>
-      <div class="sub" style="margin:-8px 0 14px;font-size:12px">"Before tax" amounts get UK income tax and National Insurance taken off, so totals show your take-home pay.
-        Pension %: the share of pay your payslip deducts for the pension. If "Gross for Tax" on the payslip equals your pay, it's taken after tax.
-        Employer %: what your employer adds. Started: the month of your first payslip, if it was this tax year.</div>
+    </section>
 
-      <div style="font-size:11.5px;text-transform:uppercase;letter-spacing:.05em;color:var(--muted);margin:8px 0 2px">Monthly payments</div>
-      <div id="fin-expenses"><span style="color:var(--faint)">Loading…</span></div>
-      <div style="display:flex;gap:6px;flex-wrap:wrap;margin:8px 0 4px">
-        <input id="e-name" placeholder="Payment (e.g. Rent)" class="ipt" style="flex:2;min-width:130px" />
-        <input id="e-amt" placeholder="Per month" type="number" step="0.01" class="ipt" style="width:100px" />
-        <select id="e-cur" class="ipt ccy-default" style="width:74px"><option>GBP</option><option>EUR</option><option>USD</option></select>
-        <select id="e-fixed" class="ipt" style="width:112px"><option value="1">Fixed</option><option value="0">Variable</option></select>
-        <button class="btn" onclick="addFin('expenses')">Add</button>
-      </div>
-      <div class="msg" id="m-fin"></div>
-      <div id="fin-totals" class="sub" style="margin-top:8px"></div>
-    </div>
+    <!-- 2. Statements -->
+    <section class="sec" id="upload">
+      <h2 class="st"><span class="n">2</span>Upload a statement</h2>
+      <div class="card" id="statements">
+        <h2>Broker statement files</h2>
+        <div class="sub">For DeGiro, Trade Republic and Trading 212 you can upload the full statement from the broker.
+          One file covers every trade, dividend and interest payment. Upload a newer one whenever you want to update.</div>
+        <div class="chips" id="st-chips" role="tablist" aria-label="Broker">
+          <button type="button" class="chip on" role="tab" aria-selected="true" data-p="degiro">DeGiro <span class="pill" id="st-degiro" hidden></span></button>
+          <button type="button" class="chip" role="tab" aria-selected="false" data-p="trade_republic">Trade Republic <span class="pill" id="st-trade_republic" hidden></span></button>
+          <button type="button" class="chip" role="tab" aria-selected="false" data-p="t212">Trading 212 <span class="pill" id="st-t212" hidden></span></button>
+        </div>
 
-    <div class="card" id="assets">
-      <h2>Things you own</h2>
-      <div class="sub" style="margin-bottom:10px">A watch, a car, art, jewellery. Counted in your net worth at the
-        value you enter (what you could sell it for), not in your savings or Freedom Day. Update the value now and then.</div>
-      <div id="asset-list"><span style="color:var(--faint)">Loading…</span></div>
-      <div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:14px;align-items:center">
-        <input id="a-name" placeholder="What (e.g. Omega watch)" class="ipt" style="flex:2;min-width:140px" />
-        <select id="a-cat" class="ipt" style="width:120px">
-          <option value="watch">Watch</option><option value="jewellery">Jewellery</option><option value="car">Car</option>
-          <option value="art">Art</option><option value="collectible">Collectible</option><option value="property">Property</option>
-          <option value="other" selected>Other</option>
-        </select>
-        <input id="a-val" placeholder="Worth now" type="number" step="0.01" class="ipt" style="width:100px" />
-        <input id="a-paid" placeholder="Price paid" type="number" step="0.01" class="ipt" style="width:100px" />
-        <input id="a-bought" type="date" class="ipt" style="width:140px" title="Date bought (optional)" />
-        <select id="a-cur" class="ipt ccy-default" style="width:74px"><option>GBP</option><option>EUR</option><option>USD</option></select>
-        <button class="btn" onclick="addAsset()">Add</button>
+        <div class="upanel" data-p="degiro" role="tabpanel">
+          <ol class="steps">
+            <li>In DeGiro, open <b>Activity → Account statement</b>.</li>
+            <li>Choose all dates since you opened the account.</li>
+            <li>Download it as <b>PDF</b>, or export it as CSV.</li>
+          </ol>
+          <div class="fine">Either file works. A PDF is converted here, and every trade is checked against its booked amount.</div>
+          <div class="up"><input type="file" id="f-degiro" accept=".pdf,.csv" aria-label="DeGiro statement file" />
+            <button onclick="up('degiro')">Upload</button></div>
+          <div class="msg" id="m-degiro"></div>
+        </div>
+
+        <div class="upanel" data-p="trade_republic" role="tabpanel" hidden>
+          <ol class="steps">
+            <li>In the Trade Republic app, open <b>Profile → Account statements</b>.</li>
+            <li>Download the account statement PDF from the day you opened the account, or the transaction export (CSV).</li>
+          </ol>
+          <div class="fine">One file covers trades, dividends and interest. Every PDF row is checked against the running balance.</div>
+          <div class="up"><input type="file" id="f-trade_republic" accept=".pdf,.csv,.json" aria-label="Trade Republic statement file" />
+            <button onclick="up('trade_republic')">Upload</button></div>
+          <div class="msg" id="m-trade_republic"></div>
+          <details class="adv">
+            <summary>Dividends and interest file (JSON, rarely needed)</summary>
+            <div class="fine" style="margin-top:0">Filled in automatically from the transaction export above. Only needed for data you
+              typed up yourself; the format is in <code>income_trade_republic.sample.json</code>.</div>
+            <div class="up"><input type="file" id="f-tr_income" accept=".json" aria-label="Trade Republic dividends file" />
+              <button onclick="up('tr_income')">Upload</button></div>
+            <div class="msg" id="m-tr_income"></div>
+          </details>
+        </div>
+
+        <div class="upanel" data-p="t212" role="tabpanel" hidden>
+          <div id="t212-accounts"></div>
+          <div class="sub" style="margin:8px 0">Best: connect each Trading 212 account (Invest, Stocks ISA) with a read-only key under
+            <a href="#add-account">Add an account</a>. Keys can also be set on the server:
+            <code>T212_INVEST_API_KEY</code> + <code>T212_INVEST_API_SECRET</code> and <code>T212_ISA_API_KEY</code> + <code>T212_ISA_API_SECRET</code>
+            (or one <code>T212_API_KEY</code> + <code>T212_API_SECRET</code>). Accounts with "ISA" in the name count as tax-free.</div>
+          <div class="sub" style="margin:8px 0 0">No key, for example for a closed account? Upload its statement (in EUR):</div>
+          <ol class="steps">
+            <li>In Trading 212, open <b>Menu → History → Export / Activity statement</b>.</li>
+            <li>Pick the full period the account was open and download the PDF.</li>
+            <li>A History CSV export (12 months at most) uploaded after it is added on.</li>
+          </ol>
+          <div class="note warn">Don't upload a statement for an account that also has a key: it would count twice.</div>
+          <div class="up"><input type="file" id="f-t212_statement" accept=".pdf,.csv,.json" aria-label="Trading 212 statement file" />
+            <button onclick="up('t212_statement')">Upload</button></div>
+          <div class="msg" id="m-t212_statement"></div>
+        </div>
       </div>
-      <div class="msg" id="m-assets"></div>
-    </div>
+    </section>
+
+    <!-- 3. Money and things you own -->
+    <section class="sec" id="money">
+      <h2 class="st"><span class="n">3</span>Money and things you own</h2>
+      <div class="card" id="cash">
+        <h2>Bank, savings and pension accounts</h2>
+        <div class="sub">Type in a balance and update it when it changes: cash, savings and pension pots such as a 401(k), IRA,
+          pensioen or lijfrente. Banks in the EU (Rabobank, ING, ABN AMRO, bunq, EU Revolut…) can also update on their own:
+          add them under <a href="#add-account">Add an account</a> → Bank link.</div>
+        <div id="cash-list"><span style="color:var(--faint)">Loading…</span></div>
+        <div class="form">
+          <input id="c-name" placeholder="Account name" style="flex:2;min-width:120px" class="ipt" aria-label="Account name" />
+          <input id="c-inst" placeholder="Bank (e.g. Starling)" style="flex:2;min-width:120px" class="ipt" aria-label="Bank" />
+          <input id="c-bal" placeholder="Balance" type="number" step="0.01" style="flex:1;min-width:90px" class="ipt" aria-label="Balance" />
+          <input id="c-rate" placeholder="Interest %" type="number" step="0.01" style="width:100px" class="ipt" aria-label="Interest rate in percent" />
+          <select id="c-cur" class="ipt ccy-default" style="width:80px" aria-label="Currency"><option>GBP</option><option>EUR</option><option>USD</option></select>
+          <select id="c-type" class="ipt" style="width:160px" aria-label="Type of account">
+            <option value="cash">Cash</option>
+            <option value="savings">Savings</option>
+            <option value="retirement">Retirement / 401(k)</option>
+            <option value="other">Other account</option>
+          </select>
+          <button class="btn" onclick="addAccount()">Add</button>
+        </div>
+        <div class="msg" id="m-cash"></div>
+      </div>
+
+      <div class="card" id="fin">
+        <h2>Loans, income and monthly payments</h2>
+        <div class="sub">Used for your net worth (what you own minus what you owe) and your monthly budget.
+          Adding a name that already exists updates it.</div>
+
+        <div class="label">Loans</div>
+        <div id="fin-loans"><span style="color:var(--faint)">Loading…</span></div>
+        <div class="form">
+          <input id="l-name" placeholder="Loan name" class="ipt" style="flex:2;min-width:120px" aria-label="Loan name" />
+          <input id="l-bal" placeholder="Balance" type="number" step="0.01" class="ipt" style="flex:1;min-width:90px" aria-label="Loan balance" />
+          <input id="l-rate" placeholder="Rate %" type="number" step="0.01" class="ipt" style="width:90px" aria-label="Interest rate in percent" />
+          <input id="l-pay" placeholder="Per month" type="number" step="0.01" class="ipt" style="width:100px" aria-label="Payment per month" />
+          <select id="l-cur" class="ipt ccy-default" style="width:80px" aria-label="Currency"><option>GBP</option><option>EUR</option><option>USD</option></select>
+          <button class="btn" onclick="addFin('loans')">Add</button>
+        </div>
+
+        <div class="label">Income</div>
+        <div id="fin-income"><span style="color:var(--faint)">Loading…</span></div>
+        <div class="form">
+          <input id="i-name" placeholder="Source (e.g. Salary)" class="ipt" style="flex:2;min-width:140px" aria-label="Income source" />
+          <input id="i-amt" placeholder="Per month" type="number" step="0.01" class="ipt" style="width:110px" aria-label="Amount per month" />
+          <select id="i-cur" class="ipt ccy-default" style="width:80px" aria-label="Currency"><option>GBP</option><option>EUR</option><option>USD</option></select>
+          <select id="i-fixed" class="ipt" style="width:120px" aria-label="Fixed or variable"><option value="1">Fixed</option><option value="0">Variable</option></select>
+          <select id="i-tax" class="ipt" style="width:126px" title="Salary and commission: before tax" aria-label="Before or after tax"><option value="before">Before tax</option><option value="after">After tax</option></select>
+        </div>
+        <details class="more" id="i-more">
+          <summary>Pension and start date (optional)</summary>
+          <div class="form" style="margin-top:4px">
+            <input id="i-pen" placeholder="Pension %" type="number" step="0.1" min="0" max="100" class="ipt" style="width:110px" title="% of pay deducted for your pension on the payslip" aria-label="Pension percent" />
+            <select id="i-pentype" class="ipt" style="width:250px" title="How your pension is paid (see your payslip)" aria-label="How your pension is paid">
+              <option value="relief_at_source">After tax (relief at source, e.g. NEST)</option>
+              <option value="sacrifice">Salary sacrifice</option>
+              <option value="net_pay">Before tax (net pay)</option>
+            </select>
+            <input id="i-emp" placeholder="Employer %" type="number" step="0.1" min="0" max="100" class="ipt" style="width:116px" title="What your employer pays into your pension, % of pay" aria-label="Employer pension percent" />
+            <label class="sub" style="margin:0;font-size:13px;display:flex;gap:6px;align-items:center">Started <input id="i-start" type="month" class="ipt" style="width:160px" title="First payslip month. Only matters in your first tax year." /></label>
+          </div>
+          <div class="fine" style="margin:4px 0 6px">Pension %: the share of pay your payslip takes for the pension. If "Gross for Tax" on the payslip equals your pay,
+            it's taken after tax. Employer %: what your employer adds. Started: the month of your first payslip, if it was this tax year.</div>
+        </details>
+        <div class="form" style="margin-top:6px"><button class="btn" onclick="addFin('income')">Add income</button></div>
+        <div class="fine" style="margin-top:2px">"Before tax" amounts have UK income tax and National Insurance taken off, so totals show your take-home pay.</div>
+
+        <div class="label">Monthly payments</div>
+        <div id="fin-expenses"><span style="color:var(--faint)">Loading…</span></div>
+        <div class="form">
+          <input id="e-name" placeholder="Payment (e.g. Rent)" class="ipt" style="flex:2;min-width:140px" aria-label="Payment name" />
+          <input id="e-amt" placeholder="Per month" type="number" step="0.01" class="ipt" style="width:110px" aria-label="Amount per month" />
+          <select id="e-cur" class="ipt ccy-default" style="width:80px" aria-label="Currency"><option>GBP</option><option>EUR</option><option>USD</option></select>
+          <select id="e-fixed" class="ipt" style="width:120px" aria-label="Fixed or variable"><option value="1">Fixed</option><option value="0">Variable</option></select>
+          <button class="btn" onclick="addFin('expenses')">Add</button>
+        </div>
+        <div class="msg" id="m-fin"></div>
+        <div id="fin-totals" class="sub" style="margin:8px 0 0"></div>
+      </div>
+
+      <div class="card" id="assets">
+        <h2>Things you own</h2>
+        <div class="sub">A watch, a car, art, jewellery. Counted in your net worth at the value you enter (what you could sell it for),
+          not in your savings. Update the value now and then.</div>
+        <div id="asset-list"><span style="color:var(--faint)">Loading…</span></div>
+        <div class="form">
+          <input id="a-name" placeholder="What (e.g. Omega watch)" class="ipt" style="flex:2;min-width:150px" aria-label="What it is" />
+          <select id="a-cat" class="ipt" style="width:130px" aria-label="Category">
+            <option value="watch">Watch</option><option value="jewellery">Jewellery</option><option value="car">Car</option>
+            <option value="art">Art</option><option value="collectible">Collectible</option><option value="property">Property</option>
+            <option value="other" selected>Other</option>
+          </select>
+          <input id="a-val" placeholder="Worth now" type="number" step="0.01" class="ipt" style="width:110px" aria-label="Worth now" />
+          <input id="a-paid" placeholder="Price paid" type="number" step="0.01" class="ipt" style="width:110px" aria-label="Price paid" />
+          <input id="a-bought" type="date" class="ipt" style="width:150px" title="Date bought (optional)" aria-label="Date bought" />
+          <select id="a-cur" class="ipt ccy-default" style="width:80px" aria-label="Currency"><option>GBP</option><option>EUR</option><option>USD</option></select>
+          <button class="btn" onclick="addAsset()">Add</button>
+        </div>
+        <div class="msg" id="m-assets"></div>
+      </div>
+    </section>
+
+    <!-- 4. App and data -->
+    <section class="sec" id="app">
+      <h2 class="st"><span class="n">4</span>App and data</h2>
+      <div class="card" id="storage">
+        <h2>Where your data is saved</h2>
+        <div id="sync-status" class="state" style="margin:8px 0 4px"><span style="color:var(--faint)">Checking…</span></div>
+        <div id="sync-howto" class="sub" style="margin:10px 0 0" hidden>Free hosting wipes its disk on every restart. To keep your
+          changes, set a GitHub token: GitHub → Settings → Developer settings → Fine-grained tokens → new token with
+          <b>Contents: read &amp; write</b> on this repo only → add it as the setting <code>GITHUB_TOKEN</code> on the host.
+          Every change is then encrypted and saved to a <code>data-sync</code> branch, so balances and uploads survive restarts
+          and deploys. (Or re-upload your files after each deploy, or add them as Render Secret Files.)</div>
+      </div>
+
+      <div class="card" id="datafiles">
+        <h2>Data files in use</h2>
+        <div class="sub" style="margin-bottom:4px">Which broker files the dashboard reads right now.</div>
+        <div id="status"><span style="color:var(--faint)">Loading…</span></div>
+        <div class="files" id="files"></div>
+      </div>
+
+      <div class="card" id="mcp">
+        <h2>Connect Claude (MCP)</h2>
+        <div class="sub" style="margin-bottom:6px">Ask Claude about your portfolio in plain words, for example “How did my investments do this year?”.
+          A small connector (an MCP server: the standard way to let Claude use an app) gives Claude access to your numbers.</div>
+        <div class="sub" style="margin:0">How to set it up, and what Claude can see:
+          <a href="https://github.com/GidonPeeper/stock-overview/blob/main/MCP.md" target="_blank" rel="noopener">MCP.md</a> in the project.</div>
+      </div>
+    </section>
   </div>
 
   <script>
     const SYM={EUR:"€",GBP:"£",USD:"$"};
     let CUR=(()=>{ try{ return localStorage.getItem("ccy"); }catch(e){ return null; } })(), PER_EUR={EUR:1};
-    const money0=n=>{ const v=Number(n||0)*(PER_EUR[CUR]??1); return (v<0?"−":"")+(SYM[CUR]||"€")+Math.abs(v).toLocaleString("en-GB",{maximumFractionDigits:0}); };
+    const money0=n=>{ const v=Number(n||0)*(PER_EUR[CUR]??1); return (v<0&&Math.round(Math.abs(v))>0?"−":"")+(SYM[CUR]||"€")+Math.abs(v).toLocaleString("en-GB",{maximumFractionDigits:0}); };
     const own0=(n,c)=>(SYM[c]||(c+" "))+Number(n||0).toLocaleString("en-GB",{maximumFractionDigits:0});
+    const esc=t=>String(t??"").replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
     const fxReady=fetch("/api/fx").then(r=>r.json()).then(fx=>{ PER_EUR=fx.per_eur||PER_EUR;
       if(!CUR||!(CUR in PER_EUR)) CUR=fx.default||"EUR";
       document.querySelectorAll(".ccy-default").forEach(sel=>sel.value=CUR); }).catch(()=>{ CUR="EUR"; });
+
+    /* ---- broker statement picker ---- */
+    function showStatement(p){
+      document.querySelectorAll("#st-chips .chip").forEach(b=>{ const on=b.dataset.p===p; b.classList.toggle("on",on); b.setAttribute("aria-selected",String(on)); });
+      document.querySelectorAll(".upanel").forEach(x=>{ x.hidden=x.dataset.p!==p; });
+    }
+    document.getElementById("st-chips").addEventListener("click",e=>{ const b=e.target.closest(".chip"); if(b) showStatement(b.dataset.p); });
+
+    /* ---- status: data files, Trading 212 keys, where data is saved ---- */
     const NAMES={degiro:"DeGiro statement",trade_republic:"Trade Republic trades",
-                 tr_income:"TR dividends & interest",trading212:"Trading 212"};
+                 tr_income:"Trade Republic dividends and interest",trading212:"Trading 212"};
+    function tagFor(s,k){
+      const v=s[k]; if(!v) return null;
+      if(!v.real) return s._demo?["Example","sample"]:["Not used","sample"];
+      if(k==="trading212") return v.live?["Live · key","live"]:["Statement","live"];
+      return ["In use","live"];
+    }
     function renderStatus(s){
       document.getElementById("status").innerHTML=Object.entries(NAMES).map(([k,label])=>{
-        const v=s[k]; if(!v) return "";
-        const tag = !v.real ? (s._demo ? 'SAMPLE' : 'NOT USED') : (k==='trading212' ? (v.live ? 'LIVE · API' : 'STATEMENT') : 'LIVE');
-        return `<div class="row"><span>${label}<br><span style="font-size:11px;color:var(--faint)">${v.expected}</span></span>
-          <span class="pill ${v.real?'live':'sample'}">${tag}</span></div>`;
+        const v=s[k], t=tagFor(s,k); if(!v) return "";
+        return `<div class="row"><span>${label}<span class="r-sub">${esc(v.expected)}</span></span>
+          <span class="pill ${t[1]}">${t[0]}</span></div>`;
       }).join("");
+      [["degiro","degiro"],["trade_republic","trade_republic"],["t212","trading212"]].forEach(([id,k])=>{
+        const el=document.getElementById("st-"+id), t=tagFor(s,k);
+        if(!el) return;
+        el.hidden=!t || !(s[k]&&s[k].real);          // only mark the brokers whose own data is in use
+        if(t){ el.textContent=t[0]; el.className="pill "+t[1]; }
+      });
       const accts=s._t212_accounts||[];
-      document.getElementById("t212-accounts").innerHTML=accts.map(a=>`<div class="row"><span>${a.label}
-          <br><span style="font-size:11px;color:var(--faint)">${a.ok?`${a.currency} account · ${a.positions} positions`:(a.error||"error")}${a.isa?" · ISA (tax-free)":""}</span></span>
-          <span class="pill ${a.ok?'live':'sample'}">${a.ok?'LIVE · API':'ERROR'}</span></div>`).join("");
+      document.getElementById("t212-accounts").innerHTML=accts.map(a=>`<div class="row"><span>${esc(a.label)}
+          <span class="r-sub">${a.ok?`${esc(a.currency)} account · ${a.positions} positions`:esc(a.error||"error")}${a.isa?" · ISA (tax-free)":""}</span></span>
+          <span class="pill ${a.ok?'live':'bad'}">${a.ok?'Live · key':'Error'}</span></div>`).join("");
       const seen=s._files_seen||{};
       document.getElementById("files").innerHTML=Object.keys(seen).length
-        ? "Files the server can see: "+Object.entries(seen).map(([d,fs])=>`<br><code>${d}</code>: ${fs.join(", ")}`).join("")
+        ? "Files the server can see: "+Object.entries(seen).map(([d,fs])=>`<br><code>${esc(d)}</code>: ${fs.map(esc).join(", ")}`).join("")
         : "";
+      document.getElementById("demo-hint").hidden=!s._demo;
+      // Where data is saved. disk_kept: true on your own computer, false on a host
+      // that wipes its disk (missing = false, the safe assumption).
       const sy=s._sync||{}, el=document.getElementById("sync-status");
       window.SYNC_ON = !!sy.token && sy.ok!==false;
-      if(el) el.innerHTML = sy.token
-        ? (sy.ok===false ? `<span style="color:var(--red)">● Cloud sync not saving: ${String(sy.error||"unknown error").replace(/[&<>"]/g,"")}.</span> Changes made since then live only on the server until the next restart.`
-                         : `<span style="color:var(--green)">● Cloud sync ON</span> — every save is permanent${sy.at?` (last sync ${sy.at})`:""}.`)
-        : `<span style="color:#e3b341">● Cloud sync OFF</span> — saves work now but reset on the next restart/redeploy. Add a GITHUB_TOKEN to make them permanent.`;
+      window.DISK_KEPT = sy.disk_kept===true;
+      const dot=c=>`<span class="d" style="background:${c}"></span>`;
+      let html;
+      if(sy.token && sy.ok===false)
+        html=dot("var(--red)")+`<span><b class="err">Cloud backup is not saving:</b> ${esc(sy.error||"unknown error")}.
+          ${window.DISK_KEPT?"Changes are still saved on this computer.":"Changes made since then live only on the server until the next restart."}</span>`;
+      else if(sy.token)
+        html=dot("var(--green)")+`<span><b class="ok">Cloud backup on.</b> Every change is also saved, encrypted, to your GitHub repository${sy.at?` (last saved ${esc(sy.at)})`:""}.</span>`;
+      else if(window.DISK_KEPT)
+        html=dot("var(--green)")+`<span><b>Saved on this computer</b> (the <code>data</code> folder). Everything you add here stays there.</span>`;
+      else
+        html=dot("var(--amber)")+`<span><b style="color:var(--amber)">Cloud backup off.</b> Saving works now, but this host resets its disk on the next restart or deploy. Add a <code>GITHUB_TOKEN</code> to keep your changes.</span>`;
+      if(el) el.innerHTML=html;
+      document.getElementById("sync-howto").hidden = !!sy.token || window.DISK_KEPT;
     }
-    function savedMsg(){ return window.SYNC_ON ? "✓ Saved — permanent (cloud-synced)"
-      : "✓ Saved — ⚠ resets on next restart until GITHUB_TOKEN is set (see Cloud persistence above)"; }
-    fetch("/api/datastatus").then(r=>r.json()).then(renderStatus);
+    function savedMsg(){
+      if(window.SYNC_ON) return "✓ Saved (backed up to the cloud)";
+      if(window.DISK_KEPT) return "✓ Saved";
+      return "✓ Saved (⚠ resets on the next restart until GITHUB_TOKEN is set: see “Where your data is saved”)";
+    }
+    fetch("/api/datastatus").then(r=>r.json()).then(renderStatus).catch(()=>{});
+
     /* ---- cash accounts ---- */
     const TYPE_LABEL={cash:"Cash",savings:"Savings",retirement:"Retirement",other:"Other"};
     function renderCash(c){
       const el=document.getElementById("cash-list");
-      if(!c.accounts.length){ el.innerHTML='<span style="color:var(--faint)">No accounts yet — add your first below.</span>'; return; }
-      el.innerHTML=(c.sample?'<div class="msg" style="color:#e3b341;margin-bottom:6px">Demo accounts shown — add a real one to replace them.</div>':'')+
-        c.accounts.map(a=>a.auto?`<div class="row"><span>${a.name}
-            <span class="pill" style="background:var(--panel2);color:var(--muted);margin-left:4px">from API</span><br>
-            <span style="font-size:11px;color:var(--faint)">${a.institution} · ${a.currency} · updates automatically</span></span>
-          <b>${own0(a.balance,a.currency)}</b></div>`:`<div class="row"><span>${a.name}
-            <span class="pill" style="background:var(--panel2);color:var(--muted);margin-left:4px">${TYPE_LABEL[a.type]||"Cash"}</span><br>
-            <span style="font-size:11px;color:var(--faint)">${a.institution||"—"} · ${a.currency}${a.rate?` · ${a.rate}% interest`:""}</span></span>
+      if(!c.accounts.length){ el.innerHTML='<span style="color:var(--faint)">No accounts yet. Add your first one below.</span>'; return; }
+      el.innerHTML=(c.sample?'<div class="msg" style="color:var(--amber);margin-bottom:6px">Example accounts shown. Add a real one to replace them.</div>':'')+
+        c.accounts.map(a=>a.auto?`<div class="row"><span>${esc(a.name)}
+            <span class="pill" style="background:var(--panel2);color:var(--muted);margin-left:4px">updates itself</span>
+            <span class="r-sub">${esc(a.institution)} · ${esc(a.currency)}</span></span>
+          <b>${own0(a.balance,a.currency)}</b></div>`:`<div class="row"><span>${esc(a.name)}
+            <span class="pill" style="background:var(--panel2);color:var(--muted);margin-left:4px">${TYPE_LABEL[a.type]||"Cash"}</span>
+            <span class="r-sub">${esc(a.institution||"—")} · ${esc(a.currency)}${a.rate?` · ${a.rate}% interest`:""}</span></span>
           <span style="display:flex;gap:6px;align-items:center">
-            <input class="ipt bal" type="number" step="0.01" value="${a.balance}" id="bal-${btoa(a.name).replace(/=/g,'')}" />
-            <button class="btn" style="padding:7px 11px" onclick="saveAccount('${a.name.replace(/'/g,"\\'")}','${(a.institution||"").replace(/'/g,"\\'")}','${a.currency}','${a.type||"cash"}',${a.rate||0})">Save</button>
-            <button class="del" title="Remove" onclick="delAccount('${a.name.replace(/'/g,"\\'")}')">✕</button>
+            <input class="ipt bal" type="number" step="0.01" value="${a.balance}" id="bal-${btoa(unescape(encodeURIComponent(a.name))).replace(/[=+/]/g,'')}" aria-label="Balance of ${esc(a.name)}" />
+            <button class="btn" onclick="saveAccount('${a.name.replace(/\\/g,"\\\\").replace(/'/g,"\\'")}','${(a.institution||"").replace(/'/g,"\\'")}','${a.currency}','${a.type||"cash"}',${a.rate||0})">Save</button>
+            <button class="del" title="Remove" aria-label="Remove ${esc(a.name)}" onclick="delAccount('${a.name.replace(/'/g,"\\'")}')">✕</button>
           </span></div>`).join("")+
         `<div class="row"><span style="font-weight:650">Total (all accounts)</span><span style="font-weight:650">${money0(c.total_eur)}</span></div>`;
     }
@@ -348,7 +487,7 @@
       else{ const e=await r.json().catch(()=>({detail:"Failed"})); msg.textContent="✗ "+e.detail; msg.className="msg err"; }
     }
     function saveAccount(name, inst, cur, type, rate){
-      const v=document.getElementById("bal-"+btoa(name).replace(/=/g,'')).value;
+      const v=document.getElementById("bal-"+btoa(unescape(encodeURIComponent(name))).replace(/[=+/]/g,'')).value;
       const fd=new FormData(); fd.append("name",name); fd.append("institution",inst);
       fd.append("balance",v); fd.append("currency",cur); fd.append("type",type||"cash");
       fd.append("rate",rate||0);
@@ -356,7 +495,7 @@
     }
     function addAccount(){
       const n=document.getElementById("c-name").value, b=document.getElementById("c-bal").value;
-      if(!n||!b){ const m=document.getElementById("m-cash"); m.textContent="Name and balance required."; m.className="msg err"; return; }
+      if(!n||!b){ const m=document.getElementById("m-cash"); m.textContent="Fill in a name and a balance."; m.className="msg err"; return; }
       const fd=new FormData(); fd.append("name",n); fd.append("institution",document.getElementById("c-inst").value);
       fd.append("balance",b); fd.append("currency",document.getElementById("c-cur").value);
       fd.append("type",document.getElementById("c-type").value);
@@ -372,41 +511,40 @@
     /* ---- loans / income / payments ---- */
     const E=s=>String(s).replace(/'/g,"\\'");
     function renderFin(f){
-      const demo=f.sample?'<div class="msg" style="color:#e3b341">Demo entries — add your own to replace them.</div>':"";
+      const demo=f.sample?'<div class="msg" style="color:var(--amber)">Example entries. Add your own to replace them.</div>':"";
       document.getElementById("fin-loans").innerHTML=demo+(f.loans.map(l=>
-        `<div class="row"><span>${l.name}<br><span style="font-size:11px;color:var(--faint)">${l.rate||0}% · ${own0(l.monthly_payment,l.currency||"EUR")}/mo${l.payoff?` · paid off ${l.payoff}`:""}</span></span>
+        `<div class="row"><span>${esc(l.name)}<span class="r-sub">${l.rate||0}% · ${own0(l.monthly_payment,l.currency||"EUR")} a month${l.payoff?` · paid off ${l.payoff}`:""}</span></span>
          <span style="display:flex;gap:8px;align-items:center"><b>${own0(l.balance,l.currency||"EUR")}</b>
-         <button class="del" onclick="delFin('loans','${E(l.name)}')">✕</button></span></div>`).join("")||'<span style="color:var(--faint)">None</span>');
-      const li=(x,k)=>`<div class="row"><span>${x.name}${x.fixed===false?' <span class="pill" style="background:var(--panel2);color:var(--muted)">variable</span>':''}</span><span style="display:flex;gap:8px;align-items:center"><b>${own0(x.amount,x.currency)}/mo</b>
-         <button class="del" onclick="delFin('${k}','${E(x.name)}')">✕</button></span></div>`;
+         <button class="del" title="Remove" aria-label="Remove ${esc(l.name)}" onclick="delFin('loans','${E(l.name)}')">✕</button></span></div>`).join("")||'<span style="color:var(--faint)">None</span>');
+      const variable=x=>x.fixed===false?' <span class="pill" style="background:var(--panel2);color:var(--muted)">variable</span>':'';
+      const li=(x,k)=>`<div class="row"><span>${esc(x.name)}${variable(x)}</span><span style="display:flex;gap:8px;align-items:center"><b>${own0(x.amount,x.currency)} a month</b>
+         <button class="del" title="Remove" aria-label="Remove ${esc(x.name)}" onclick="delFin('${k}','${E(x.name)}')">✕</button></span></div>`;
       const PEN={sacrifice:"salary sacrifice",net_pay:"before tax",relief_at_source:"after tax"};
+      const acts=x=>`<button class="del" title="Edit" aria-label="Edit ${esc(x.name)}" onclick='editIncome(${JSON.stringify(x).replace(/'/g,"&#39;")})'>✎</button>
+          <button class="del" title="Remove" aria-label="Remove ${esc(x.name)}" onclick="delFin('income','${E(x.name)}')">✕</button>`;
       const inc=x=>{
-        if(x.tax!=="before") return `<div class="row"><span>${x.name}${x.fixed===false?' <span class="pill" style="background:var(--panel2);color:var(--muted)">variable</span>':''}
-            <br><span style="font-size:11px;color:var(--faint)">after tax · ${own0(x.amount,x.currency)}/mo lands in your account</span></span>
-          <span style="display:flex;gap:8px;align-items:center"><b>${own0(x.amount,x.currency)}/mo</b>
-          <button class="del" title="Edit" onclick='editIncome(${JSON.stringify(x).replace(/'/g,"&#39;")})'>✎</button>
-          <button class="del" onclick="delFin('income','${E(x.name)}')">✕</button></span></div>`;
+        if(x.tax!=="before") return `<div class="row"><span>${esc(x.name)}${variable(x)}
+            <span class="r-sub">after tax · ${own0(x.amount,x.currency)} a month lands in your account</span></span>
+          <span style="display:flex;gap:4px;align-items:center"><b>${own0(x.amount,x.currency)} a month</b>${acts(x)}</span></div>`;
         const parts=f.tax&&f.tax.applied?[`income tax ${money0(x.tax_monthly_eur)}`,`NI ${money0(x.ni_monthly_eur)}`]
           .concat(x.pension_monthly_eur?[`pension ${money0(x.pension_monthly_eur)} (${x.pension_pct}%, ${PEN[x.pension_type]||""})`]:[]):[];
         const pot=x.pension_pot_monthly_eur?[`you ${money0(x.pension_monthly_eur)}`]
           .concat(x.pension_relief_monthly_eur?[`tax relief ${money0(x.pension_relief_monthly_eur)}`]:[])
           .concat(x.employer_pension_monthly_eur?[`employer ${money0(x.employer_pension_monthly_eur)}`]:[]):[];
         const slips=(x.payslips||[]).map(p=>`${new Date(p.month+"-01").toLocaleDateString("en-GB",{month:"short"})} ${money0(p.net_eur)}`).join(" · ");
-        return `<div class="row"><span>${x.name}${x.fixed===false?' <span class="pill" style="background:var(--panel2);color:var(--muted)">variable</span>':''}
-            <br><span style="font-size:11px;color:var(--faint)">${own0(x.amount,x.currency)}/mo before tax${parts.length?" − "+parts.join(" − "):""}${x.top_rate_pct?` · next £1 taxed ${x.top_rate_pct}%`:""}</span>
-            ${pot.length?`<br><span style="font-size:11px;color:var(--faint)">Into your pension: ${money0(x.pension_pot_monthly_eur)}/mo (${pot.join(" + ")})${x.pension_type==="relief_at_source"&&x.top_rate_pct>=40?" · claim the extra higher-rate relief on your tax return":""}</span>`:""}
-            ${slips?`<br><span style="font-size:11px;color:var(--faint)">This tax year's payslips (started mid-year, so less tax): ${slips}</span>`:""}
-            ${f.tax&&f.tax.note?`<br><span style="font-size:11px;color:#e3b341">${f.tax.note}</span>`:""}</span>
-          <span style="display:flex;gap:8px;align-items:center;text-align:right"><span><b>${money0(x.net_monthly_eur)}/mo</b><br><span style="font-size:11px;color:var(--faint)">take-home</span></span>
-          <button class="del" title="Edit" onclick='editIncome(${JSON.stringify(x).replace(/'/g,"&#39;")})'>✎</button>
-          <button class="del" onclick="delFin('income','${E(x.name)}')">✕</button></span></div>`;
+        return `<div class="row"><span>${esc(x.name)}${variable(x)}
+            <span class="r-sub">${own0(x.amount,x.currency)} a month before tax${parts.length?" − "+parts.join(" − "):""}${x.top_rate_pct?` · next £1 taxed ${x.top_rate_pct}%`:""}</span>
+            ${pot.length?`<span class="r-sub">Into your pension: ${money0(x.pension_pot_monthly_eur)} a month (${pot.join(" + ")})${x.pension_type==="relief_at_source"&&x.top_rate_pct>=40?" · claim the extra higher-rate relief on your tax return":""}</span>`:""}
+            ${slips?`<span class="r-sub">This tax year's payslips (started mid-year, so less tax): ${slips}</span>`:""}
+            ${f.tax&&f.tax.note?`<span class="r-sub" style="color:var(--amber)">${esc(f.tax.note)}</span>`:""}</span>
+          <span style="display:flex;gap:4px;align-items:center;text-align:right"><span><b>${money0(x.net_monthly_eur)} a month</b><span class="r-sub">take-home</span></span>${acts(x)}</span></div>`;
       };
       document.getElementById("fin-income").innerHTML=f.income.map(inc).join("")||'<span style="color:var(--faint)">None</span>';
       document.getElementById("fin-expenses").innerHTML=f.expenses.map(x=>li(x,"expenses")).join("")||'<span style="color:var(--faint)">None</span>';
       const t=f.totals;
       document.getElementById("fin-totals").innerHTML=
-        `Debt <b>${money0(t.debt_eur)}</b> · income after tax <b>${money0(t.monthly_income)}/mo</b> · payments <b>${money0(t.monthly_payments)}/mo</b> · free cash flow <b style="color:${t.free_cashflow>=0?'var(--green)':'var(--red)'}">${money0(t.free_cashflow)}/mo</b>`+
-        (f.tax&&f.tax.applied?`<br><span style="font-size:11.5px">${f.tax.rules} Your payslip is the final word.</span>`:"");
+        `Owed <b>${money0(t.debt_eur)}</b> · income after tax <b>${money0(t.monthly_income)} a month</b> · payments <b>${money0(t.monthly_payments)} a month</b> · left over <b style="color:${t.free_cashflow>=0?'var(--green)':'var(--red)'}">${money0(t.free_cashflow)} a month</b>`+
+        (f.tax&&f.tax.applied?`<br><span style="font-size:12px">${esc(f.tax.rules)} Your payslip is the final word.</span>`:"");
       renderAssets(f);
     }
     function editIncome(x){
@@ -414,7 +552,8 @@
       set("i-name",x.name); set("i-amt",x.amount); set("i-cur",x.currency||"GBP");
       set("i-fixed",x.fixed===false?"0":"1"); set("i-tax",x.tax||"before");
       set("i-pen",x.pension_pct||""); set("i-pentype",x.pension_type||"relief_at_source"); set("i-emp",x.employer_pct||""); set("i-start",x.started||"");
-      const m=document.getElementById("m-fin"); m.textContent="Change the fields and press Add to save."; m.className="msg";
+      if(x.pension_pct||x.employer_pct||x.started) document.getElementById("i-more").open=true;
+      const m=document.getElementById("m-fin"); m.textContent="Change the fields and press Add income to save."; m.className="msg";
       document.getElementById("i-name").scrollIntoView({behavior:"smooth",block:"center"});
     }
     /* ---- things you own ---- */
@@ -425,12 +564,12 @@
       el.innerHTML=a.map(x=>{
         const id="av-"+btoa(unescape(encodeURIComponent(x.name))).replace(/[=+/]/g,"");
         const ch=x.change_eur!=null?` · paid ${own0(x.paid,x.currency)} (<span style="color:${x.change_eur>=0?'var(--green)':'var(--red)'}">${x.change_eur>=0?"+":"−"}${money0(Math.abs(x.change_eur))}</span>)`:"";
-        return `<div class="row"><span>${x.name} <span class="pill" style="background:var(--panel2);color:var(--muted);margin-left:4px">${CAT[x.category]||"Other"}</span><br>
-            <span style="font-size:11px;color:var(--faint)">${x.currency}${x.bought?` · bought ${x.bought}`:""}${ch}</span></span>
+        return `<div class="row"><span>${esc(x.name)} <span class="pill" style="background:var(--panel2);color:var(--muted);margin-left:4px">${CAT[x.category]||"Other"}</span>
+            <span class="r-sub">${esc(x.currency)}${x.bought?` · bought ${esc(x.bought)}`:""}${ch}</span></span>
           <span style="display:flex;gap:6px;align-items:center">
-            <input class="ipt bal" type="number" step="0.01" value="${x.value}" id="${id}" />
-            <button class="btn" style="padding:7px 11px" onclick="saveAsset('${E(x.name)}','${id}','${x.category}','${x.currency}',${x.paid||0},'${x.bought||""}')">Save</button>
-            <button class="del" title="Remove" onclick="delFin('assets','${E(x.name)}')">✕</button></span></div>`;
+            <input class="ipt bal" type="number" step="0.01" value="${x.value}" id="${id}" aria-label="Value of ${esc(x.name)}" />
+            <button class="btn" onclick="saveAsset('${E(x.name)}','${id}','${x.category}','${x.currency}',${x.paid||0},'${x.bought||""}')">Save</button>
+            <button class="del" title="Remove" aria-label="Remove ${esc(x.name)}" onclick="delFin('assets','${E(x.name)}')">✕</button></span></div>`;
       }).join("")+`<div class="row"><span style="font-weight:650">Total</span><span style="font-weight:650">${money0(f.totals.assets_eur)}</span></div>`;
     }
     function assetForm(name,value,cat,cur,paid,bought){
@@ -445,7 +584,7 @@
     }
     function addAsset(){
       const n=document.getElementById("a-name").value, v=document.getElementById("a-val").value;
-      if(!n||!v){ const m=document.getElementById("m-assets"); m.textContent="Name and value required."; m.className="msg err"; return; }
+      if(!n||!v){ const m=document.getElementById("m-assets"); m.textContent="Fill in what it is and what it is worth now."; m.className="msg err"; return; }
       postAsset(assetForm(n,v,document.getElementById("a-cat").value,document.getElementById("a-cur").value,
         document.getElementById("a-paid").value,document.getElementById("a-bought").value));
       ["a-name","a-val","a-paid","a-bought"].forEach(id=>document.getElementById(id).value="");
@@ -464,7 +603,7 @@
       const fd=new FormData();
       if(kind==="loans"){
         const n=document.getElementById("l-name").value, b=document.getElementById("l-bal").value;
-        if(!n||!b){ const m=document.getElementById("m-fin"); m.textContent="Loan name and balance required."; m.className="msg err"; return; }
+        if(!n||!b){ const m=document.getElementById("m-fin"); m.textContent="Fill in the loan name and balance."; m.className="msg err"; return; }
         fd.append("name",n); fd.append("balance",b);
         fd.append("rate",document.getElementById("l-rate").value||0);
         fd.append("monthly_payment",document.getElementById("l-pay").value||0);
@@ -473,7 +612,7 @@
       }else{
         const p=kind==="income"?"i":"e";
         const n=document.getElementById(p+"-name").value, a=document.getElementById(p+"-amt").value;
-        if(!n||!a){ const m=document.getElementById("m-fin"); m.textContent="Name and amount required."; m.className="msg err"; return; }
+        if(!n||!a){ const m=document.getElementById("m-fin"); m.textContent="Fill in a name and an amount."; m.className="msg err"; return; }
         fd.append("name",n); fd.append("monthly_eur",a);
         fd.append("fixed",document.getElementById(p+"-fixed").value);
         fd.append("currency",document.getElementById(p+"-cur").value);
@@ -495,10 +634,11 @@
     }
     loadFin();
 
+    /* ---- statement uploads (/api/upload/{kind}) ---- */
     async function up(kind){
       const inp=document.getElementById("f-"+kind), msg=document.getElementById("m-"+kind);
       if(!inp.files.length){ msg.textContent="Choose a file first."; msg.className="msg err"; return; }
-      msg.textContent="Uploading… a long statement can take a minute or two on the free server. Keep this page open."; msg.className="msg";
+      msg.textContent="Uploading… a long statement can take a minute or two on a free server. Keep this page open."; msg.className="msg";
       const fd=new FormData(); fd.append("file", inp.files[0]);
       const r=await fetch("/api/upload/"+kind,{method:"POST",body:fd});
       if(r.ok){
