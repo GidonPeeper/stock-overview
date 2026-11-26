@@ -387,5 +387,37 @@ class Trading212ThroughSourcesTest(unittest.TestCase):
             self.assertIn("new", sources.holdings())
 
 
+
+
+class SectorFallbackTest(unittest.TestCase):
+    """Company info refused (as on a hosted server): the sector comes from
+    Yahoo's symbol search; with neither, the lookup is tried again later."""
+
+    def yf(self, info, quotes):
+        from types import SimpleNamespace
+
+        def ticker(t):
+            def get_info():
+                if isinstance(info, Exception):
+                    raise info
+                return info
+            return SimpleNamespace(get_info=get_info)
+        return SimpleNamespace(Ticker=ticker, Search=lambda *a, **k: SimpleNamespace(quotes=quotes))
+
+    def test_lookup(self):
+        from backend import sectors
+        refused = RuntimeError("401")
+        share = [{"symbol": "NVDL", "quoteType": "ETF"},
+                 {"symbol": "NVDA", "quoteType": "EQUITY", "sector": "Technology"}]
+        self.assertEqual(sectors._lookup(self.yf(refused, share), "NVDA"), "Technology")   # exact symbol only
+        self.assertEqual(sectors._lookup(self.yf(refused, [{"symbol": "PACW.L", "quoteType": "ETF"}]), "PACW.L"),
+                         "ETF / Fund")
+        self.assertIsNone(sectors._lookup(self.yf(refused, []), "NVDA"))                   # try again later
+        self.assertIsNone(sectors._lookup(self.yf(refused, [{"symbol": "NVDA.TO", "sector": "Technology"}]), "NVDA"))
+        # company info works: it wins; a share without a sector is "Other"
+        self.assertEqual(sectors._lookup(self.yf({"quoteType": "EQUITY", "sector": "Energy"}, share), "NVDA"), "Energy")
+        self.assertEqual(sectors._lookup(self.yf({"quoteType": "EQUITY"}, []), "SPAC"), "Other")
+
+
 if __name__ == "__main__":
     unittest.main()

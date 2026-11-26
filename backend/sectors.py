@@ -45,17 +45,38 @@ def _save_cache(cache: dict[str, str]) -> None:
         pass
 
 
+def _from_search(yf, t: str) -> str | None:
+    """Yahoo's symbol search also names the sector, and answers from hosts
+    where the company-info request is refused (seen on Render)."""
+    try:
+        quotes = yf.Search(t, max_results=5, news_count=0).quotes
+    except Exception:
+        return None
+    hit = next((q for q in quotes if (q.get("symbol") or "").upper() == t.upper()), None)
+    if hit is None:
+        return None
+    if hit.get("quoteType") in ("ETF", "MUTUALFUND"):
+        return "ETF / Fund"
+    return hit.get("sector") or hit.get("sectorDisp") or None
+
+
 def _lookup(yf, t: str) -> str | None:
     """The sector, or None when Yahoo did not answer (try again later)."""
     if t in _FUNDS:
         return "ETF / Fund"
     try:
-        info = yf.Ticker(t).get_info()
+        info = yf.Ticker(t).get_info() or {}
     except Exception:
-        return None
+        info = {}
     if info.get("quoteType") in ("ETF", "MUTUALFUND"):
         return "ETF / Fund"
-    return info.get("sector") or "Other"
+    if info.get("sector"):
+        return info["sector"]
+    found = _from_search(yf, t)
+    if found:
+        return found
+    # the company info answered but names no sector (an index, a currency, a SPAC)
+    return "Other" if info.get("quoteType") else None
 
 
 def get_sectors(tickers: list[str]) -> dict[str, str]:

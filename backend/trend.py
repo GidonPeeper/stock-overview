@@ -26,7 +26,7 @@ from __future__ import annotations
 import logging
 from datetime import date, timedelta
 
-from . import cache, clock, sources
+from . import cache, clock, closes, sources
 from .instruments import TICKERS, prefetch, price_currency, ticker_for
 from .positions import Trade, compute_positions
 from .prices import quote_scale
@@ -134,6 +134,9 @@ def _download(tickers: list[str], start: str):
                 splits = s2[keep] if splits is None else pd.concat(
                     [splits.drop(columns=[t for t in keep if t in splits.columns]), s2[keep]], axis=1)
     close = close.sort_index().copy()
+    # holes in Yahoo's daily history (closes.py), before the split adjustment
+    # is undone: hourly prices are split-adjusted like the daily closes
+    close, _ = closes.fill_frame(close, until=clock.today() - timedelta(days=1))
     if splits is not None:
         for t in close.columns:
             if t not in splits.columns:

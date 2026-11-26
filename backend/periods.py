@@ -21,6 +21,7 @@ from __future__ import annotations
 from datetime import date, timedelta
 
 from . import cache, clock
+from . import closes as price_gaps
 from .fx import to_eur
 from .prices import quote_scale
 
@@ -141,10 +142,14 @@ def _closes(tickers: list[str]) -> dict[str, list[tuple[date, float]]]:
         cols = [(t, hist[t]) for t in tickers if t in hist.columns]
     else:  # single ticker -> Series
         cols = [(tickers[0], hist)]
+    yesterday = clock.today() - timedelta(days=1)
     for t, col in cols:
         col = col.dropna()
         if len(col):
-            series[t] = [(ts.date(), float(v)) for ts, v in col.items()]
+            # a hole in Yahoo's daily history would make an old close the
+            # start price of the week or month: fill it (closes.py)
+            series[t] = price_gaps.fill_list(t, [(ts.date(), float(v)) for ts, v in col.items()],
+                                             until=yesterday)
     if not series:
         raise ValueError("no price history returned")
     return series
