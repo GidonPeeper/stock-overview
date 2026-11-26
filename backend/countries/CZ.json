@@ -1,0 +1,172 @@
+{
+  "code": "CZ",
+  "name": "Czechia",
+  "currency": "EUR",
+  "currency_note": "Czechia uses koruna (CZK); the app shows euros. Tax figures below are in koruna.",
+  "timezone": "Europe/Prague",
+  "languages": ["cs"],
+  "checked_on": "2026-11-26",
+  "tax_year": {
+    "label": "2026",
+    "starts": "01-01",
+    "ends": "12-31",
+    "return_due": "The income tax return is due 3 months after the end of the year (1 April 2026 for 2025), 4 months if filed electronically after that date, and 6 months if filed by a tax adviser.",
+    "source": "https://financnisprava.gov.cz/cs/dane/dane/dan-z-prijmu/dotazy-a-odpovedi/dan-z-prijmu-fyzickych-osob/aktualne-k-dani-z-prijmu-fyzickych-osob-2025"
+  },
+  "summary": "A gain on shares or fund units is tax-free if you held them more than 3 years (the time test), or if all your sales of securities in the year total no more than CZK 100,000. Otherwise the gain is taxed with your other income at 15%, or 23% above a high threshold. Czech dividends and bank interest have 15% withheld at source.",
+  "topics": [
+    {
+      "id": "gains",
+      "title": "Profit when you sell",
+      "points": [
+        "Time test (časový test): the gain on a security sold more than 3 years after you acquired it is exempt. Since 1 January 2026 there is no upper limit on this exemption for securities (the CZK 40 million cap was removed).",
+        "Value test (hodnotový test): if the total proceeds from all your sales of securities in the year are no more than CZK 100,000, the income is exempt, whatever the holding period.",
+        "Neither test applies to securities that are, or within the last 3 years were, business assets.",
+        "A gain that is not exempt is other income (ostatní příjmy, § 10). It is added to your tax base and taxed at 15%, and at 23% on the part of the tax base above 36 times the average wage."
+      ],
+      "figures": [
+        {"label": "Holding period for exemption", "value": "more than 3 years"},
+        {"label": "Yearly sales exempt (value test)", "value": "CZK 100,000"},
+        {"label": "Tax rate", "value": "15% (23% above 36× average wage)"}
+      ],
+      "sources": [
+        "https://e-sbirka.gov.cz/sb/1992/586",
+        "https://financnisprava.gov.cz/cs/financni-sprava/media-a-verejnost/tiskove-zpravy-gfr/tiskove-zpravy-2026/danove-novinky-pro-rok-2026"
+      ]
+    },
+    {
+      "id": "dividends",
+      "title": "Dividends",
+      "points": [
+        "Dividends from Czech companies whose shares are securities are taxed by a 15% withholding tax (srážková daň), which is final; they do not go in your return.",
+        "Dividends from abroad must be declared in a Czech tax return. You may put all of them in a separate tax base taxed at 15%; otherwise they are added to your general tax base."
+      ],
+      "figures": [
+        {"label": "Withholding on Czech dividends", "value": "15%"},
+        {"label": "Rate on foreign dividends (separate base)", "value": "15%"}
+      ],
+      "sources": [
+        "https://e-sbirka.gov.cz/sb/1992/586",
+        "https://financnisprava.gov.cz/cs/dane/dane/dan-z-prijmu/dotazy-a-odpovedi/dan-z-prijmu-fyzickych-osob/aktualne-k-dani-z-prijmu-fyzickych-osob-2025"
+      ]
+    },
+    {
+      "id": "interest",
+      "title": "Interest on savings",
+      "points": [
+        "Interest on ordinary (non-business) bank accounts and on bonds from Czech sources is taxed by a final 15% withholding tax at source."
+      ],
+      "figures": [
+        {"label": "Withholding on Czech interest", "value": "15%"}
+      ],
+      "sources": [
+        "https://e-sbirka.gov.cz/sb/1992/586"
+      ]
+    },
+    {
+      "id": "funds",
+      "title": "Funds and ETFs",
+      "points": [
+        "Fund units that are securities follow the same rules as shares: a gain is exempt after more than 3 years or under the CZK 100,000 value test, and otherwise taxed as other income.",
+        "Payouts from a Czech fund whose units are securities are taxed by the 15% withholding tax."
+      ],
+      "sources": [
+        "https://e-sbirka.gov.cz/sb/1992/586"
+      ]
+    },
+    {
+      "id": "accounts",
+      "title": "Tax-free and tax-deferred accounts",
+      "points": [
+        "Long-term investment product (dlouhodobý investiční produkt, DIP): an investment account for retirement, available for contracts made from 2024.",
+        "What you pay into a DIP and other supported retirement products (pension savings, private life insurance, long-term care insurance) can be deducted from your tax base, up to CZK 48,000 a year in total.",
+        "Employer contributions to these products are tax-free for the employee up to CZK 50,000 a year in total.",
+        "For products taken out from 2025, money may not be paid out before 120 calendar months from the start and before the year you turn 60."
+      ],
+      "figures": [
+        {"label": "Yearly deduction, all retirement products", "value": "CZK 48,000"},
+        {"label": "Tax-free employer contribution", "value": "CZK 50,000"},
+        {"label": "Minimum saving period", "value": "120 months"}
+      ],
+      "sources": [
+        "https://e-sbirka.gov.cz/sb/1992/586",
+        "https://financnisprava.gov.cz/cs/dane/dane/dan-z-prijmu/zamestnanci-zamestnavatele/dotazy-a-odpovedi/2026/aktualni-dotazy-a-odpovedi-k-dani-z",
+        "https://financnisprava.gov.cz/cs/dane/dane/dan-z-prijmu/dotazy-a-odpovedi/dan-z-prijmu-fyzickych-osob/aktualne-k-dani-z-prijmu-fyzickych-osob-2025"
+      ]
+    },
+    {
+      "id": "losses",
+      "title": "Losses",
+      "points": [
+        "Within one year, losses on taxable sales of securities reduce gains on taxable sales of securities.",
+        "If the costs are higher than the income for that kind of income, the difference is ignored: a net loss cannot reduce other income and cannot be carried forward."
+      ],
+      "sources": [
+        "https://e-sbirka.gov.cz/sb/1992/586"
+      ]
+    },
+    {
+      "id": "foreign",
+      "title": "Foreign shares",
+      "points": [
+        "The time test and value test apply to foreign securities as well.",
+        "A Czech resident who receives dividends from abroad must file a Czech return and declare them."
+      ],
+      "sources": [
+        "https://e-sbirka.gov.cz/sb/1992/586",
+        "https://financnisprava.gov.cz/cs/dane/dane/dan-z-prijmu/dotazy-a-odpovedi/dan-z-prijmu-fyzickych-osob/aktualne-k-dani-z-prijmu-fyzickych-osob-2025"
+      ]
+    },
+    {
+      "id": "reporting",
+      "title": "What your broker does and what you do",
+      "points": [
+        "Czech payers withhold the final 15% tax on Czech dividends and interest, so these need no return.",
+        "Taxable gains on securities (held 3 years or less, above the CZK 100,000 sales limit) and all foreign dividends must be declared in your own return."
+      ],
+      "sources": [
+        "https://e-sbirka.gov.cz/sb/1992/586",
+        "https://financnisprava.gov.cz/cs/dane/dane/dan-z-prijmu/dotazy-a-odpovedi/dan-z-prijmu-fyzickych-osob/aktualne-k-dani-z-prijmu-fyzickych-osob-2025"
+      ]
+    },
+    {
+      "id": "crypto",
+      "title": "Crypto",
+      "points": [
+        "Crypto has its own time test: a gain on crypto held more than 3 years is exempt, but only up to total exempt proceeds of CZK 40 million a year (the cap that was removed for securities still applies to crypto).",
+        "Crypto also has its own value test: if your total crypto sale proceeds in the year are no more than CZK 100,000, they are exempt.",
+        "Otherwise the gain is taxable income in your return."
+      ],
+      "figures": [
+        {"label": "Holding period for exemption", "value": "more than 3 years"},
+        {"label": "Cap on time-test exemption", "value": "CZK 40,000,000 a year"},
+        {"label": "Yearly sales exempt (value test)", "value": "CZK 100,000"}
+      ],
+      "sources": [
+        "https://e-sbirka.gov.cz/sb/1992/586",
+        "https://financnisprava.gov.cz/cs/financni-sprava/media-a-verejnost/tiskove-zpravy-gfr/tiskove-zpravy-2026/danove-novinky-pro-rok-2026"
+      ]
+    }
+  ],
+  "dates": [
+    {"when": "04-01", "what": "Usual deadline for the paper income tax return for the year before (later if filed electronically or by an adviser)."}
+  ],
+  "official": [
+    {"title": "Finanční správa: Aktuálně k dani z příjmů fyzických osob 2025", "url": "https://financnisprava.gov.cz/cs/dane/dane/dan-z-prijmu/dotazy-a-odpovedi/dan-z-prijmu-fyzickych-osob/aktualne-k-dani-z-prijmu-fyzickych-osob-2025"},
+    {"title": "Finanční správa: Daňové novinky pro rok 2026", "url": "https://financnisprava.gov.cz/cs/financni-sprava/media-a-verejnost/tiskove-zpravy-gfr/tiskove-zpravy-2026/danove-novinky-pro-rok-2026"},
+    {"title": "e-Sbírka: Income Tax Act 586/1992 Sb.", "url": "https://e-sbirka.gov.cz/sb/1992/586"},
+    {"title": "Finanční správa: FAQ on employees and retirement products 2026", "url": "https://financnisprava.gov.cz/cs/dane/dane/dan-z-prijmu/zamestnanci-zamestnavatele/dotazy-a-odpovedi/2026/aktualni-dotazy-a-odpovedi-k-dani-z"}
+  ],
+  "upcoming": [],
+  "not_covered": [
+    "Shares in limited companies that are not securities (s.r.o. shares).",
+    "Employee shares and options.",
+    "How exactly foreign withholding tax is credited under each tax treaty.",
+    "Real estate, and moving to or from Czechia."
+  ],
+  "news": [
+    {"name": "iROZHLAS Ekonomika", "url": "https://www.irozhlas.cz/rss/irozhlas/section/ekonomika", "language": "cs"},
+    {"name": "Hospodářské noviny", "url": "https://hn.cz/?m=rss", "language": "cs"},
+    {"name": "Peníze.cz", "url": "https://www.penize.cz/rss", "language": "cs"}
+  ]
+}
