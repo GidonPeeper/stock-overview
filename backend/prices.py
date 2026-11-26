@@ -18,6 +18,7 @@ on every request. A small sample map keeps the demo rendering when offline.
 
 from __future__ import annotations
 
+import math
 import threading
 import time
 from concurrent.futures import ThreadPoolExecutor
@@ -49,6 +50,16 @@ _bg_pending: set[str] = set()        # tickers being refreshed in the background
 # ticker -> 0.01 if Yahoo quotes it in pence (GBp), else 1.0. Only London (.L)
 # listings can be pence-quoted, so nothing else costs a lookup.
 _SCALE: dict[str, float] = {}
+
+
+def _number(v) -> float | None:
+    """A usable price: finite and above zero, else None (Yahoo sends NaN
+    for a missing value, and a NaN would poison every total)."""
+    try:
+        v = float(v)
+    except (TypeError, ValueError):
+        return None
+    return v if math.isfinite(v) and v > 0 else None
 
 
 def _scale_from(info) -> float:
@@ -86,14 +97,14 @@ def _fetch_one(yf, t: str) -> tuple | None:
         tk = yf.Ticker(t)
         tk.history(period="1d", interval="1d", auto_adjust=False)
         meta = dict(getattr(tk, "history_metadata", None) or {})
-        last = meta.get("regularMarketPrice")
-        if not last:
+        last = _number(meta.get("regularMarketPrice"))
+        if last is None:
             return None
         ccy = meta.get("currency") or ""
         scale = 0.01 if ccy in ("GBp", "GBX") else 1.0
         if t.endswith(".L"):
             _SCALE[t] = scale
-        prev = meta.get("chartPreviousClose") or meta.get("previousClose")
+        prev = _number(meta.get("chartPreviousClose")) or _number(meta.get("previousClose"))
         traded = clock.local_date(meta.get("regularMarketTime"))
         if traded is not None and traded < clock.today():
             prev = last  # no trading yet today: nothing changed today
@@ -161,7 +172,9 @@ def _refresh_in_background(tickers: list[str]) -> None:
 
 def fetch_quotes(tickers: list[str]) -> dict[str, dict]:
     """Return {ticker: {"price": float, "prev_close": float|None, "currency": str}}.
-    prev_close is the last close before today (calendar day)."""
+    prev_close is the last close before today (calendar day). A quote kept
+    from an earlier day (Yahoo failing since) knows no move today, so its
+    prev_close is its price: the change it carries is that day's."""
     tickers = sorted(set(t for t in tickers if t))
     if not tickers:
         return {}
@@ -182,7 +195,8 @@ def fetch_quotes(tickers: list[str]) -> dict[str, dict]:
     for t in tickers:
         c = _CACHE.get(t)
         if c:
-            out[t] = {"price": c[0], "prev_close": c[1], "currency": c[3]}
+            prev = c[1] if c[4] == clock.today() else c[0]
+            out[t] = {"price": c[0], "prev_close": prev, "currency": c[3]}
         elif t in SAMPLE_PRICES:
             p, pc = SAMPLE_PRICES[t]
             out[t] = {"price": p, "prev_close": pc, "currency": ""}
