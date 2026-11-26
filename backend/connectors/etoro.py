@@ -94,6 +94,12 @@ def fetch(creds: dict, conn: dict | None = None) -> Snapshot:
             buy_price=round(g["cost"] / g["units"], 6), currency="USD",
             price=round(g["value"] / g["units"], 6) if g["value"] else None, buy_currency="USD"))
     cash = [{"name": "cash USD", "currency": "USD", "balance": round(num(portfolio.get("credit")), 2)}]
+    # Money set aside for copy trading but not invested: each mirror's
+    # availableAmount ("reserved for mirror operations"), which `credit`
+    # ("funds available for new positions") does not include.
+    copy_cash = sum(num(m.get("availableAmount")) for m in portfolio.get("mirrors") or [])
+    if copy_cash:
+        cash.append({"name": "copy trading cash USD", "currency": "USD", "balance": round(copy_cash, 2)})
     summary = f"{len(holdings)} positions"
     if skipped:
         summary += f" ({skipped} leveraged or short left out)"

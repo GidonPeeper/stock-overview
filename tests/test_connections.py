@@ -314,6 +314,46 @@ class IbkrTest(TempStore):
                                      {"name": "cash USD", "currency": "USD", "balance": 140.5}])
         self.assertIn("3 positions", snap.summary)
 
+    def flex(self, positions="", trades=""):
+        import xml.etree.ElementTree as ET
+
+        return ibkr_flex.parse(ET.fromstring(
+            f"""<FlexQueryResponse><FlexStatements><FlexStatement toDate="20261113">
+            <AccountInformation currency="USD" /><OpenPositions>{positions}</OpenPositions>
+            <Trades>{trades}</Trades></FlexStatement></FlexStatements></FlexQueryResponse>"""), "IBKR")
+
+    def test_cancelled_trade_does_not_count(self):
+        # Bought 10 (trade 111), the trade was cancelled (a "BUY (Ca.)" row
+        # naming 111), then rebooked at the right price (trade 113). One buy
+        # of 10 for 1,001. Before: both buys counted, 20 shares for 2,001.
+        snap = self.flex(trades="""
+          <Trade currency="USD" assetCategory="STK" symbol="AAPL" isin="US0378331005" tradeID="111"
+            dateTime="20260105;093000" quantity="10" netCash="-1000" buySell="BUY" levelOfDetail="EXECUTION" />
+          <Trade currency="USD" assetCategory="STK" symbol="AAPL" isin="US0378331005" tradeID="112"
+            origTradeID="111" dateTime="20260105;120000" quantity="-10" netCash="1000"
+            buySell="BUY (Ca.)" levelOfDetail="EXECUTION" />
+          <Trade currency="USD" assetCategory="STK" symbol="AAPL" isin="US0378331005" tradeID="113"
+            dateTime="20260105;120000" quantity="10" netCash="-1001" buySell="BUY" levelOfDetail="EXECUTION" />""")
+        self.assertEqual([(t.side, t.quantity, t.amount) for t in snap.trades], [("BUY", 10, 1001.0)])
+
+    def test_sale_costing_more_than_it_brings_is_negative(self):
+        # Sold 100 worthless shares for 0.50 with 1.00 commission: netCash
+        # -0.50, the sale brought -0.50. Before: abs() made it +0.50.
+        snap = self.flex(trades="""
+          <Trade currency="USD" assetCategory="STK" symbol="ZZZ" quantity="-100" proceeds="0.5"
+            ibCommission="-1" netCash="-0.5" buySell="SELL" levelOfDetail="EXECUTION" />""")
+        self.assertEqual(snap.trades[0].amount, -0.5)
+
+    def test_position_with_a_multiplier_keeps_the_report_value(self):
+        # A bond of 10,000 nominal at 98.5% of par: value 9,850 (multiplier
+        # 0.01). Before: it got a guessed live ticker, so a quote per unit
+        # times 10,000 would be priced instead of the report's 0.985 per unit.
+        snap = self.flex(positions="""
+          <OpenPosition currency="USD" assetCategory="BOND" symbol="T 4 1/2 08/15/39" position="10000"
+            markPrice="98.5" multiplier="0.01" positionValue="9850" costBasisMoney="9700" levelOfDetail="SUMMARY" />""")
+        (h,) = snap.holdings
+        self.assertEqual((h.ticker, h.price, h.buy_price), ("", 0.985, 0.97))
+
     def test_query_id_must_be_a_number(self):
         with self.assertRaises(ConnectorError):
             ibkr_flex.fetch({"token": "t", "query_id": "abc"})
@@ -351,6 +391,15 @@ class EtoroTest(TempStore):
         h = fake.calls[0]["headers"]
         self.assertEqual((h["x-api-key"], h["x-user-key"]), ("pub", "usr"))
         self.assertEqual(len(h["x-request-id"]), 36)
+
+    def test_cash_held_in_a_copy_is_counted(self):
+        # 100 USD free, and 250 USD of a 1,000 USD copy not invested yet
+        # (mirror availableAmount, "reserved for mirror operations"). Before:
+        # the 250 were missing from the totals.
+        self.http({"/trading/info/portfolio": {"clientPortfolio": {"credit": 100, "positions": [],
+                   "mirrors": [{"availableAmount": 250, "positions": []}]}}})
+        snap = etoro.fetch({"api_key": "pub", "user_key": "usr"})
+        self.assertEqual(sum(c["balance"] for c in snap.cash), 350)
 
 
 class BitvavoTest(TempStore):

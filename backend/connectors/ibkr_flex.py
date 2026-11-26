@@ -192,6 +192,7 @@ def _rows(parent: ET.Element | None, tag: str, prefer: tuple[str, ...]) -> list[
 def parse(root: ET.Element, label: str = "IBKR") -> Snapshot:
     snap = Snapshot()
     to_date = ""
+    unmatched = 0   # cancellations without origTradeID (add it to the Flex Query)
     for st in root.iter("FlexStatement"):
         to_date = max(to_date, _date(st.get("toDate")))
         info = st.find("AccountInformation")
@@ -208,6 +209,10 @@ def parse(root: ET.Element, label: str = "IBKR") -> Snapshot:
             ticker = yf_ticker(p.get("symbol"), p.get("listingExchange"), ccy, isin)
             value = num(p.get("positionValue"), qty * num(p.get("markPrice")))
             cost = num(p.get("costBasisMoney"), qty * num(p.get("costBasisPrice")))
+            if num(p.get("multiplier"), 1.0) != 1.0:
+                # value = position x price x multiplier: a live quote times the
+                # quantity would be off by the multiplier, so keep the report's
+                ticker = ""
             snap.holdings.append(Holding(
                 broker=label, ticker=ticker, name=p.get("description") or p.get("symbol") or ticker,
                 quantity=qty, buy_price=round(cost / qty, 6), currency=ccy, isin=isin,
@@ -217,14 +222,25 @@ def parse(root: ET.Element, label: str = "IBKR") -> Snapshot:
 
         trades = st.find("Trades")
         rows = _rows(trades, "Trade", ("EXECUTION",)) or _rows(trades, "Order", ("ORDER",))
+        # A cancellation ("BUY (Ca.)") names the trade it cancels in
+        # origTradeID ("The original trade ID that was cancelled"); that
+        # trade stays in the report and must not count.
+        cancels = [t for t in rows if "(CA" in (t.get("buySell") or "").upper()]
+        cancelled = {t.get("origTradeID") for t in cancels if t.get("origTradeID")}
+        unmatched += sum(1 for t in cancels if not t.get("origTradeID"))
         for t in rows:
             if (t.get("assetCategory") or "STK").upper() in _SKIP_ASSETS:
                 continue
             side = (t.get("buySell") or "").upper()
             if side not in ("BUY", "SELL"):
                 continue  # cancellations ("BUY (Ca.)") and other bookings
+            if t.get("tradeID") and t.get("tradeID") in cancelled:
+                continue
             qty = abs(num(t.get("quantity")))
-            net = num(t.get("netCash"), num(t.get("proceeds")) + num(t.get("ibCommission")))
+            # Net Cash = proceeds + tax + commission: paid on a buy (negative),
+            # received on a sale -- negative too when the costs exceed the proceeds
+            net = num(t.get("netCash"), num(t.get("proceeds")) + num(t.get("taxes"))
+                      + num(t.get("ibCommission")))
             if not qty:
                 continue
             isin = t.get("isin") or ""
@@ -233,7 +249,7 @@ def parse(root: ET.Element, label: str = "IBKR") -> Snapshot:
                 when=_date(t.get("dateTime")) or _date(t.get("tradeDate")),
                 key=isin or t.get("conid") or t.get("symbol") or "",
                 name=t.get("description") or t.get("symbol") or "", side=side, quantity=qty,
-                amount=round(abs(net), 2), currency=ccy,
+                amount=round(-net if side == "BUY" else net, 2), currency=ccy,
                 ticker=yf_ticker(t.get("symbol"), t.get("listingExchange"), ccy, isin),
             ))
 
@@ -262,6 +278,9 @@ def parse(root: ET.Element, label: str = "IBKR") -> Snapshot:
     if root.find(".//FlexStatement") is None:
         raise ConnectorError("The IBKR report is empty. Check the Flex Query has an account selected.")
     parts = [f"{len(snap.holdings)} positions", f"{len(snap.trades)} trades"]
+    if unmatched:
+        parts.append(f"{unmatched} cancelled trade{'s' if unmatched != 1 else ''} not matched: "
+                     "add Orig Trade ID to the Flex Query")
     if to_date:
         parts.append(f"report of {to_date[:10]}")
     snap.summary = " · ".join(parts)
