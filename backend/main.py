@@ -100,7 +100,8 @@ async def _lifespan(_app):
     else:
         _WARM_FIRST.set()
     _keep_awake()
-    yield
+    async with mcp_server.http_lifespan():   # the /mcp endpoint (MCP.md)
+        yield
 
 
 app = FastAPI(title="Stock Overview", lifespan=_lifespan)
@@ -160,6 +161,8 @@ def _needs_password(request: Request) -> bool:
 @app.middleware("http")
 async def _auth(request: Request, call_next):
     path = request.url.path
+    if path == mcp_server.PATH:  # MCP clients have no login cookie: /mcp checks MCP_TOKEN itself
+        return await call_next(request)
     if not _DASH_PASS:  # auth disabled on your own computer
         if _needs_password(request) and path not in ("/healthz", "/sw.js"):
             if path.startswith("/api"):
@@ -647,6 +650,11 @@ from . import banklink_api, connections_api  # noqa: E402
 
 app.include_router(connections_api.router)
 app.include_router(banklink_api.router)
+
+# Claude and other MCP clients: read-only tools at /mcp, behind MCP_TOKEN (MCP.md)
+from . import mcp_server  # noqa: E402
+
+mcp_server.mount(app)
 
 
 def _connections_changed(trades_changed: bool) -> None:
