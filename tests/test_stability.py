@@ -456,6 +456,16 @@ class StaleQuoteTest(unittest.TestCase):
         self.assertEqual(q["price"], 110.0)              # the last known price…
         self.assertIsNone(q["prev_close"])               # …but no "today" change (was +10%)
 
+    def test_made_up_sample_prices_never_price_your_own_holdings(self):
+        down = fake_yf({"AAPL": RuntimeError("Yahoo down")})
+        with mock.patch.dict(sys.modules, {"yfinance": down}), \
+                mock.patch.object(datafiles, "demo", return_value=False):
+            self.assertEqual(prices.fetch_quotes(["AAPL"]), {})    # before: 212.4, marked live, +0.7% "today"
+        prices._FAILED.clear()
+        with mock.patch.dict(sys.modules, {"yfinance": down}), \
+                mock.patch.object(datafiles, "demo", return_value=True):
+            self.assertEqual(prices.fetch_quotes(["AAPL"])["AAPL"]["price"], prices.SAMPLE_PRICES["AAPL"][0])
+
     def test_todays_quote_keeps_its_move(self):
         prices._CACHE["ACME"] = (110.0, 100.0, time.time(), "USD", clock.today())
         self.assertEqual(prices.fetch_quotes(["ACME"])["ACME"]["prev_close"], 100.0)
@@ -555,7 +565,7 @@ class ApiErrorTest(unittest.TestCase):
         with mock.patch.object(self.main.market, "indices", side_effect=KeyError("regularMarketPrice")):
             r = self.client.get("/api/indices")
         self.assertEqual(r.status_code, 500)
-        self.assertIn("could not be worked out just now", r.json()["detail"])
+        self.assertIn("A data source did not answer", r.json()["detail"])
         self.assertNotIn("Traceback", r.text)
         self.assertNotIn("regularMarketPrice", r.text)
 

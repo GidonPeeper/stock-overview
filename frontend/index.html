@@ -1476,7 +1476,10 @@
         })(t0);
       } else vEl.textContent=money(target);
       const d=PORT.totals.daily,dp=PORT.totals.daily_pct,el=$("v-today");
-      if(d===null||d===undefined){ el.className="today muted"; el.innerHTML='<span class="small">No price change yet today</span>'; }
+      // no holding has a move for today (no live prices): the server's 0 is "unknown", not "flat"
+      const noneKnown=PORT.holdings.length&&!PORT.holdings.some(h=>h.daily_eur!=null);
+      if(noneKnown&&(PORT.quotes||{}).unpriced){ el.className="today muted"; el.innerHTML='<span class="small">Today’s change not known yet (no live prices)</span>'; }
+      else if(d===null||d===undefined){ el.className="today muted"; el.innerHTML='<span class="small">No price change yet today</span>'; }
       else { el.className="today "+cls(d); el.innerHTML=`${arrow(d)}${signed(d)} (${pct(dp)}) today`; }
       renderReturn();
     }
@@ -1700,7 +1703,8 @@
     }
     function renderPeriods(){
       const el=$("period-stats"),p=PROFIT?PROFIT.periods:{};
-      const items=[["Today",PORT.totals.daily]]; [["This week","week"],["This month","month"],["This year","year"]].forEach(([lab,k])=>items.push([lab,p[k]===undefined?null:p[k]]));
+      const noLive=PORT.holdings.length&&!PORT.holdings.some(h=>h.daily_eur!=null)&&(PORT.quotes||{}).unpriced;
+      const items=[["Today",noLive?null:PORT.totals.daily]]; [["This week","week"],["This month","month"],["This year","year"]].forEach(([lab,k])=>items.push([lab,p[k]===undefined?null:p[k]]));
       el.innerHTML=items.map(([k,v])=>`<div class="stat"><div class="k">${k}</div><div class="v num ${v==null?'flat':cls(v)}">${v==null?'—':signed(v)}</div></div>`).join("");
       $("period-note").textContent="Price move of what you hold now."+(PROFIT&&PROFIT.coverage_pct<100?` Covers ${PROFIT.coverage_pct}% of your holdings (the rest has no price history).`:"");
     }
@@ -1709,7 +1713,9 @@
     function setUpdated(refreshing,q){
       document.body.classList.remove("is-stale");
       const asOf=q&&q.as_of?q.as_of*1000:0, old=asOf&&Date.now()-asOf>15*60000;   // prices Yahoo could not refresh
+      const noLive=PORT&&PORT.holdings.length&&!PORT.holdings.some(h=>h.priced_live);   // none at all
       setLive(refreshing ? `<span class="dot amber"></span>Updating prices… · ${hhmm(Date.now())}`
+            : noLive ? `<span class="dot amber"></span>No live prices right now · updated ${hhmm(Date.now())}`
             : old ? `<span class="dot amber"></span>Prices from ${when(asOf)} (could not refresh them yet)`
                   : `<span class="dot"></span>Live · updated ${hhmm(Date.now())}`);
     }
