@@ -152,6 +152,13 @@ Optional settings in `.env`: `DISPLAY_CURRENCY` (`GBP`/`EUR`), `UK_RESIDENT_FROM
 and `CGT_RATE` for the tax-loss harvesting card, and `NEWSAPI_KEY` to
 blend NewsAPI into the Daily Brief.
 
+## 🤖 Ask Claude
+
+Stock Overview is also an MCP server: connect Claude Code, Claude Desktop or
+claude.ai and ask "how did my portfolio do this month?" or "how much dividend
+did I get this year?". Claude reads your data only to answer you, and the tools
+are read-only: they can never trade. Setup in [MCP.md](MCP.md).
+
 ## ✅ Tests
 
 ```bash
