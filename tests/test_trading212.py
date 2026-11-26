@@ -215,6 +215,61 @@ class HistoryTest(Base):
         self.assertAlmostEqual(d["amount_eur"], 15.0)
         self.assertEqual([round(i["amount_eur"], 2) for i in interest], [3.85])
 
+    def test_fill_of_a_partly_filled_then_cancelled_order_counts(self):
+        # An order for 5 shares fills 2 and the rest is cancelled: the 2 shares
+        # were bought (fill.quantity = 2, 2 x 100 = 200 paid). Later all 2 are
+        # sold for 260. Before: the CANCELLED item was skipped, so the sell had
+        # no buy and the trades disagreed with the shares actually held.
+        acct = t212.Account("T212 Invest", "k", "s")
+        orders = {"items": [
+            {"order": {"status": "CANCELLED", "side": "BUY", "ticker": "ASML_EQ", "quantity": 5,
+                       "filledQuantity": 2, "createdAt": "2026-03-01T10:00:00Z",
+                       "instrument": {"ticker": "ASML_EQ", "isin": "NL0010273215", "name": "ASML"}},
+             "fill": {"filledAt": "2026-03-01T10:00:01Z", "quantity": 2, "price": 100,
+                      "walletImpact": {"currency": "EUR", "netValue": 200.0}}},
+            {"order": {"status": "PARTIALLY_FILLED", "side": "SELL", "ticker": "ASML_EQ",
+                       "createdAt": "2026-04-01T10:00:00Z",
+                       "instrument": {"ticker": "ASML_EQ", "isin": "NL0010273215", "name": "ASML"}},
+             "fill": {"filledAt": "2026-04-01T10:00:01Z", "quantity": -2, "price": 130,
+                      "walletImpact": {"currency": "EUR", "netValue": 260.0}}},
+            # a cancelled order that never filled: no shares, no trade
+            {"order": {"status": "CANCELLED", "side": "BUY", "ticker": "ASML_EQ", "value": 999},
+             "fill": None},
+        ], "nextPagePath": None}
+        with mock.patch.object(t212, "_get", fake_get({"/equity/history/orders": orders})):
+            trades = t212.account_trades(acct)
+        self.assertEqual([(t.side, t.quantity, t.amount) for t in trades],
+                         [("BUY", 2.0, 200.0), ("SELL", 2.0, 260.0)])
+        self.assertAlmostEqual(compute_positions(trades)["NL0010273215"].realized, 60.0)
+
+    def test_rate_limit_is_waited_out_until_it_resets(self):
+        # The history endpoints allow 20 calls a minute; x-ratelimit-reset is
+        # when the limit resets. Here it resets 40 s after the first 429.
+        # Before: two waits capped at 15 s (30 s in all), then the 429 was
+        # raised and the whole account's trades silently went missing.
+        clock = {"now": 1_000.0}
+        reset_at = clock["now"] + 40
+
+        def fake_session_get(url, auth=None, timeout=None):
+            resp = requests.Response()
+            if clock["now"] < reset_at:
+                resp.status_code = 429
+                resp.headers["x-ratelimit-reset"] = str(reset_at)
+            else:
+                resp.status_code = 200
+                resp._content = b'{"items": [], "nextPagePath": null}'
+            return resp
+
+        def fake_sleep(seconds):
+            clock["now"] += seconds
+
+        acct = t212.Account("T212 Invest", "k", "s")
+        with mock.patch.object(t212._session, "get", side_effect=fake_session_get), \
+                mock.patch.object(t212.time, "sleep", side_effect=fake_sleep), \
+                mock.patch.object(t212.time, "time", side_effect=lambda: clock["now"]):
+            page = t212._get(acct, "/equity/history/orders?limit=50")
+        self.assertEqual(page, {"items": [], "nextPagePath": None})
+
     def test_old_dividends_path(self):
         acct = t212.Account("T212 Invest", "k", "s")
         get = fake_get({"/equity/history/dividends": http_error(404), "/history/dividends": DIVIDENDS})

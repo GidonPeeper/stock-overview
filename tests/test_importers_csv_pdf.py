@@ -94,6 +94,167 @@ class Trading212CsvTest(unittest.TestCase):
             trading212_csv.convert("Symbol,Quantity\nAAPL,1\n")
 
 
+    def test_number_that_is_not_a_number_stops_the_import(self):
+        # "1,000.00" in Total (a thousands comma): before, it silently became
+        # 0, so a 1000 EUR buy cost nothing. Now the import stops and says so.
+        bad = t212_csv("Market buy,2026-09-14 09:00:00+00:00,US30303M1027,META,Meta,,EOF3,2.0,500,"
+                       "USD,1.1,,,\"1,000.00\",EUR,,,,,,")
+        with self.assertRaisesRegex(ValueError, "Total"):
+            trading212_csv.convert(bad)
+
+    def test_rows_that_move_shares_without_a_trade_are_flagged(self):
+        # 4 bought, then a 2-for-1 split adds 4 more: the split row is not a
+        # buy or sell, so the holdings would show 4 instead of 8. Before: no
+        # warning at all ("all checks passed").
+        st, report = trading212_csv.convert(t212_csv(
+            "Market buy,2026-09-01 09:00:00+00:00,US30303M1027,META,Meta,,B1,4.0,500,USD,1.1,,,"
+            "1800.00,EUR,,,,,,",
+            "Stock split open,2026-09-20 09:00:00+00:00,US30303M1027,META,Meta,,S1,4.0,250,USD,,,,"
+            ",EUR,,,,,,"))
+        self.assertTrue(any("Stock split open" in w for w in report["warnings"]))
+        self.assertFalse(st["all_checks_ok"])
+
+
+# ---- Trading 212 uploads: a new file is joined to the saved statement ----
+BASE = {   # an activity statement for 2025 (AAPL was bought in 2024, before it starts)
+    "overview": {"period": ["2025-01-01", "2025-12-31"]},
+    "trades": [{"date": "2025-03-01 10:00", "symbol": "META", "isin": "US30303M1027", "name": "Meta",
+                "ticker": "META", "side": "BUY", "quantity": 4.0, "amount_eur": 2000.0, "return_eur": None},
+               {"date": "2025-11-01 10:00", "symbol": "META", "isin": "US30303M1027", "name": "Meta",
+                "ticker": "META", "side": "SELL", "quantity": 1.0, "amount_eur": 600.0, "return_eur": 100.0}],
+    "positions": [{"symbol": "META", "isin": "US30303M1027", "name": "Meta", "ticker": "META",
+                   "quantity": 3.0, "value_eur": 1800.0, "return_eur": 300.0},
+                  {"symbol": "AAPL", "isin": "US0378331005", "name": "Apple", "ticker": "AAPL",
+                   "quantity": 2.0, "value_eur": 380.0, "return_eur": 80.0}],
+    "cash": {}, "transactions": [], "dividends": [], "warnings": [],
+    "_source": "Trading 212 activity statement",
+}
+AAPL_2024 = ("Market buy,2024-06-01 10:00:00+00:00,US0378331005,AAPL,Apple,,A1,2.0,165,USD,1.1,,,"
+             "300.00,EUR,,,,,,")
+META_2025 = ("Market buy,2025-03-01 10:00:00+00:00,US30303M1027,META,Meta,,M1,4.0,550,USD,1.1,,,"
+             "2000.00,EUR,,,,,,")
+
+
+class Trading212UploadTest(unittest.TestCase):
+    """POST /api/upload/t212_statement with a statement already saved."""
+
+    def setUp(self):
+        import json
+        import os
+        import tempfile
+        from pathlib import Path
+
+        from starlette.testclient import TestClient
+
+        from backend import datafiles, github_sync, main
+
+        tmp = tempfile.TemporaryDirectory()
+        self.addCleanup(tmp.cleanup)
+        self.data = Path(tmp.name)
+        for p in (mock.patch.object(datafiles, "_SEARCH_DIRS", [self.data]),
+                  mock.patch.object(datafiles, "DATA_DIR", self.data),
+                  mock.patch.object(github_sync, "push_vault_async", lambda *a, **k: None),
+                  mock.patch.object(main, "_DASH_PASS", ""),
+                  mock.patch.object(fx, "_live_rates", return_value={"EUR": 1.0, "GBP": 1.2, "USD": 0.9}),
+                  mock.patch("backend.connections.t212_accounts", return_value=[]),
+                  mock.patch.dict(os.environ, {k: "" for k in os.environ if k.startswith("T212_")})):
+            p.start()
+            self.addCleanup(p.stop)
+        datafiles.refresh()
+        self.addCleanup(datafiles.refresh)
+        (self.data / "trading212_statement.json").write_text(json.dumps(BASE))
+        self.client = TestClient(main.app, base_url="http://localhost:8000")
+        self.json = json
+
+    def upload(self, csv_text: str):
+        return self.client.post("/api/upload/t212_statement",
+                                files={"file": ("export.csv", csv_text.encode(), "text/csv")})
+
+    def saved(self) -> dict:
+        return self.json.loads((self.data / "trading212_statement.json").read_text())
+
+    def test_an_older_export_is_joined_not_swapped_in(self):
+        # The 2024 export (2024-06-01 .. 2025-03-01) ends before the saved
+        # statement does. Before: it replaced the statement, so the META sale
+        # of 2025-11-01 and everything after 2025-03-01 was lost.
+        r = self.upload(t212_csv(AAPL_2024, META_2025))
+        self.assertEqual(r.status_code, 200, r.text)
+        st = self.saved()
+        self.assertEqual(st["overview"]["period"], ["2024-06-01", "2025-12-31"])
+        self.assertEqual([(t["date"][:10], t["side"]) for t in st["trades"]],
+                         [("2024-06-01", "BUY"), ("2025-03-01", "BUY"), ("2025-11-01", "SELL")])
+        self.assertEqual({p["isin"]: p["quantity"] for p in st["positions"]},
+                         {"US30303M1027": 3.0, "US0378331005": 2.0})
+        self.assertEqual(r.json()["_report"]["warnings"], [])
+
+    def test_a_file_inside_the_saved_dates_changes_nothing(self):
+        # Only 2025-03-01: before, this one-day file replaced the whole year.
+        r = self.upload(t212_csv(META_2025))
+        self.assertEqual(r.status_code, 400)
+        self.assertIn("Nothing was changed", r.json()["detail"])
+        self.assertEqual(self.saved(), BASE)
+
+    def test_a_gap_between_files_is_reported(self):
+        # The saved statement ends 2025-12-31, the export starts 2026-03-02:
+        # January and February are missing. Before: joined without a word.
+        r = self.upload(t212_csv(
+            "Interest on cash,2026-03-02 00:10:00+00:00,,,,,i1,,,,,,,0.50,EUR,,,,,,"))
+        self.assertEqual(r.status_code, 200, r.text)
+        warnings = " ".join(r.json()["_report"]["warnings"])
+        self.assertIn("2026-01-01 to 2026-03-01", warnings)
+
+
+class Trading212CombineTest(unittest.TestCase):
+    def setUp(self):
+        p = mock.patch.object(fx, "_live_rates", return_value={"EUR": 1.0, "GBP": 1.2, "USD": 0.9})
+        p.start()
+        self.addCleanup(p.stop)
+
+    def test_a_later_statement_keeps_its_own_positions_table(self):
+        later = {**BASE, "overview": {"period": ["2025-06-01", "2026-06-30"]},
+                 "trades": [BASE["trades"][1]],
+                 "positions": [{**BASE["positions"][0], "value_eur": 2100.0, "return_eur": 600.0},
+                               BASE["positions"][1]]}
+        st, report = trading212_csv.combine(BASE, later, {"warnings": []})
+        self.assertEqual(st["overview"]["period"], ["2025-01-01", "2026-06-30"])
+        self.assertEqual(len(st["trades"]), 2)           # the sale once, not twice
+        self.assertEqual(st["positions"], later["positions"])
+        self.assertEqual(report["warnings"], [])
+
+    def test_files_of_two_accounts_are_refused(self):
+        other = trading212_csv.convert(t212_csv(
+            "Market buy,2025-12-01 10:00:00+00:00,US0378331005,AAPL,Apple,,X1,1.0,190,USD,1.1,,,"
+            "170.00,EUR,,,,,,",
+            "Market buy,2026-02-01 10:00:00+00:00,US0378331005,AAPL,Apple,,X2,1.0,190,USD,1.1,,,"
+            "170.00,EUR,,,,,,"))[0]
+        # 2025-12-01 .. 2025-12-31 is in both, with different trades in each
+        other["trades"][0]["isin"] = "IE00B4ND3602"
+        with self.assertRaisesRegex(ValueError, "different accounts"):
+            trading212_csv.combine({**BASE, "trades": BASE["trades"] + [
+                {**BASE["trades"][0], "date": "2025-12-15 10:00"}]}, other)
+
+
+def _line(*words):
+    return {"top": 0, "words": [{"text": w, "x0": 10.0 * i, "x1": 10.0 * i + 8, "top": 0, "bottom": 8}
+                                for i, w in enumerate(words)]}
+
+
+class Trading212PdfTest(unittest.TestCase):
+    def test_statement_of_two_accounts_is_refused(self):
+        # All accounts are ticked by default. Two overviews with different
+        # figures: before, the rows of both were mixed into one account and
+        # only the second overview's totals were kept.
+        from backend.importers import trading212_pdf
+
+        page = lambda n, deposits, value: {"page": n, "lines": [  # noqa: E731
+            _line("Overview"), _line("Deposits", deposits), _line("Account", "value", value)]}
+        with self.assertRaisesRegex(ValueError, "more than one Trading 212 account"):
+            trading212_pdf.parse([page(1, "€1,000.00", "€1,200.00"), page(2, "£500.00", "£480.00")])
+        # the same overview twice (a repeated page) is still one account
+        st = trading212_pdf.parse([page(1, "€1,000.00", "€1,200.00"), page(2, "€1,000.00", "€1,200.00")])
+        self.assertEqual(st["overview"]["deposits"], 1000.0)
+
+
 def tr_row(date, typ, text, amount, balance, page=1):
     return {"date": date, "type": typ, "text": text, "money": [amount, balance], "page": page}
 

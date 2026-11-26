@@ -133,16 +133,25 @@ def _url(path: str) -> str:
     return _HOST + path if path.startswith("/api/") else BASE_URL + path
 
 
+# History endpoints allow 20 calls a minute per account and x-ratelimit-reset is
+# the Unix time the limit fully resets (docs.trading212.com/api), so a 429 can
+# need a wait of up to a whole minute. Giving up sooner silently dropped the
+# trades of accounts with a long history (more than ~20 pages).
+_RETRIES = 4
+_MAX_WAIT = 65.0
+
+
 def _get(acct: Account, path: str):
-    """GET with one polite retry on 429 (limits are per account, per endpoint)."""
-    for attempt in range(3):
+    """GET, waiting out a 429 until the limit resets (limits are per account,
+    per endpoint)."""
+    for attempt in range(_RETRIES + 1):
         resp = _session.get(_url(path), auth=acct.auth, timeout=30)
-        if resp.status_code == 429 and attempt < 2:
+        if resp.status_code == 429 and attempt < _RETRIES:
             try:
                 wait = float(resp.headers.get("x-ratelimit-reset", 0)) - time.time()
             except ValueError:
                 wait = 2
-            time.sleep(min(max(wait, 1.0), 15.0))
+            time.sleep(min(max(wait, 1.0), _MAX_WAIT))
             continue
         resp.raise_for_status()
         return resp.json()
@@ -333,13 +342,18 @@ def account_trades(acct: Account) -> list[Trade]:
     for item in _pages(acct, "/equity/history/orders?limit=50"):
         order = item.get("order") or {}
         fill = item.get("fill")
-        if order.get("status") != "FILLED" or not fill:
+        # A fill is shares that changed hands, whatever the order's final
+        # status: an order that was partly filled and then cancelled still
+        # bought (or sold) its filled shares.
+        if not fill or not float(fill.get("quantity") or order.get("filledQuantity") or 0):
             continue
         inst = order.get("instrument") or {}
         wallet = fill.get("walletImpact") or {}
         net = wallet.get("netValue")
         if net is None:
-            net = order.get("filledValue") or order.get("value")
+            net = order.get("filledValue")
+            if net is None and order.get("status") == "FILLED":
+                net = order.get("value")
         if net is None:
             continue
         # Fees (FX fee, stamp duty, ...) make a buy cost more and a sell net less.

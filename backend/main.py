@@ -667,23 +667,20 @@ async def upload_statement(kind: str, file: UploadFile = File(...)) -> dict:
             if "income" not in _loads_or_400(text):
                 raise HTTPException(400, 'JSON must contain an "income" list — see the .sample file.')
             datafiles.save_upload("tr_income", content)
-        elif kind == "t212_statement" and not is_pdf and trading212_csv.looks_like(text):
-            st, report = trading212_csv.convert(text)
-            path, real = datafiles.resolve("trading212_statement.json")
-            base = _json.loads(path.read_text()) if real else None
-            base_end = ((base or {}).get("overview") or {}).get("period", [None, None])[1]
-            if base_end and base_end < st["overview"]["period"][1]:
-                # a later export: add it to the statement already uploaded
-                st, report = trading212_csv.merge(base, st)
-            datafiles.save_upload("t212_statement",
-                                  _json.dumps(st, indent=1, ensure_ascii=False).encode())
-        elif kind == "t212_statement":
+        elif kind == "t212_statement" and (is_pdf or trading212_csv.looks_like(text)):
             if is_pdf:
                 st, report = trading212_pdf.convert(content)
                 if not st["trades"] and not st["positions"]:
                     raise HTTPException(400, "No trades or positions found — is this the Trading 212 activity statement (Invest account)?")
-                content = _json.dumps(st, indent=1, ensure_ascii=False).encode()
-            elif not {"positions", "trades"} & set(_loads_or_400(text)):
+            else:
+                st, report = trading212_csv.convert(text)
+            # joined to the statement already uploaded, never silently replacing it
+            path, real = datafiles.resolve("trading212_statement.json")
+            st, report = trading212_csv.combine(_json.loads(path.read_text()) if real else None, st, report)
+            datafiles.save_upload("t212_statement",
+                                  _json.dumps(st, indent=1, ensure_ascii=False).encode())
+        elif kind == "t212_statement":
+            if not {"positions", "trades"} & set(_loads_or_400(text)):
                 raise HTTPException(400, 'Expected the Trading 212 activity-statement PDF, its History CSV export, or the converted JSON.')
             datafiles.save_upload("t212_statement", content)
         else:

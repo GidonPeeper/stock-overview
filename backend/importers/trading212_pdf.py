@@ -106,6 +106,12 @@ def parse(pages: list[dict]) -> dict:
             _parse_transactions(lines, out)
         elif section == "dividends":
             _parse_dividends(lines, out)
+    if out["overview"].pop("_conflicts", None):
+        # Its rows would be mixed into one account and the checks would use
+        # only the last overview: refuse rather than import a mix.
+        raise ValueError("This statement covers more than one Trading 212 account (it has two "
+                         "overviews with different figures). Make the activity statement again "
+                         "with only one account ticked, and upload that.")
     _finish(out)
     return out
 
@@ -116,17 +122,24 @@ def _parse_overview(texts, ov):
             "open return": "open_return", "dividends": "dividends",
             "interest on cash": "interest", "fx fee": "fx_fee",
             "third-party fees": "third_party_fees", "account value": "account_value"}
+    def put(key, value):
+        # A second overview with other figures: the statement covers more than
+        # one account (Trading 212 ticks every account by default).
+        if key in ov and ov[key] != value:
+            ov.setdefault("_conflicts", []).append(key)
+        ov[key] = value
+
     for t in texts:
         low = t.lower()
         for label, key in sorted(keys.items(), key=lambda kv: -len(kv[0])):
             if low.startswith(label) and key:
                 m = _money(t.split()[-1])
                 if m:
-                    ov[key] = m[1]
+                    put(key, m[1])
                 break
         m = re.search(r"covering from (\d{2}\.\d{2}\.\d{4}).*?to (\d{2}\.\d{2}\.\d{4})", t)
         if m:
-            ov["period"] = [_ddmmyyyy(m.group(1)), _ddmmyyyy(m.group(2))]
+            put("period", [_ddmmyyyy(m.group(1)), _ddmmyyyy(m.group(2))])
 
 
 def _ddmmyyyy(s: str) -> str:
