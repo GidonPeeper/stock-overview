@@ -47,7 +47,7 @@ _VAULT_STATE = github_sync.restore()
 from .connectors import trading212
 from .fx import BASE_CURRENCY, display_rates, from_eur, to_eur
 from .prices import fetch_quotes, quotes_status
-from . import (analytics, cache, cash, datafiles, finances, income, insights, market,
+from . import (analytics, cache, cash, datafiles, finances, income, insights, lookup, market,
                periods, prefs, realized, reports, sectors, sources, store, trend, uktax, watch)
 
 
@@ -671,6 +671,24 @@ def ticker_history(ticker: str, range: str = "1mo") -> list[float]:
     return market.ticker_history(ticker, range)
 
 
+@app.get("/api/quote/{ticker}")
+def quote(ticker: str) -> dict:
+    """Price lookup for any share, fund, index, currency or crypto (lookup.py)."""
+    try:
+        return lookup.quote(ticker)
+    except lookup.QuoteError as e:
+        raise HTTPException(e.status, str(e))
+
+
+@app.get("/api/quote/{ticker}/chart")
+def quote_chart(ticker: str, range: str = "1mo") -> dict:
+    """The price lookup's chart for one range: 1d, 5d, 1mo, 6mo, 1y or 5y."""
+    try:
+        return lookup.chart(ticker, range)
+    except lookup.QuoteError as e:
+        raise HTTPException(e.status, str(e))
+
+
 @app.get("/api/datastatus")
 def datastatus() -> dict:
     """Which data sources are live vs sample — shown as a banner in the UI."""
@@ -1081,10 +1099,16 @@ def watchlist_remove(ticker: str) -> dict:
 
 
 @app.get("/api/search")
-def search_tickers(q: str) -> list[dict]:
-    """Global ticker search (Yahoo symbol search via yfinance)."""
+def search_tickers(q: str, kinds: str = "") -> list[dict]:
+    """Global ticker search (Yahoo symbol search via yfinance): shares and ETFs
+    for the watchlist, or with kinds=all every kind the price lookup shows."""
     if not q.strip():
         return []
+    if kinds == "all":
+        try:
+            return lookup.search(q)
+        except lookup.QuoteError as e:
+            raise HTTPException(e.status, str(e))
     return watch.search(q.strip())
 
 

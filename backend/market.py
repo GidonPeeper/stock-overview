@@ -109,10 +109,12 @@ def _sparklines(tickers: list[str]) -> dict[str, list[float]]:
 
 
 _hist_cache: dict[str, tuple[list[float], float]] = {}
-# range -> (yfinance period, interval, cache TTL seconds)
+# range -> (yfinance period, interval, cache TTL seconds). Also used by the
+# price lookup's chart (lookup.py).
 _RANGES = {
     "1d": ("1d", "5m", 300), "5d": ("5d", "30m", 900),
-    "1mo": ("1mo", "1d", 1800), "1y": ("1y", "1d", 3600),
+    "1mo": ("1mo", "1d", 1800), "6mo": ("6mo", "1d", 3600),
+    "1y": ("1y", "1d", 3600), "5y": ("5y", "1wk", 6 * 3600),
 }
 
 

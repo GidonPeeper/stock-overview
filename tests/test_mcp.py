@@ -28,7 +28,9 @@ HEADERS = {"Accept": "application/json, text/event-stream", "Content-Type": "app
            "Authorization": f"Bearer {TOKEN}", "MCP-Protocol-Version": "2025-11-25"}
 TOOL_NAMES = {"get_portfolio_summary", "list_holdings", "get_performance", "get_realized_gains",
               "get_income", "get_net_worth", "get_risk_analysis", "get_tax_overview",
-              "get_data_status", "get_watchlist"}
+              "get_data_status", "get_watchlist", "get_quote"}
+# Arguments for tools that need some (the rest run without any).
+TOOL_ARGS = {"get_quote": {"query": "NVDA"}}
 RATES = {"EUR": 1.0, "USD": 0.9, "GBP": 1.2, "CHF": 1.05}   # EUR per unit
 
 
@@ -97,7 +99,7 @@ class ToolsTest(unittest.TestCase):
     def test_every_tool_runs_and_says_it_is_sample_data(self):
         for fn in self.t.TOOLS:
             with self.subTest(tool=fn.__name__):
-                out = fn()
+                out = fn(**TOOL_ARGS.get(fn.__name__, {}))
                 self.assertIs(out["sample_data"], True)
                 self.assertIn("SAMPLE DATA", out["warning"])
                 json.loads(self.t.to_text(out))   # serialisable
@@ -191,6 +193,22 @@ class ToolsTest(unittest.TestCase):
         wl = self.t.get_watchlist()["watchlist"]
         self.assertEqual(next(w for w in wl if w["ticker"] == "NVDA")["price"], 150.0)
 
+    def test_get_quote(self):
+        out = self.t.get_quote("NVDA")
+        self.assertEqual((out["ticker"], out["price"], out["price_currency"]), ("NVDA", 150.0, "USD"))
+        self.assertEqual((out["today_change"], out["currency"]), (2.0, "EUR"))
+        self.assertAlmostEqual(out["price_in_currency"], 150.0 * RATES["USD"], places=2)
+        self.assertIsNone(out["you_hold"])                       # on the watchlist, not held
+        held = self.t.get_quote("ASML.AS", currency="GBP")
+        self.assertEqual((held["you_hold"]["quantity"], held["you_hold"]["accounts"]), (2.0, ["DeGiro"]))
+        self.assertNotIn("price_in_currency", self.t.get_quote("ASML.AS", currency="EUR"))   # already euros
+        for bad in ("", "  ", "x " * 40):
+            with self.subTest(bad=bad), self.assertRaises(self.t.ToolInputError):
+                self.t.get_quote(bad)
+        with self.assertRaises(self.t.ToolInputError) as ctx:
+            self.t.get_quote("some company")                     # a name is searched for: this Yahoo has no search
+        self.assertIn("Yahoo Finance", str(ctx.exception))
+
     def test_real_data_is_not_marked_as_sample(self):
         from backend import datafiles
         with mock.patch.object(datafiles, "demo", return_value=False):
@@ -261,7 +279,7 @@ class HttpProtocolTest(unittest.TestCase):
     def test_every_tool_over_the_protocol(self):
         for name in sorted(TOOL_NAMES):
             with self.subTest(tool=name):
-                res = self.call(name)
+                res = self.call(name, TOOL_ARGS.get(name))
                 self.assertFalse(res.get("isError"), res)
                 data = json.loads(res["content"][0]["text"])
                 self.assertIs(data["sample_data"], True)

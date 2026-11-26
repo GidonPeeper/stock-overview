@@ -51,7 +51,8 @@ numbers are the app's demo portfolio: say so, and never present them as the user
 - Amounts are in the currency the result names (the dashboard's display currency unless you \
 pass `currency`). Dates are ISO; percentages are plain numbers (12.5 = 12.5%).
 - Start with get_portfolio_summary for general questions. Use get_data_status when numbers \
-look wrong or stale.
+look wrong or stale. For the price of any share, fund, index, currency or crypto, held or not, \
+use get_quote.
 - Tax and money-saving figures are the app's estimates, not advice: keep their caveats."""
 
 _READ_ONLY = ToolAnnotations(read_only_hint=True, destructive_hint=False,
@@ -111,6 +112,14 @@ _DESCRIPTIONS = {
         "Watchlist",
         "Shares the user watches but may not own: price, today's change and the change over "
         "about a month."),
+    "get_quote": (
+        "Price of any share",
+        "The current price of any share, ETF, fund, index, currency pair or crypto, whether the "
+        "user holds it or not: price and its time, today's change, whether the market is open, day "
+        "and 52-week range, and when Yahoo has them market value, P/E, dividend yield and a fund's "
+        "yearly cost. Also says if the user holds it (quantity, value, gain). `query` is a ticker "
+        "(AAPL, RMV.L, ^GSPC, EURUSD=X, BTC-EUR), a name or an ISIN. Use it for 'what is the "
+        "price of X?'."),
 }
 
 

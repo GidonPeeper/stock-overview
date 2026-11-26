@@ -24,6 +24,7 @@ Works with Claude Code, Claude Desktop and claude.ai.
 - What is my net worth? How much is left of my budget each month?
 - How risky is my portfolio? Am I too concentrated in one stock or currency?
 - What should I look at for tax before 5 April?
+- What is the price of Nvidia? How did the S&P 500 do today?
 - Give me a portfolio review. (Uses the built-in `portfolio_review` prompt.)
 
 ## Set it up
@@ -118,6 +119,7 @@ Your dashboard password is separate and is not used here.
 | `get_tax_overview` | UK tax-year figures, tax-loss candidates and money-saving tips (estimates, not advice) |
 | `get_data_status` | Which accounts are connected, sample data or not, how fresh the prices are |
 | `get_watchlist` | The shares you watch |
+| `get_quote` | The price of any share, fund, index, currency or crypto, held or not: today's change, market open or closed, key facts, and what you hold of it |
 
 Amounts are in your dashboard currency (`DISPLAY_CURRENCY`) unless you ask
 Claude for another one (EUR, GBP or USD). Tax figures follow `TAX_RESIDENCE`.

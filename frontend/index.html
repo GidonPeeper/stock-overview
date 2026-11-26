@@ -310,13 +310,102 @@
       #demo-pill{ display:none; }
       .card{ padding:16px; }
     }
+
+    /* ---- lookup ---- the price of any share: search in the top bar + its dialog */
+    .lk-sr{ position:absolute; width:1px; height:1px; padding:0; margin:-1px; overflow:hidden; clip:rect(0,0,0,0); white-space:nowrap; border:0; }
+    .lk-search{ position:relative; z-index:16; flex:0 1 360px; min-width:0; margin-left:auto; }
+    .lk-field{ position:relative; display:flex; align-items:center; gap:8px; }
+    .lk-inbox{ position:relative; flex:1; min-width:0; }
+    .lk-ico{ position:absolute; left:12px; top:50%; width:17px; height:17px; margin-top:-8.5px; stroke:var(--muted); fill:none; stroke-width:2; stroke-linecap:round; pointer-events:none; }
+    #lk-input{ width:100%; min-height:40px; padding:0 36px 0 38px; background:var(--panel2); border:1px solid var(--border); border-radius:12px;
+      color:var(--text); font:inherit; font-size:14.5px; }
+    #lk-input::placeholder{ color:var(--muted); opacity:1; }
+    #lk-input:focus{ outline:none; border-color:var(--accent); box-shadow:0 0 0 3px var(--accent-bg); }
+    .lk-kbd{ position:absolute; right:10px; top:50%; transform:translateY(-50%); font:600 11.5px/1 inherit; color:var(--muted); background:var(--panel);
+      border:1px solid var(--border); border-radius:6px; padding:3px 6px; pointer-events:none; }
+    #lk-input:focus ~ .lk-kbd, #lk-input:not(:placeholder-shown) ~ .lk-kbd{ display:none; }
+    .lk-cancel, .lk-scrim, .iconbtn.lk-open{ display:none; }
+    .lk-open svg{ width:19px; height:19px; stroke:currentColor; fill:none; stroke-width:2; stroke-linecap:round; }
+    .lk-pop{ position:absolute; top:calc(100% + 6px); left:0; right:0; min-width:320px; background:var(--panel); border:1px solid var(--border);
+      border-radius:14px; box-shadow:var(--shadow); max-height:min(440px,70vh); overflow-y:auto; padding:4px; }
+    .lk-status{ padding:10px 12px; font-size:13.5px; color:var(--muted); line-height:1.5; }
+    .lk-status:empty{ display:none; }
+    .lk-list{ list-style:none; margin:0; padding:0; }
+    .lk-list:empty{ display:none; }
+    .lk-opt{ display:flex; align-items:center; gap:10px; min-height:52px; padding:6px 10px; border-radius:10px; cursor:pointer; }
+    .lk-opt:hover, .lk-opt[aria-selected="true"]{ background:var(--panel2); }
+    .lk-opt[aria-selected="true"]{ box-shadow:inset 3px 0 0 var(--accent); }
+    .lk-o-main{ flex:1; min-width:0; }
+    .lk-o-name{ display:block; font-weight:600; font-size:14px; color:var(--text); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+    .lk-o-sub{ display:block; font-size:12.5px; color:var(--muted); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+    .lk-pop .linkbtn, .lk-modal .linkbtn{ display:inline-flex; align-items:center; min-height:44px; }
+    @media(max-width:640px){
+      .iconbtn.lk-open{ display:grid; }
+      .lk-search{ display:none; }
+      .lk-search.open{ display:block; position:fixed; inset:0; z-index:18; margin:0; }
+      .lk-search.open .lk-scrim{ display:block; position:absolute; inset:0; background:rgba(0,0,0,.55); }
+      .lk-search.open .lk-field{ padding:calc(10px + env(safe-area-inset-top)) 12px 10px; background:var(--bg); border-bottom:1px solid var(--border); }
+      .lk-cancel{ display:grid; place-items:center; flex:0 0 44px; height:44px; background:var(--panel2); border:1px solid var(--border);
+        border-radius:12px; color:var(--muted); font-size:15px; cursor:pointer; }
+      #lk-input{ min-height:44px; font-size:16px; }      /* 16px: phones do not zoom in */
+      .lk-kbd{ display:none; }
+      .lk-search.open .lk-pop{ position:relative; top:auto; min-width:0; margin:6px 8px 0; max-height:calc(100vh - 90px - env(safe-area-inset-top)); }
+    }
+    .lk-sheet{ overscroll-behavior:contain; }
+    .lk-head{ min-width:0; }
+    .lk-sheet h2.d-name{ margin:0; overflow-wrap:anywhere; }
+    .lk-sheet h2.d-name:focus{ outline:none; }   /* focused on open so screen readers read the name; not a control */
+    .lk-tags{ display:flex; gap:6px; flex-wrap:wrap; align-items:center; margin-top:6px; font-size:12.5px; color:var(--muted); }
+    .lk-main{ min-height:96px; }
+    .lk-conv{ font-size:14px; color:var(--muted); }
+    .lk-move{ font-size:14.5px; font-weight:650; margin-top:4px; }
+    .lk-when{ color:var(--muted); margin-top:4px; }
+    .lk-state{ display:flex; align-items:center; gap:7px; margin-top:2px; font-size:13px; color:var(--text); }
+    .lk-dot{ width:8px; height:8px; border-radius:50%; background:var(--muted); flex:0 0 8px; }
+    .lk-dot.on{ background:var(--green); }
+    .lk-held{ background:var(--accent-bg); border-radius:12px; padding:10px 12px; margin:14px 0 2px; }
+    .lk-held-h{ font-size:12.5px; font-weight:700; color:var(--accent); margin-bottom:4px; }
+    .lk-held-g{ display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:8px; }
+    .lk-held-g .k{ display:block; font-size:12px; color:var(--muted); }
+    .lk-held-g b{ display:block; font-size:14.5px; font-weight:650; overflow-wrap:anywhere; }
+    .lk-chartbox{ margin:14px 0 2px; }
+    .lk-rchg{ font-size:13.5px; font-weight:600; min-height:21px; }
+    .lk-cwrap{ position:relative; height:200px; margin:6px 0 8px; border-radius:10px; }
+    .lk-acts{ display:flex; gap:8px; flex-wrap:wrap; align-items:center; margin:6px 0 2px; }
+    .lk-note{ min-height:18px; margin:2px 0 6px; overflow-wrap:anywhere; }
+    .lk-calc-row{ display:grid; grid-template-columns:minmax(0,1fr) auto minmax(0,1fr); gap:8px; align-items:end; margin-top:6px; }
+    .lk-calc-row label > span{ display:block; font-size:12px; color:var(--muted); margin-bottom:4px; }
+    .lk-eq{ padding-bottom:11px; color:var(--muted); font-weight:600; }
+    #lk-calc-out{ margin:8px 0 4px; min-height:19px; }
   </style>
 </head>
 <body>
   <div class="wrap">
     <header>
       <div><h1>Stock Overview <span id="demo-pill" class="pill amber" hidden>Example data</span></h1><div id="live" class="live"></div></div>
+      <!-- ---- lookup ---- the price of any share: search (a combobox; on phones it opens full width) -->
+      <div class="lk-search" id="lk-search">
+        <div class="lk-scrim" onclick="lkCloseSearch(true)"></div>
+        <div class="lk-field">
+          <div class="lk-inbox">
+            <svg class="lk-ico" viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="M20 20l-4.2-4.2"/></svg>
+            <label for="lk-input" class="lk-sr">Look up a price: a name, ticker or ISIN</label>
+            <input id="lk-input" type="text" role="combobox" aria-autocomplete="list" aria-expanded="false" aria-controls="lk-list"
+              aria-describedby="lk-hint" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" enterkeyhint="search"
+              placeholder="Look up any share, fund or index">
+            <kbd class="lk-kbd" aria-hidden="true">/</kbd>
+          </div>
+          <button type="button" class="lk-cancel" onclick="lkCloseSearch(true)" aria-label="Close search">✕</button>
+        </div>
+        <div class="lk-pop" id="lk-pop" hidden>
+          <div class="lk-status" id="lk-status"></div>
+          <ul class="lk-list" id="lk-list" role="listbox" aria-label="Matches"></ul>
+        </div>
+        <span id="lk-hint" class="lk-sr">Type a company or fund name, a ticker or an ISIN. Choose a match with the up and down arrows and open it with Enter. Press slash to come back here.</span>
+        <span id="lk-live" class="lk-sr" role="status" aria-live="polite"></span>
+      </div>
       <div class="hdr-acts">
+        <button class="iconbtn lk-open" id="lk-open" type="button" onclick="lkOpenSearch()" aria-label="Look up a price" aria-controls="lk-search" aria-expanded="false" title="Look up a price"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="M20 20l-4.2-4.2"/></svg></button>
         <button class="iconbtn" id="ccybtn" onclick="toggleCcy()" title="Show amounts in pounds or euros" aria-label="Switch currency">€</button>
         <button class="iconbtn" id="themebtn" onclick="toggleTheme()" title="Light or dark" aria-label="Switch light or dark">☀</button>
         <a class="iconbtn" href="/settings" title="Settings: accounts and data" aria-label="Settings">⚙</a>
@@ -708,6 +797,37 @@
       <div class="d-grid" id="d-grid"></div>
       <h3>Latest news</h3>
       <div class="news" id="d-news"></div>
+    </div>
+  </div>
+
+  <!-- ---- lookup ---- the price of any share: one dialog, filled when it opens -->
+  <div class="modal lk-modal" id="lk-modal" role="dialog" aria-modal="true" aria-labelledby="lk-name"><div class="backdrop" onclick="lkClose()"></div>
+    <div class="sheet lk-sheet">
+      <div class="grabber"></div>
+      <div class="d-head">
+        <div class="lk-head"><h2 id="lk-name" class="d-name" tabindex="-1"></h2><div id="lk-tags" class="lk-tags"></div></div>
+        <button type="button" class="x" onclick="lkClose()" aria-label="Close">✕</button>
+      </div>
+      <div id="lk-main" class="lk-main"></div>
+      <div id="lk-held" class="lk-held" hidden></div>
+      <div id="lk-chartbox" class="lk-chartbox" hidden>
+        <div id="lk-rchg" class="lk-rchg"></div>
+        <div id="lk-cwrap" class="lk-cwrap"><canvas id="lk-chart" role="img" aria-label="Price chart"></canvas></div>
+        <div id="lk-cmsg"></div>
+        <div class="seg" id="lk-ranges" role="group" aria-label="Chart range">
+          <button type="button" data-r="1d" onclick="lkSetRange('1d')">1D</button>
+          <button type="button" data-r="5d" onclick="lkSetRange('5d')">1W</button>
+          <button type="button" data-r="1mo" onclick="lkSetRange('1mo')">1M</button>
+          <button type="button" data-r="6mo" onclick="lkSetRange('6mo')">6M</button>
+          <button type="button" data-r="1y" onclick="lkSetRange('1y')">1Y</button>
+          <button type="button" data-r="5y" onclick="lkSetRange('5y')">5Y</button>
+        </div>
+      </div>
+      <div class="d-grid" id="lk-facts" hidden></div>
+      <div class="lk-acts" id="lk-acts" hidden></div>
+      <div id="lk-note" class="small muted lk-note" role="status" aria-live="polite"></div>
+      <div id="lk-calc" hidden></div>
+      <div id="lk-newsbox" hidden><h3>Latest news</h3><div class="news" id="lk-news"></div></div>
     </div>
   </div>
 
@@ -1811,8 +1931,8 @@
         setStale(s.at);
       }
       const start=(location.hash||"").slice(1);
-      if(start) showPage(start);
-      addEventListener("hashchange",()=>{ const n=(location.hash||"").slice(1)||"overview"; if(n!==current) showPage(n); });
+      if(start&&!start.startsWith("lookup=")) showPage(start);   // #lookup=… opens the price lookup (lookup block)
+      addEventListener("hashchange",()=>{ const n=(location.hash||"").slice(1)||"overview"; if(n.startsWith("lookup=")) return; if(n!==current) showPage(n); });
       loadAll();
       setInterval(refreshLive,30000);
       document.addEventListener("visibilitychange",()=>{ if(!document.hidden) refreshLive(); });
@@ -1823,6 +1943,412 @@
     if(document.readyState==="loading") document.addEventListener("DOMContentLoaded",drawCharts); else drawCharts();
     // Opens the app from cache while the server wakes up (see /sw.js).
     if("serviceWorker" in navigator) addEventListener("load",()=>navigator.serviceWorker.register("/sw.js").catch(()=>{}));
+
+    /* ---- lookup ---- the price of any share, fund, index, currency or crypto.
+       The search in the top bar is a combobox (/ focuses it, arrows choose, Enter opens,
+       Escape closes); a match opens a dialog with the price, a chart, facts, your holding,
+       the watchlist button, a cost calculator and news (backend/lookup.py). Nothing loads
+       until it is used. /#lookup=NVDA opens it directly; Back closes it. */
+    const LK_KIND={share:"Share",etf:"ETF",fund:"Fund",index:"Index",currency:"Currency",crypto:"Crypto",other:"Other"};
+    const LK_MONEY=new Set(["share","etf","fund","crypto","other"]);   // an index is points, a currency pair a rate
+    const LK_TICKER=/^\^?[A-Z0-9][A-Z0-9.=&-]{0,23}$/;
+    const LK_SPAN={"5d":"over 1 week","1mo":"over 1 month","6mo":"over 6 months","1y":"over 1 year","5y":"over 5 years"};
+    const LK={t:null,isin:null,name:null,kind:null,q:null,err:null,seq:0,rng:"1d",charts:{},chart:null,pushed:false,opener:null,n:"10"};
+    const LKS={q:"",items:[],active:-1,seq:0,timer:null,enter:false};
+    const lkPhone=()=>matchMedia("(max-width:640px)").matches;
+    const lkIsOpen=()=>$("lk-modal").classList.contains("open");
+
+    /* formatting: prices in the currency they trade in; "≈" amounts in your display currency */
+    const lkNum=(v,d)=>Number(v).toLocaleString("en-GB",{minimumFractionDigits:Math.min(2,d),maximumFractionDigits:d});
+    function lkFmt(v,q,d){
+      if(v==null||!isFinite(v)) return "—";
+      d=d??(q&&q.decimals!=null?q.decimals:2);
+      if(!q||!q.currency||!LK_MONEY.has(q.kind)) return lkNum(v,d);
+      try{ return new Intl.NumberFormat("en-GB",{style:"currency",currency:q.currency,currencyDisplay:lkNarrow(q.currency),
+        minimumFractionDigits:Math.min(2,d),maximumFractionDigits:d}).format(v); }
+      catch(e){ return lkNum(v,d)+" "+q.currency; }
+    }
+    const lkNarrow=c=>c in SYM?"narrowSymbol":"symbol";   // $, €, £ as elsewhere on the page; CA$, CHF… for the rest
+    function lkSigned(v,q){ const s=lkFmt(Math.abs(v),q), nz=/[1-9]/.test(s); return (v>0&&nz?"+":v<0&&nz?"−":"")+s; }
+    function lkCompact(v,q){
+      try{ return new Intl.NumberFormat("en-GB",{style:"currency",currency:q.currency,currencyDisplay:lkNarrow(q.currency),notation:"compact",maximumFractionDigits:1}).format(v); }
+      catch(e){ return compact.format(v)+" "+(q.currency||""); }
+    }
+    const lkCanConvert=q=>q&&q.price_eur!=null&&LK_MONEY.has(q.kind)&&CUR&&FX.per_eur[CUR]!=null&&CUR!==q.currency;
+    const lkDisp=eur=>{ const v=cv(eur); return fmt(v,Math.abs(v)<1?4:2); };
+    const lkDay=iso=>new Date(iso+"T12:00:00").toLocaleDateString("en-GB",{weekday:"short",day:"numeric",month:"short"});
+    const lkSafeUrl=u=>/^https?:\/\//i.test(u||"")?u:"#";
+    async function lkGet(url,ms){   // fetchJSON, plus the HTTP status (its error message ends with it)
+      try{ return await fetchJSON(url,ms); }
+      catch(e){ const m=/ (\d{3})$/.exec(e.message||""); e.status=m?+m[1]:0; throw e; }
+    }
+
+    /* ---- the search box ---- */
+    function lkShowPop(on){ $("lk-pop").hidden=!on; $("lk-input").setAttribute("aria-expanded",on?"true":"false"); }
+    function lkStatus(html){ $("lk-status").innerHTML=html; }
+    function lkAnnounce(text){ const el=$("lk-live"); el.textContent=""; setTimeout(()=>{ el.textContent=text; },60); }
+    function lkOpenSearch(){
+      if(lkPhone()){ $("lk-search").classList.add("open"); $("lk-open").setAttribute("aria-expanded","true"); }
+      const i=$("lk-input"); i.focus(); i.select();
+      if(LKS.q&&(LKS.items.length||$("lk-status").innerHTML)) lkShowPop(true);
+    }
+    function lkCloseSearch(back){
+      lkShowPop(false);
+      const overlay=$("lk-search").classList.contains("open");
+      $("lk-search").classList.remove("open"); $("lk-open").setAttribute("aria-expanded","false");
+      if(back){ if(overlay) $("lk-open").focus(); else $("lk-input").blur(); }
+    }
+    function lkQuery(text){
+      clearTimeout(LKS.timer); LKS.seq++;   // answers for earlier text are dropped
+      LKS.q=text.trim(); LKS.items=[]; LKS.active=-1; LKS.enter=false; lkRenderList();
+      if(!LKS.q){ lkStatus(""); lkShowPop(false); return; }
+      lkStatus("Searching…"); lkShowPop(true);
+      LKS.timer=setTimeout(()=>lkSearch(LKS.q),250);
+    }
+    async function lkSearch(q){
+      clearTimeout(LKS.timer);
+      const seq=++LKS.seq;
+      try{
+        const rs=await fetchJSON("/api/search?kinds=all&q="+encodeURIComponent(q),15000);
+        if(seq!==LKS.seq) return;
+        LKS.items=Array.isArray(rs)?rs:[]; LKS.active=-1;
+        if(LKS.enter&&LKS.items.length){ LKS.enter=false; lkPick(LKS.items[0]); return; }
+        LKS.enter=false;
+        lkStatus(LKS.items.length?"":`Nothing found for “${esc(q)}”. Try the ticker (for example AAPL) or the 12-character ISIN (for example US0378331005).`);
+        lkRenderList(); lkShowPop(true);
+        const n=LKS.items.length;
+        lkAnnounce(n?`${n} match${n===1?"":"es"}. Choose one with the up and down arrows.`:`Nothing found for ${q}.`);
+      }catch(e){
+        if(seq!==LKS.seq||e.auth) return;
+        LKS.items=[]; LKS.enter=false; lkRenderList(); lkShowPop(true);
+        lkStatus(esc(e.detail||"The search could not run right now.")+' <button type="button" class="linkbtn" onclick="lkRetrySearch()">Try again</button>');
+        lkAnnounce("The search could not run. Try again.");
+      }
+    }
+    function lkRetrySearch(){ $("lk-input").focus(); if(LKS.q){ lkStatus("Searching…"); lkSearch(LKS.q); } }
+    function lkRenderList(){
+      $("lk-list").innerHTML=LKS.items.map((r,i)=>`<li role="option" id="lk-opt-${i}" class="lk-opt" data-i="${i}" aria-selected="${i===LKS.active}">
+          <span class="lk-o-main"><span class="lk-o-name">${esc(r.name||r.ticker)}</span>
+            <span class="lk-o-sub">${esc(r.ticker)}${r.exchange?" · "+esc(r.exchange):""}${r.held?" · you hold this":""}</span></span>
+          ${r.kind?`<span class="tag">${LK_KIND[r.kind]||"Other"}</span>`:""}</li>`).join("");
+      lkRenderActive();
+    }
+    function lkRenderActive(){
+      const inp=$("lk-input");
+      document.querySelectorAll("#lk-list .lk-opt").forEach(li=>li.setAttribute("aria-selected",String(+li.dataset.i===LKS.active)));
+      if(LKS.active>=0){ inp.setAttribute("aria-activedescendant","lk-opt-"+LKS.active); const li=$("lk-opt-"+LKS.active); if(li) li.scrollIntoView({block:"nearest"}); }
+      else inp.removeAttribute("aria-activedescendant");
+    }
+    function lkKeys(e){
+      const n=LKS.items.length;
+      if(e.key==="ArrowDown"||e.key==="ArrowUp"){
+        if(!n) return;
+        e.preventDefault();
+        const down=e.key==="ArrowDown";
+        if($("lk-pop").hidden){ lkShowPop(true); LKS.active=down?0:n-1; }   // reopened: start at the first (or last) match
+        else LKS.active=down?(LKS.active+1)%n:(LKS.active<=0?n-1:LKS.active-1);
+        lkRenderActive();
+      } else if(e.key==="Enter"){
+        e.preventDefault();
+        if(LKS.active>=0&&LKS.items[LKS.active]) return lkPick(LKS.items[LKS.active]);
+        if(n) return lkPick(LKS.items[0]);
+        if(LKS.q){ LKS.enter=true; lkStatus("Searching…"); lkShowPop(true); lkSearch(LKS.q); }   // open the first match when it arrives
+      } else if(e.key==="Escape"){
+        e.preventDefault(); e.stopPropagation();
+        if(!$("lk-pop").hidden) lkShowPop(false); else lkCloseSearch(true);
+      }
+    }
+    function lkPick(r){
+      const overlay=$("lk-search").classList.contains("open");
+      lkShowPop(false); $("lk-input").value=""; lkQuery("");
+      $("lk-search").classList.remove("open"); $("lk-open").setAttribute("aria-expanded","false");
+      lkOpen(r.ticker,{isin:r.isin,name:r.name,kind:r.kind,opener:overlay?$("lk-open"):$("lk-input")});
+    }
+    (function(){
+      const inp=$("lk-input"), list=$("lk-list");
+      inp.addEventListener("input",()=>lkQuery(inp.value));
+      inp.addEventListener("keydown",lkKeys);
+      inp.addEventListener("focus",()=>{ if(LKS.q&&(LKS.items.length||$("lk-status").innerHTML)) lkShowPop(true); });
+      inp.addEventListener("blur",()=>setTimeout(()=>{   // keep it open while focus moves inside (Try again)
+        if(!$("lk-search").contains(document.activeElement)&&!$("lk-search").classList.contains("open")) lkShowPop(false); },150));
+      list.addEventListener("pointerdown",e=>{ if(e.target.closest(".lk-opt")) e.preventDefault(); });   // keep focus in the box
+      list.addEventListener("click",e=>{ const li=e.target.closest(".lk-opt"); if(li) lkPick(LKS.items[+li.dataset.i]); });
+      document.addEventListener("keydown",e=>{   // "/" anywhere (not while typing, not over a dialog)
+        if(e.key!=="/"||e.ctrlKey||e.metaKey||e.altKey) return;
+        const a=document.activeElement, tag=a&&a.tagName;
+        if(tag==="INPUT"||tag==="TEXTAREA"||tag==="SELECT"||(a&&a.isContentEditable)||document.querySelector(".modal.open")) return;
+        e.preventDefault(); lkOpenSearch();
+      });
+      document.addEventListener("pointerdown",e=>{ if(!$("lk-search").contains(e.target)&&!$("lk-search").classList.contains("open")) lkShowPop(false); });
+    })();
+
+    /* ---- the dialog ---- */
+    function lkHashTicker(){
+      const m=/^#lookup=([^&]+)/.exec(location.hash||""); if(!m) return null;
+      let t; try{ t=decodeURIComponent(m[1]); }catch(e){ t=m[1]; }
+      t=t.trim().toUpperCase(); return LK_TICKER.test(t)?t:null;
+    }
+    function lkOpen(ticker,o){
+      o=o||{}; const t=String(ticker||"").trim().toUpperCase(); if(!t) return;
+      if(o.push!==false){ const h="#lookup="+encodeURIComponent(t);
+        if(location.hash!==h){ try{ history.pushState(null,"",h); LK.pushed=true; }catch(e){} } }
+      if(!lkIsOpen()) LK.opener=o.opener||document.activeElement;
+      LK.t=t; LK.isin=o.isin||null; LK.name=o.name||null; LK.kind=o.kind||null;
+      $("lk-modal").classList.add("open");
+      const w=document.querySelector(".wrap"); if(w) w.inert=true;   // the page behind cannot be reached
+      lkLoad();
+      $("lk-name").focus();
+    }
+    function lkHide(){
+      if(!lkIsOpen()) return;
+      $("lk-modal").classList.remove("open"); LK.seq++;              // answers still on their way are dropped
+      const w=document.querySelector(".wrap"); if(w) w.inert=false;
+      if(LK.chart){ LK.chart.destroy(); LK.chart=null; }
+      const o=LK.opener; LK.opener=null; LK.t=null;
+      if(o&&o.isConnected&&o.offsetParent!==null&&o!==document.body) o.focus();
+    }
+    function lkClose(){
+      if(LK.pushed){ LK.pushed=false; lkHide(); history.back(); return; }
+      try{ history.replaceState(null,"",current==="overview"?location.pathname:"#"+current); }catch(e){}
+      lkHide();
+    }
+    addEventListener("hashchange",()=>{
+      const t=lkHashTicker();
+      if(t){ if(!lkIsOpen()||t!==LK.t) lkOpen(t,{push:false}); }
+      else if(lkIsOpen()){ LK.pushed=false; lkHide(); }
+    });
+    $("lk-modal").addEventListener("keydown",e=>{   // Escape closes; Tab stays inside
+      if(e.key==="Escape"){ e.preventDefault(); e.stopPropagation(); lkClose(); return; }
+      if(e.key!=="Tab") return;
+      const f=[...$("lk-modal").querySelectorAll('a[href],button:not([disabled]),input:not([disabled]),[tabindex="0"]')].filter(x=>x.offsetParent!==null);
+      if(!f.length) return;
+      const a=document.activeElement;
+      if(e.shiftKey&&(a===f[0]||a===$("lk-name"))){ e.preventDefault(); f[f.length-1].focus(); }
+      else if(!e.shiftKey&&a===f[f.length-1]){ e.preventDefault(); f[0].focus(); }
+    });
+    function lkNote(text){ $("lk-note").textContent=text; }
+
+    async function lkLoad(){
+      const seq=++LK.seq, t=LK.t;
+      LK.q=null; LK.err=null; LK.charts={};
+      if(LK.chart){ LK.chart.destroy(); LK.chart=null; }
+      $("lk-name").textContent=LK.name||t;
+      $("lk-tags").innerHTML=`<span class="tag">${esc(t)}</span>`+(LK.kind?`<span class="tag">${LK_KIND[LK.kind]||"Other"}</span>`:"");
+      const main=$("lk-main"); main.setAttribute("aria-busy","true");
+      main.innerHTML='<div class="ph" style="--h:96px" aria-hidden="true"></div><span class="lk-sr">Looking up the price…</span>';
+      ["lk-held","lk-chartbox","lk-facts","lk-acts","lk-calc","lk-newsbox"].forEach(id=>{ $(id).hidden=true; });
+      lkNote("");
+      lkFetchChart(t,LK.rng,seq);   // at the same time as the price
+      try{
+        const q=await lkGet("/api/quote/"+encodeURIComponent(t),20000);
+        if(seq!==LK.seq) return;
+        LK.q=q; lkRender(seq);
+      }catch(e){
+        if(seq!==LK.seq||e.auth) return;
+        LK.err=e; lkRenderError();
+      }
+    }
+    function lkRenderError(){
+      const e=LK.err, s=e.status||0, main=$("lk-main");
+      main.removeAttribute("aria-busy");
+      if(s===404||s===400){
+        main.innerHTML=`<div class="empty">${esc(e.detail||"Yahoo Finance does not know this ticker.")}</div>
+          <div class="lk-acts"><button type="button" class="btn ghost" onclick="lkSearchInstead()">Search for “${esc(LK.t)}”</button></div>`;
+      } else {
+        const msg=e.detail||(s?"Yahoo Finance is not answering right now.":"Could not reach the dashboard's server.");
+        main.innerHTML=`<div class="empty">${esc(msg)}</div><div class="lk-acts"><button type="button" class="btn ghost" onclick="lkLoad()">Try again</button></div>`;
+      }
+      lkNote("");
+    }
+    function lkSearchInstead(){
+      const t=LK.t; lkClose();
+      setTimeout(()=>{ lkOpenSearch(); $("lk-input").value=t; lkQuery(t); },0);
+    }
+    function lkRender(seq){
+      const q=LK.q;
+      $("lk-main").removeAttribute("aria-busy");
+      $("lk-name").textContent=q.name||q.ticker;
+      const sub=[q.exchange, q.currency&&LK_MONEY.has(q.kind)?"trades in "+q.currency:""].filter(Boolean).map(esc).join(" · ");
+      $("lk-tags").innerHTML=`<span class="tag">${esc(q.ticker)}</span><span class="tag">${LK_KIND[q.kind]||"Other"}</span>${sub?`<span>${sub}</span>`:""}`;
+      lkRenderPrice(); lkRenderHeld(); lkRenderFacts(); lkRenderActs(); lkRenderCalc();
+      $("lk-chartbox").hidden=q.price==null;
+      if(q.price!=null) lkSetRange(LK.rng);
+      $("lk-newsbox").hidden=false; lkLoadNews(seq);
+      if(q.facts_pending) lkFollowFacts(seq,1);
+      if(!WATCH) fetchJSON("/api/watchlist").then(w=>{ WATCH=w; renderWatchlist(); if(seq===LK.seq) lkRenderActs(); }).catch(()=>{});
+      if(!PORT) getPortfolio().then(p=>{ if(seq===LK.seq) lkRenderHeld(PORT||p); }).catch(()=>{});
+    }
+    function lkRenderPrice(){
+      const q=LK.q, el=$("lk-main");
+      if(q.price==null){ el.innerHTML=`<div class="empty">${esc(q.message||"Yahoo Finance has no price for this right now.")}</div>`; return; }
+      let h=`<div class="d-val num">${q.kind==="currency"?lkNum(q.price,q.decimals)+" "+esc(q.currency||""):lkFmt(q.price,q)}</div>`;
+      if(lkCanConvert(q)) h+=`<div class="lk-conv num">≈ ${lkDisp(q.price_eur)}</div>`;
+      if(q.change!=null) h+=`<div class="lk-move num ${cls(q.change_pct)}">${arrow(q.change_pct)}${lkSigned(q.change,q)} (${pct(q.change_pct)}) today</div>`;
+      else if(q.traded_today===false){
+        const s=q.last_session;
+        h+=`<div class="lk-move"><span class="muted">No change yet today.</span>${s?` <span class="num ${cls(s.change_pct)}">${esc(lkDay(s.day))}: ${arrow(s.change_pct)}${lkSigned(s.change,q)} (${pct(s.change_pct)})</span>`:""}</div>`;
+      }
+      if(q.price_time_text) h+=`<div class="lk-when small">Price ${esc(q.price_time_text)}</div>`;
+      if(q.market_open===true) h+='<div class="lk-state"><span class="lk-dot on" aria-hidden="true"></span>Market open</div>';
+      else if(q.market_open===false) h+=`<div class="lk-state"><span class="lk-dot" aria-hidden="true"></span>${esc(q.market_note||"Market closed.")}</div>`;
+      el.innerHTML=h;
+    }
+    function lkRenderHeld(port){
+      port=port||PORT; const q=LK.q, el=$("lk-held");
+      const hs=q&&port&&port.holdings?port.holdings.filter(h=>(h.ticker||"").toUpperCase()===q.ticker||(LK.isin&&h.isin===LK.isin)):[];
+      el.hidden=!hs.length; if(!hs.length) return;
+      const n=hs.reduce((s,h)=>s+h.quantity,0), v=hs.reduce((s,h)=>s+h.value_eur,0), g=hs.reduce((s,h)=>s+h.profit_eur,0), cost=v-g;
+      el.innerHTML=`<div class="lk-held-h">You hold this${hs[0].brokers&&hs[0].brokers.length?" · "+esc([...new Set(hs.flatMap(h=>h.brokers))].join(", ")):""}</div>
+        <div class="lk-held-g"><span><span class="k">${q.kind==="crypto"?"Coins":"Shares"}</span><b class="num">${qty(n)}</b></span>
+          <span><span class="k">Worth</span><b class="num">${money(v)}</b></span>
+          <span><span class="k">Gain</span><b class="num ${cls(g)}">${signed(g)}${cost>0?" · "+pct(g/cost*100):""}</b></span></div>`;
+    }
+    function lkRenderFacts(){
+      const q=LK.q, f=q.facts||{}, P=v=>lkFmt(v,q), items=[], el=$("lk-facts");
+      if(q.price==null){ el.hidden=true; return; }
+      if(f.day_range) items.push([q.traded_today===false?"Last day's range":"Day range",P(f.day_range[0])+" – "+P(f.day_range[1])]);
+      if(f.year_range) items.push(["52-week range",P(f.year_range[0])+" – "+P(f.year_range[1])]);
+      if(f.market_cap) items.push(["Market value",lkCompact(f.market_cap,q)]);
+      if(f.pe) items.push(["P/E ratio",f.pe.toLocaleString("en-GB",{maximumFractionDigits:1})]);
+      if(f.dividend_yield_pct) items.push(["Dividend yield",f.dividend_yield_pct.toLocaleString("en-GB",{maximumFractionDigits:2})+"%"]);
+      if(f.yearly_cost_pct) items.push(["Yearly cost",f.yearly_cost_pct.toLocaleString("en-GB",{maximumFractionDigits:3})+"% a year"]);
+      el.hidden=!items.length&&!q.facts_pending;
+      el.innerHTML=items.map(([k,v])=>`<div class="b"><div class="k">${k}</div><div class="v num">${v}</div></div>`).join("")+
+        (q.facts_pending?'<div class="b"><div class="k">More facts</div><div class="v small muted">Loading…</div></div>':"");
+    }
+    function lkFollowFacts(seq,n){   // company facts were still on their way: ask again shortly
+      setTimeout(async()=>{
+        if(seq!==LK.seq) return;
+        try{ const q=await lkGet("/api/quote/"+encodeURIComponent(LK.t),20000);
+          if(seq!==LK.seq) return;
+          LK.q=q; lkRenderPrice(); lkRenderFacts();
+          if(q.facts_pending&&n<3) lkFollowFacts(seq,n+1);
+        }catch(e){ if(seq===LK.seq&&LK.q){ LK.q.facts_pending=false; lkRenderFacts(); } }
+      },1500*n);
+    }
+    function lkRenderActs(){
+      const q=LK.q, el=$("lk-acts"); if(!q) return;
+      const on=isWatched(q.ticker);
+      el.hidden=false;
+      el.innerHTML=`<button type="button" class="btn ghost" id="lk-watch" onclick="lkToggleWatch()">${on?"★ On your watchlist: remove":"☆ Add to watchlist"}</button>
+        <button type="button" class="link-btn" onclick="lkCopyLink()">Copy link</button>`;
+    }
+    async function lkToggleWatch(){
+      const q=LK.q, b=$("lk-watch"); if(!q||!b) return;
+      const on=isWatched(q.ticker), seq=LK.seq;
+      b.disabled=true;
+      try{
+        let r;
+        if(on) r=await fetch("/api/watchlist/"+encodeURIComponent(q.ticker),{method:"DELETE"});
+        else { const fd=new FormData(); fd.append("ticker",q.ticker); fd.append("name",q.name||q.ticker); r=await fetch("/api/watchlist",{method:"POST",body:fd}); }
+        if(r.status===401){ location.href="/login"; return; }
+        if(!r.ok) throw new Error(String(r.status));
+        WATCH=await r.json(); renderWatchlist();
+        if(seq===LK.seq) lkNote(on?"Removed from your watchlist.":"Added to your watchlist.");
+      }catch(e){ if(seq===LK.seq) lkNote("Your watchlist could not be changed right now. Try again."); }
+      if(seq!==LK.seq) return;
+      lkRenderActs(); const nb=$("lk-watch"); if(nb) nb.focus();
+    }
+    async function lkCopyLink(){
+      const url=location.origin+location.pathname+"#lookup="+encodeURIComponent(LK.t);
+      try{ await navigator.clipboard.writeText(url); lkNote("Link copied: "+url); }
+      catch(e){ lkNote("The link to this page: "+url); }
+    }
+    const lkParse=s=>{ s=String(s||"").replace(/\s/g,""); s=s.includes(",")&&!s.includes(".")?s.replace(",","."):s.replace(/,/g,"");
+      const v=parseFloat(s); return isFinite(v)&&v>=0?v:null; };
+    function lkRenderCalc(){
+      const q=LK.q, el=$("lk-calc"), ok=q.price!=null&&LK_MONEY.has(q.kind)&&!!q.currency;
+      el.hidden=!ok; if(!ok) return;
+      el.innerHTML=`<h3>What would it cost?</h3>
+        <div class="lk-calc-row">
+          <label><span>${q.kind==="crypto"?"Coins":"Shares"}</span><input class="field num" id="lk-n" inputmode="decimal" autocomplete="off"></label>
+          <span class="lk-eq" aria-hidden="true">=</span>
+          <label><span>Amount in ${esc(q.currency)}</span><input class="field num" id="lk-amt" inputmode="decimal" autocomplete="off"></label>
+        </div>
+        <div class="small muted num" id="lk-calc-out" aria-live="polite"></div>`;
+      $("lk-n").value=LK.n;
+      $("lk-n").addEventListener("input",()=>lkCalc("n"));
+      $("lk-amt").addEventListener("input",()=>lkCalc("amt"));
+      lkCalc("n");
+    }
+    function lkCalc(from){
+      const q=LK.q, p=q.price, n=$("lk-n"), a=$("lk-amt"), out=$("lk-calc-out");
+      let shares, amount;
+      if(from==="n"){ shares=lkParse(n.value); LK.n=n.value; amount=shares==null?null:shares*p; a.value=amount==null?"":amount.toFixed(2); }
+      else { amount=lkParse(a.value); shares=amount==null?null:amount/p; n.value=shares==null?"":String(+shares.toFixed(4)); LK.n=n.value; }
+      if(shares==null||amount==null){ out.textContent=""; return; }
+      const unit=q.kind==="crypto"?"coins":shares===1?"share":"shares";
+      out.textContent=`${qty(shares)} ${unit} at ${lkFmt(p,q)} = ${lkFmt(amount,q,2)}`+(lkCanConvert(q)?` ≈ ${lkDisp(amount*q.eur_per_unit)}`:"")+", before costs";
+    }
+    function lkLoadNews(seq){
+      const el=$("lk-news"), t=LK.t;
+      el.innerHTML='<div class="ph" style="--h:60px" aria-hidden="true"></div>';
+      fetchJSON("/api/news/"+encodeURIComponent(t),20000).then(items=>{
+        if(seq!==LK.seq) return;
+        el.innerHTML=items&&items.length
+          ?items.map(n=>`<a href="${esc(lkSafeUrl(n.url))}" target="_blank" rel="noopener">${esc(n.title)}<div class="src">${esc(n.publisher)}</div></a>`).join("")
+          :'<div class="empty">No recent news for this.</div>';
+      }).catch(()=>{ if(seq!==LK.seq) return;
+        el.innerHTML='<div class="empty">News could not load right now. <button type="button" class="linkbtn" onclick="lkLoadNews(LK.seq)">Try again</button></div>'; });
+    }
+
+    /* ---- the chart ---- */
+    function lkSetRange(rng){
+      LK.rng=rng;
+      document.querySelectorAll("#lk-ranges button").forEach(b=>{ const on=b.dataset.r===rng; b.classList.toggle("active",on); b.setAttribute("aria-pressed",String(on)); });
+      const c=LK.charts[rng];
+      if(c&&c!=="loading") return lkDrawChart(c);
+      if(LK.chart){ LK.chart.destroy(); LK.chart=null; }
+      $("lk-rchg").innerHTML=""; $("lk-cmsg").innerHTML="";
+      const w=$("lk-cwrap"); w.hidden=false; w.classList.add("skeleton");
+      if(c!=="loading") lkFetchChart(LK.t,rng,LK.seq);
+    }
+    async function lkFetchChart(t,rng,seq){
+      LK.charts[rng]="loading";
+      try{
+        const c=await lkGet("/api/quote/"+encodeURIComponent(t)+"/chart?range="+rng,20000);
+        if(seq!==LK.seq) return;
+        LK.charts[rng]=c;
+        if(LK.q&&LK.q.price!=null&&LK.rng===rng) lkDrawChart(c);
+      }catch(e){
+        if(seq!==LK.seq) return;
+        delete LK.charts[rng];
+        if(!LK.q||LK.rng!==rng) return;
+        const w=$("lk-cwrap"); w.classList.remove("skeleton"); w.hidden=true;
+        $("lk-cmsg").innerHTML=`<div class="empty">${esc(e.detail||"The chart could not load right now.")} <button type="button" class="linkbtn" onclick="lkSetRange('${rng}')">Try again</button></div>`;
+      }
+    }
+    function lkDrawChart(c){
+      const q=LK.q, pts=(c&&c.points)||[], w=$("lk-cwrap"), cv_=$("lk-chart");
+      if(LK.chart){ LK.chart.destroy(); LK.chart=null; }
+      w.classList.remove("skeleton"); $("lk-cmsg").innerHTML="";
+      if(pts.length<2){ w.hidden=true; $("lk-rchg").innerHTML=""; $("lk-cmsg").innerHTML='<div class="empty">No chart for this range.</div>'; return; }
+      w.hidden=false;
+      const lastDay=new Date(pts[pts.length-1][0]).toISOString().slice(0,10);
+      const span=c.range==="1d"?(q.traded_today===false?"on "+lkDay(lastDay):"today"):LK_SPAN[c.range];
+      const chg=c.change!=null?`${arrow(c.change_pct)}${lkSigned(c.change,q)} (${pct(c.change_pct)})`:"";
+      $("lk-rchg").innerHTML=chg?`<span class="num ${cls(c.change_pct)}">${chg}</span> <span class="muted">${esc(span)}</span>`:"";
+      cv_.setAttribute("aria-label",`Price chart ${span}${chg?": "+chg:""}`);
+      if(!window.Chart) return;
+      const tc=chartColors(), col=(c.change??0)>=0?tc.green:tc.red, labels=pts.map(p=>p[0]);
+      const g=cv_.getContext("2d").createLinearGradient(0,0,0,200); g.addColorStop(0,col+"44"); g.addColorStop(1,col+"05");
+      const ds=[{data:pts.map(p=>p[1]),borderColor:col,backgroundColor:g,fill:true,tension:.15,pointRadius:0,pointHoverRadius:3,borderWidth:2}];
+      if(c.range==="1d"&&c.base) ds.push({data:labels.map(()=>c.base),borderColor:tc.muted,borderDash:[4,4],borderWidth:1,pointRadius:0,pointHoverRadius:0,fill:false});
+      const time=ms=>new Date(ms).toLocaleTimeString("en-GB",{hour:"2-digit",minute:"2-digit"});
+      const day=(ms,o)=>new Date(ms).toLocaleDateString("en-GB",o);
+      const tick=ms=>c.range==="1d"?time(ms):c.range==="5d"?day(ms,{weekday:"short"}):c.range==="1mo"?day(ms,{day:"numeric",month:"short"})
+        :c.range==="5y"?day(ms,{year:"numeric"}):day(ms,{month:"short",year:"2-digit"});
+      const title=ms=>c.intraday?day(ms,{weekday:"short",day:"numeric",month:"short"})+", "+time(ms):day(ms,{day:"numeric",month:"short",year:"numeric"});
+      LK.chart=new Chart(cv_,{type:"line",data:{labels,datasets:ds},
+        options:{responsive:true,maintainAspectRatio:false,animation:{duration:250},interaction:{intersect:false,mode:"index"},
+          plugins:{legend:{display:false},tooltip:{filter:i=>i.datasetIndex===0,displayColors:false,
+            callbacks:{title:i=>title(labels[i[0].dataIndex]),label:i=>lkFmt(i.parsed.y,q)}}},
+          scales:{x:{ticks:{color:tc.tick,font:{size:11},maxTicksLimit:5,maxRotation:0,autoSkip:true,callback:v=>tick(labels[v])},grid:{display:false}},
+            y:{position:"right",ticks:{color:tc.tick,font:{size:11},maxTicksLimit:5,callback:v=>lkFmt(v,q,v>=1000?0:Math.min(q.decimals??2,4))},grid:{color:tc.grid}}}}});
+    }
+    // a direct link (/#lookup=NVDA): open once Chart.js has loaded
+    function lkBoot(){ const t=lkHashTicker(); if(t&&!lkIsOpen()) lkOpen(t,{push:false}); }
+    if(document.readyState==="loading") document.addEventListener("DOMContentLoaded",lkBoot); else lkBoot();
   </script>
 </body>
 </html>
