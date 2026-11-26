@@ -32,10 +32,11 @@ from __future__ import annotations
 import logging
 from datetime import date, timedelta
 
-from . import cache, clock, fx, sources
+from . import cache, clock, sources
 from .instruments import TICKERS, prefetch, price_currency, ticker_for
 from .positions import Trade, compute_positions
 from .prices import quote_scale
+from . import fx
 
 log = logging.getLogger("stock_overview.trend")
 
