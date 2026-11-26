@@ -314,6 +314,46 @@ class IbkrTest(TempStore):
                                      {"name": "cash USD", "currency": "USD", "balance": 140.5}])
         self.assertIn("3 positions", snap.summary)
 
+    def flex(self, positions="", trades=""):
+        import xml.etree.ElementTree as ET
+
+        return ibkr_flex.parse(ET.fromstring(
+            f"""<FlexQueryResponse><FlexStatements><FlexStatement toDate="20261113">
+            <AccountInformation currency="USD" /><OpenPositions>{positions}</OpenPositions>
+            <Trades>{trades}</Trades></FlexStatement></FlexStatements></FlexQueryResponse>"""), "IBKR")
+
+    def test_cancelled_trade_does_not_count(self):
+        # Bought 10 (trade 111), the trade was cancelled (a "BUY (Ca.)" row
+        # naming 111), then rebooked at the right price (trade 113). One buy
+        # of 10 for 1,001. Before: both buys counted, 20 shares for 2,001.
+        snap = self.flex(trades="""
+          <Trade currency="USD" assetCategory="STK" symbol="AAPL" isin="US0378331005" tradeID="111"
+            dateTime="20260105;093000" quantity="10" netCash="-1000" buySell="BUY" levelOfDetail="EXECUTION" />
+          <Trade currency="USD" assetCategory="STK" symbol="AAPL" isin="US0378331005" tradeID="112"
+            origTradeID="111" dateTime="20260105;120000" quantity="-10" netCash="1000"
+            buySell="BUY (Ca.)" levelOfDetail="EXECUTION" />
+          <Trade currency="USD" assetCategory="STK" symbol="AAPL" isin="US0378331005" tradeID="113"
+            dateTime="20260105;120000" quantity="10" netCash="-1001" buySell="BUY" levelOfDetail="EXECUTION" />""")
+        self.assertEqual([(t.side, t.quantity, t.amount) for t in snap.trades], [("BUY", 10, 1001.0)])
+
+    def test_sale_costing_more_than_it_brings_is_negative(self):
+        # Sold 100 worthless shares for 0.50 with 1.00 commission: netCash
+        # -0.50, the sale brought -0.50. Before: abs() made it +0.50.
+        snap = self.flex(trades="""
+          <Trade currency="USD" assetCategory="STK" symbol="ZZZ" quantity="-100" proceeds="0.5"
+            ibCommission="-1" netCash="-0.5" buySell="SELL" levelOfDetail="EXECUTION" />""")
+        self.assertEqual(snap.trades[0].amount, -0.5)
+
+    def test_position_with_a_multiplier_keeps_the_report_value(self):
+        # A bond of 10,000 nominal at 98.5% of par: value 9,850 (multiplier
+        # 0.01). Before: it got a guessed live ticker, so a quote per unit
+        # times 10,000 would be priced instead of the report's 0.985 per unit.
+        snap = self.flex(positions="""
+          <OpenPosition currency="USD" assetCategory="BOND" symbol="T 4 1/2 08/15/39" position="10000"
+            markPrice="98.5" multiplier="0.01" positionValue="9850" costBasisMoney="9700" levelOfDetail="SUMMARY" />""")
+        (h,) = snap.holdings
+        self.assertEqual((h.ticker, h.price, h.buy_price), ("", 0.985, 0.97))
+
     def test_query_id_must_be_a_number(self):
         with self.assertRaises(ConnectorError):
             ibkr_flex.fetch({"token": "t", "query_id": "abc"})
@@ -351,6 +391,15 @@ class EtoroTest(TempStore):
         h = fake.calls[0]["headers"]
         self.assertEqual((h["x-api-key"], h["x-user-key"]), ("pub", "usr"))
         self.assertEqual(len(h["x-request-id"]), 36)
+
+    def test_cash_held_in_a_copy_is_counted(self):
+        # 100 USD free, and 250 USD of a 1,000 USD copy not invested yet
+        # (mirror availableAmount, "reserved for mirror operations"). Before:
+        # the 250 were missing from the totals.
+        self.http({"/trading/info/portfolio": {"clientPortfolio": {"credit": 100, "positions": [],
+                   "mirrors": [{"availableAmount": 250, "positions": []}]}}})
+        snap = etoro.fetch({"api_key": "pub", "user_key": "usr"})
+        self.assertEqual(sum(c["balance"] for c in snap.cash), 350)
 
 
 class BitvavoTest(TempStore):
@@ -447,6 +496,51 @@ class GenericCsvTest(unittest.TestCase):
         self.assertEqual(n("(12.50)"), -12.5)
         self.assertEqual(n("1,000"), 1000)
         self.assertIsNone(n("--"))
+
+    def test_gbp_pence_written_gbp_lowercase_p(self):
+        # "GBp" is pence (Yahoo's and fx.unit's spelling). 400 shares at 625p
+        # are worth £2,500. Before: GBp was upper-cased to GBP, so the price
+        # was £625 and the holding £250,000.
+        text = "Symbol,Quantity,Price,Avg cost,Currency\nRMV.L,400,625,600,GBp\n"
+        m = generic_csv.detect(generic_csv.read_table(text.encode())[0])
+        h = generic_csv.parse(text.encode(), m, "GBP")[0][0]
+        self.assertEqual((h["price"], h["buy_price"], h["cost_currency"]), (6.25, 6.0, "GBP"))
+
+    def test_a_company_called_total_is_not_a_total_row(self):
+        # TotalEnergies starts with "total". Before: skipped as a totals line.
+        text = ("Name,ISIN,Quantity,Value\nTotalEnergies SE,FR0000120271,10,600.00\n"
+                "Total,,10,600.00\nSubtotal,,10,600.00\n")
+        m = generic_csv.detect(generic_csv.read_table(text.encode())[0])
+        holdings, report = generic_csv.parse(text.encode(), m, "EUR")
+        self.assertEqual([h["name"] for h in holdings], ["TotalEnergies SE"])
+        self.assertEqual(report["skipped"], 2)
+
+    def test_change_columns_are_not_taken_for_value_or_price(self):
+        # "Value change %" and "Price change" come first. Before: they were
+        # taken as the market value and the price.
+        header = ["Ticker", "Shares", "Value change %", "Price change", "Market value (EUR)", "Last price (EUR)"]
+        m = generic_csv.detect(header)
+        self.assertEqual((m["value"], m["price"]), ("Market value (EUR)", "Last price (EUR)"))
+
+    def test_thousands_dot_in_a_decimal_comma_file(self):
+        # A European file: 1.234 units of a fund at 12,50 = 15.425,00. Before:
+        # "1.234" was read as 1.234 units (a thousand times too few).
+        text = "Product;ISIN;Quantity;Price\nMade-up Fund;LU0000000001;1.234;12,50\n"
+        m = generic_csv.detect(generic_csv.read_table(text.encode())[0])
+        h = generic_csv.parse(text.encode(), m, "EUR")[0][0]
+        self.assertEqual((h["quantity"], h["price"]), (1234, 12.5))
+        # the same "1.234" in a file that writes decimals with a point stays 1.234
+        text = "Product;ISIN;Quantity;Price\nMade-up Fund;LU0000000001;1.234;12.50\n"
+        h = generic_csv.parse(text.encode(), generic_csv.detect(generic_csv.read_table(text.encode())[0]), "EUR")[0][0]
+        self.assertEqual(h["quantity"], 1.234)
+
+    def test_euro_sign_sets_the_currency(self):
+        # No currency column, values in euros, the default currency is GBP.
+        # Before: €1.200,00 was booked as £1,200.
+        text = "Product;ISIN;Quantity;Value\nMade-up AG;DE0005557508;100;€1.200,00\n"
+        m = generic_csv.detect(generic_csv.read_table(text.encode())[0])
+        h = generic_csv.parse(text.encode(), m, "GBP")[0][0]
+        self.assertEqual((h["cost_currency"], h["price"]), ("EUR", 12.0))
 
     def test_rejects_excel(self):
         with self.assertRaises(ValueError):

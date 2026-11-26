@@ -215,6 +215,61 @@ class HistoryTest(Base):
         self.assertAlmostEqual(d["amount_eur"], 15.0)
         self.assertEqual([round(i["amount_eur"], 2) for i in interest], [3.85])
 
+    def test_fill_of_a_partly_filled_then_cancelled_order_counts(self):
+        # An order for 5 shares fills 2 and the rest is cancelled: the 2 shares
+        # were bought (fill.quantity = 2, 2 x 100 = 200 paid). Later all 2 are
+        # sold for 260. Before: the CANCELLED item was skipped, so the sell had
+        # no buy and the trades disagreed with the shares actually held.
+        acct = t212.Account("T212 Invest", "k", "s")
+        orders = {"items": [
+            {"order": {"status": "CANCELLED", "side": "BUY", "ticker": "ASML_EQ", "quantity": 5,
+                       "filledQuantity": 2, "createdAt": "2026-03-01T10:00:00Z",
+                       "instrument": {"ticker": "ASML_EQ", "isin": "NL0010273215", "name": "ASML"}},
+             "fill": {"filledAt": "2026-03-01T10:00:01Z", "quantity": 2, "price": 100,
+                      "walletImpact": {"currency": "EUR", "netValue": 200.0}}},
+            {"order": {"status": "PARTIALLY_FILLED", "side": "SELL", "ticker": "ASML_EQ",
+                       "createdAt": "2026-04-01T10:00:00Z",
+                       "instrument": {"ticker": "ASML_EQ", "isin": "NL0010273215", "name": "ASML"}},
+             "fill": {"filledAt": "2026-04-01T10:00:01Z", "quantity": -2, "price": 130,
+                      "walletImpact": {"currency": "EUR", "netValue": 260.0}}},
+            # a cancelled order that never filled: no shares, no trade
+            {"order": {"status": "CANCELLED", "side": "BUY", "ticker": "ASML_EQ", "value": 999},
+             "fill": None},
+        ], "nextPagePath": None}
+        with mock.patch.object(t212, "_get", fake_get({"/equity/history/orders": orders})):
+            trades = t212.account_trades(acct)
+        self.assertEqual([(t.side, t.quantity, t.amount) for t in trades],
+                         [("BUY", 2.0, 200.0), ("SELL", 2.0, 260.0)])
+        self.assertAlmostEqual(compute_positions(trades)["NL0010273215"].realized, 60.0)
+
+    def test_rate_limit_is_waited_out_until_it_resets(self):
+        # The history endpoints allow 20 calls a minute; x-ratelimit-reset is
+        # when the limit resets. Here it resets 40 s after the first 429.
+        # Before: two waits capped at 15 s (30 s in all), then the 429 was
+        # raised and the whole account's trades silently went missing.
+        clock = {"now": 1_000.0}
+        reset_at = clock["now"] + 40
+
+        def fake_session_get(url, auth=None, timeout=None):
+            resp = requests.Response()
+            if clock["now"] < reset_at:
+                resp.status_code = 429
+                resp.headers["x-ratelimit-reset"] = str(reset_at)
+            else:
+                resp.status_code = 200
+                resp._content = b'{"items": [], "nextPagePath": null}'
+            return resp
+
+        def fake_sleep(seconds):
+            clock["now"] += seconds
+
+        acct = t212.Account("T212 Invest", "k", "s")
+        with mock.patch.object(t212._session, "get", side_effect=fake_session_get), \
+                mock.patch.object(t212.time, "sleep", side_effect=fake_sleep), \
+                mock.patch.object(t212.time, "time", side_effect=lambda: clock["now"]):
+            page = t212._get(acct, "/equity/history/orders?limit=50")
+        self.assertEqual(page, {"items": [], "nextPagePath": None})
+
     def test_old_dividends_path(self):
         acct = t212.Account("T212 Invest", "k", "s")
         get = fake_get({"/equity/history/dividends": http_error(404), "/history/dividends": DIVIDENDS})
@@ -256,7 +311,10 @@ class ClosedAccountTest(Base):
     def test_history_is_kept_with_live_accounts(self):
         self.assertEqual(set(t212.trade_sources()), {"T212 Invest", "Trading212"})
         statement_trades = t212.trade_sources()["Trading212"][1]()
-        self.assertEqual([t.side for t in statement_trades], ["buy", "sell"])
+        # the statement says "buy"/"sell"; position math needs BUY/SELL (a
+        # lowercase "buy" was read as a sale: -2 shares, no realized gain)
+        self.assertEqual([t.side for t in statement_trades], ["BUY", "SELL"])
+        self.assertAlmostEqual(compute_positions(statement_trades)["NL0010273215"].realized, 100.0)
         self.assertEqual({d["account"] for d in t212.get_dividends()}, {"Trading212", "T212 Invest"})
         self.assertIn(("Trading212", 2.5), {(i["account"], i["amount_eur"]) for i in t212.get_interest()})
         # closed: nothing held there, the live positions are all still shown
@@ -316,6 +374,25 @@ class SameAccountTest(Base):
     def test_closed_account_that_still_lists_no_positions(self):
         sources, divs, interest, replaced = self.run_with([])  # readable, but empty
         self.assertEqual(replaced, ["Trading212"])
+
+    def test_small_closed_account_is_counted_once(self):
+        # A closed account with only 2 trades (buy 2 ASML for 1,200, sell 2
+        # for 1,300: +100 realized). Its old key and its statement are the
+        # same account. Before: fewer than 3 shared trades never counted as
+        # "the same", so both were used and the +100 showed as +200.
+        small = {**CLOSED_STATEMENT, "trades": [{**t, "side": t["side"].upper()}
+                                                for t in CLOSED_STATEMENT["trades"]]}
+        orders ={"items": [_order("2024-03-01", "BUY", 2, 1200.0), _order("2025-06-01", "SELL", 2, 1300.0)],
+                  "nextPagePath": None}
+        routes = {"/equity/positions": http_error(403), "/equity/history/orders": orders,
+                  "/equity/history/dividends": DIVIDENDS, "/equity/history/transactions": TRANSACTIONS,
+                  "/equity/account/info": {"currencyCode": "EUR"}}
+        with mock.patch.object(t212, "_statement", return_value=small), \
+                mock.patch.object(t212, "_get", fake_get(routes)), \
+                mock.patch.object(t212, "accounts", return_value=[self.old]):
+            trades = t212.get_trades()
+            self.assertEqual(t212.replaced_by_statement(), ["Trading212"])
+        self.assertAlmostEqual(sum(e["realized"] for e in realized_events(trades)), 100.0)
 
     def test_live_key_makes_the_statement_redundant(self):
         sources, divs, interest, replaced = self.run_with(POSITIONS)

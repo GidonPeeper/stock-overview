@@ -72,10 +72,42 @@ _ORDER = ("isin", "symbol", "quantity", "cost_per_share", "cost_total", "currenc
           "price", "name")
 
 _CCY = re.compile(r"^[A-Za-z]{3}$")
+_PENCE = {"GBX", "GBp", "GBx"}           # pence, as fx.unit reads them ("GBp" is not pounds)
+_SYMBOLS = {"€": "EUR", "£": "GBP"}      # unambiguous currency signs in a number cell
+# A total line, not a holding ("Total", "Subtotal", "Cash"), but not "TotalEnergies".
+_TOTAL_ROW = re.compile(r"^(grand |sub)?totals?\b|^(totaal|summe|gesamt|cash)\b")
+# Numeric fields that a "contains" match must not take from a percentage or
+# change column ("Value change %", "Price change").
+_AMOUNTS = {"quantity", "cost_per_share", "cost_total", "value", "price"}
+_NOT_AMOUNT = ("change", "chg", "pct", "percent", "gain", "loss", "return", "profit", "weight",
+               "allocation", "yield", "diff")
 
 
 def _norm(header: str) -> str:
     return re.sub(r"[^a-z0-9]", "", (header or "").lower())
+
+
+def _not_amount(header: str) -> bool:
+    return "%" in header or any(w in _norm(header) for w in _NOT_AMOUNT)
+
+
+def _decimal_comma(body: list[list[str]], delim: str) -> bool:
+    """Does the file write 1.234,56 (decimal comma)? Decided by the numbers
+    themselves where they say so ("12,50" or "1.234,56" vs "12.50" or
+    "1,234.56"), else by the separator (";" files are European)."""
+    comma = dot = 0
+    for row in body[:200]:
+        for c in row:
+            s = re.sub(r"[^0-9,.]", "", c)
+            if re.search(r"\d,(\d{1,2}|\d{4,})$|\.\d{3},\d", s):
+                comma += 1
+            elif re.search(r"\d\.(\d{1,2}|\d{4,})$|,\d{3}\.\d", s):
+                dot += 1
+    if comma and not dot:
+        return True
+    if dot and not comma:
+        return False
+    return delim == ";"
 
 
 # ------------------------------------------------------------------ reading
@@ -165,7 +197,8 @@ def detect(header: list[str]) -> dict:
         if field in found:
             continue
         for h in header:
-            if h not in used and any(w in normed[h] for w in words):
+            if h not in used and any(w in normed[h] for w in words) \
+                    and not (field in _AMOUNTS and _not_amount(h)):
                 take(field, h)
                 break
 
@@ -201,6 +234,8 @@ def number(s: str, decimal_comma: bool = False) -> float | None:
             s = s.replace(".", "").replace(",", ".") if s.count(",") == 1 else s.replace(",", "")
         else:
             s = s.replace(",", "")
+    elif decimal_comma and re.fullmatch(r"[-+]?\d{1,3}(\.\d{3})+", s):
+        s = s.replace(".", "")              # "1.234" in a decimal-comma file is 1234
     try:
         v = float(s)
     except ValueError:
@@ -227,9 +262,9 @@ def parse(content: bytes, mapping: dict, default_currency: str = "GBP") -> tuple
         raise ValueError("Choose the column with the number of shares (quantity).")
     if not (mapping.get("symbol") or mapping.get("isin") or mapping.get("name")):
         raise ValueError("Choose a column that names the investment (symbol, ISIN or name).")
-    dec_comma = delim == ";"
+    dec_comma = _decimal_comma(body, delim)
     per_share = (mapping.get("cost_kind") or "per_share") == "per_share"
-    default_currency = (default_currency or "GBP").upper()
+    default_currency = (default_currency or "GBP").strip()
 
     out, skipped = [], 0
     for row in body:
@@ -238,7 +273,7 @@ def parse(content: bytes, mapping: dict, default_currency: str = "GBP") -> tuple
         isin = _cell(row, header, mapping.get("isin")).strip().upper()
         name = _cell(row, header, mapping.get("name")).strip()
         label = (name or symbol or isin).lower()
-        if not qty or qty <= 0 or not (symbol or isin or name) or label.startswith(("total", "cash")):
+        if not qty or qty <= 0 or not (symbol or isin or name) or _TOTAL_ROW.match(label):
             skipped += 1
             continue
         if isin and not is_valid_isin(isin):
@@ -247,11 +282,13 @@ def parse(content: bytes, mapping: dict, default_currency: str = "GBP") -> tuple
         ccy = _cell(row, header, mapping.get("currency")).strip()
         value_cell = _cell(row, header, mapping.get("value"))
         prefix = re.match(r"\s*([A-Z]{3})\s", value_cell)   # DEGIRO: "USD 1.234,00"
-        ccy = ccy.upper() if _CCY.match(ccy) else (prefix.group(1) if prefix else default_currency)
-        # Pence-quoted rows (GBX): per-share figures are in pence, totals
+        sign = next((_SYMBOLS[ch] for f in ("value", "cost", "price")
+                     for ch in _cell(row, header, mapping.get(f)) if ch in _SYMBOLS), None)
+        ccy = ccy if _CCY.match(ccy) else (prefix.group(1) if prefix else sign or default_currency)
+        # Pence-quoted rows (GBX, GBp): per-share figures are in pence, totals
         # (value, total cost) in pounds -- the usual UK layout.
-        pence = 0.01 if ccy == "GBX" else 1.0
-        ccy = "GBP" if ccy == "GBX" else ccy
+        pence = 0.01 if ccy in _PENCE or ccy.upper() == "GBX" else 1.0
+        ccy = "GBP" if pence != 1.0 else ccy.upper()
         cost = number(_cell(row, header, mapping.get("cost")), dec_comma)
         buy_price = (cost * pence if per_share else cost / qty) if cost is not None else None
         value = number(_cell(row, header, mapping.get("value")), dec_comma)

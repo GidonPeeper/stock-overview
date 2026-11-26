@@ -21,12 +21,15 @@ import json
 import sys
 import time
 from collections import defaultdict
+from datetime import date, timedelta
 
 from ..fx import to_eur
 from ..instruments import NAMES, ticker_for
 from .trading212_pdf import _T212_ALIAS
 
 _REQUIRED = {"Action", "Time (UTC)", "ISIN", "No. of shares", "Total", "Currency (Total)"}
+PDF_SOURCE = "Trading 212 activity statement"   # trading212_pdf's "_source"
+_SHORT = "Sells without the matching buys"
 
 
 def looks_like(text: str) -> bool:
@@ -39,6 +42,19 @@ def _f(s) -> float:
         return float(s) if s not in ("", None) else 0.0
     except ValueError:
         return 0.0
+
+
+def _strict(r: dict, col: str) -> float:
+    """A number that becomes a quantity or an amount: empty is 0, anything
+    else that is not a number stops the import (it used to count as 0)."""
+    s = (r.get(col) or "").strip()
+    if not s:
+        return 0.0
+    try:
+        return float(s)
+    except ValueError:
+        raise ValueError(f"Row of {r.get('Time (UTC)') or '?'} ({r.get('Action') or '?'}): "
+                         f"\"{col}\" is not a number: {s!r}. Nothing was imported.") from None
 
 
 def _eur(amount: float, ccy: str) -> float:
@@ -77,11 +93,12 @@ def convert(source) -> tuple[dict, dict]:
     rows.sort(key=lambda r: r["Time (UTC)"])
 
     trades, dividends, transactions, skipped = [], [], [], defaultdict(int)
+    moved_shares: dict[str, int] = defaultdict(int)  # share-moving rows not understood
     for r in rows:
         action = (r.get("Action") or "").strip()
         low = action.lower()
         when = r["Time (UTC)"][:16]
-        total = _f(r.get("Total"))
+        total = _strict(r, "Total")
         ccy = r.get("Currency (Total)") or "EUR"
         isin = (r.get("ISIN") or "").strip()
         symbol = (r.get("Ticker") or "").strip()
@@ -93,7 +110,7 @@ def convert(source) -> tuple[dict, dict]:
                 "name": NAMES.get(isin, r.get("Name") or symbol),
                 "ticker": ticker_for(isin) or _T212_ALIAS.get(symbol, symbol),
                 "order_id": r.get("ID") or "", "side": side,
-                "quantity": _f(r.get("No. of shares")), "price": _f(r.get("Price / share")),
+                "quantity": _strict(r, "No. of shares"), "price": _f(r.get("Price / share")),
                 "price_currency": r.get("Currency (Price / share)") or "",
                 "fx_rate": _f(r.get("Exchange rate")) or None,
                 "fx_fee_eur": _eur(abs(fee), r.get("Currency (Currency conversion fee)") or ccy) if fee else 0.0,
@@ -108,6 +125,10 @@ def convert(source) -> tuple[dict, dict]:
                 "amount_eur": _eur(total, ccy),
                 "gross": None, "tax": _f(r.get("Withholding tax")) or None,
             })
+        elif isin and _strict(r, "No. of shares"):
+            # shares in or out without a buy or sell (a split, a transfer...):
+            # not imported, so the holdings would be wrong -- say so
+            moved_shares[action or "?"] += 1
         else:
             kind = _kind(action, total)
             if kind is None:
@@ -125,8 +146,12 @@ def convert(source) -> tuple[dict, dict]:
     short = sorted(isin for isin, q in qty.items() if q < -1e-6)
     if short:
         st["warnings"].append(
-            "Sells without the matching buys in this file (it starts after the account opened): "
+            _SHORT + " in this file (it starts after the account opened): "
             + ", ".join(short) + ". Upload the earlier statement first; this file is then added to it.")
+    if moved_shares:
+        st["warnings"].append(
+            "Rows that move shares without a buy or sell were not imported, so holdings may be "
+            "wrong: " + ", ".join(f"{a} ({n})" for a, n in sorted(moved_shares.items())) + ".")
     st["positions"] = _positions_from_trades(trades)
     _finish(st, "Trading 212 history CSV")
     report = {"summary": st["summary"], "warnings": st["warnings"], "skipped": dict(skipped)}
@@ -188,8 +213,11 @@ def _finish(st: dict, source: str) -> None:
     st["_generated"] = time.strftime("%Y-%m-%d %H:%M")
 
 
-def merge(base: dict, new: dict) -> tuple[dict, dict]:
-    """`base` (an earlier statement) + the rows of `new` dated after base's end."""
+def merge(base: dict, new: dict, keep_new_positions: bool | None = None) -> tuple[dict, dict]:
+    """`base` (an earlier statement) + the rows of `new` dated after base's end.
+    Positions are base's carried through the added trades, or `new`'s own
+    when it already knows them at the end date (a statement PDF, or
+    `keep_new_positions`)."""
     end = ((base.get("overview") or {}).get("period") or [None, None])[1]
     if not end:
         raise ValueError("The existing Trading 212 statement has no period; upload it again.")
@@ -203,10 +231,22 @@ def merge(base: dict, new: dict) -> tuple[dict, dict]:
     st["positions"] = _positions_from_trades(added_trades, base.get("positions"))
     for p in st["positions"]:
         p.pop("_cost", None)
+    st["warnings"] = []
+    if keep_new_positions or (keep_new_positions is None and new.get("_source") == PDF_SOURCE):
+        # a later activity statement has the exact open-positions table at the
+        # new end date (Trading 212's own cost, FX included): use it, and say
+        # so if it does not hold the shares the joined trades add up to
+        carried = {p["isin"]: p["quantity"] for p in st["positions"]}
+        st["positions"] = copy.deepcopy(new.get("positions") or [])
+        table = {p["isin"]: float(p["quantity"]) for p in st["positions"]}
+        off = sorted(i for i in set(carried) | set(table)
+                     if abs(carried.get(i, 0.0) - table.get(i, 0.0)) > 1e-5)
+        if off:
+            st["warnings"].append("The joined trades do not add up to the statement's open "
+                                  "positions for: " + ", ".join(off))
     new_end = max(end, (new.get("overview") or {}).get("period", [end, end])[1])
     st["overview"] = {**(base.get("overview") or {}), "period": [base["overview"]["period"][0], new_end]}
     st["cash"] = {}  # the cash table belongs to the old end date
-    st["warnings"] = []
     qty = _net_quantities(st["trades"])
     short = sorted(isin for isin, q in qty.items() if q < -1e-6)
     if short:
@@ -216,6 +256,73 @@ def merge(base: dict, new: dict) -> tuple[dict, dict]:
               "added": {"trades": len(added_trades),
                         "dividends": len(st["dividends"]) - len(base["dividends"]),
                         "transactions": len(st["transactions"]) - len(base["transactions"])}}
+    return st, report
+
+
+def _period(st: dict | None) -> tuple[str, str] | None:
+    p = ((st or {}).get("overview") or {}).get("period") or []
+    return (str(p[0])[:10], str(p[1])[:10]) if len(p) == 2 and p[0] and p[1] else None
+
+
+def _traded(st: dict, lo: str, hi: str) -> set[tuple[str, str]]:
+    return {(t.get("isin"), str(t.get("side", "")).upper()) for t in st.get("trades") or []
+            if lo <= str(t.get("date", ""))[:10] <= hi}
+
+
+def combine(base: dict | None, new: dict, report: dict | None = None) -> tuple[dict, dict]:
+    """The statement to keep when `new` (a converted activity-statement PDF or
+    History CSV) is uploaded while `base` is already saved. A PDF covers 18
+    months at most and a CSV 12, so files are joined rather than replaced, and
+    nothing uploaded before is lost:
+
+      new covers every date of base       -> new replaces base
+      new starts earlier or ends later    -> joined, each day taken from one
+                                             file (no row twice); a gap
+                                             between them is a warning
+      new lies inside base's dates        -> refused: it would add nothing
+      the overlapping dates show other
+      trades                              -> refused: another account
+
+    Returns (statement, report); `report` is the new file's own report, which
+    is extended."""
+    report = dict(report or {})
+    warnings = list(report.get("warnings") or [])
+    np_ = _period(new)
+    if not base:
+        return new, report
+    bp = _period(base)
+    if not bp or not np_:
+        if not np_:
+            raise ValueError("This file shows no dates, so it cannot be joined to the Trading 212 "
+                             "statement uploaded before. Nothing was changed.")
+        report["warnings"] = warnings + ["The statement uploaded before had no dates, "
+                                         "so this file replaced it."]
+        return new, report
+    (bs, be), (ns, ne) = bp, np_
+    if ns <= bs and ne >= be:
+        return new, report
+    if bs <= ns and ne <= be:
+        raise ValueError(f"This file covers {ns} to {ne}, which the Trading 212 statement already "
+                         f"uploaded ({bs} to {be}) covers too. Nothing was changed. To start "
+                         f"again, upload a statement that covers at least {bs} to {be}.")
+    earlier, later = (base, new) if ne > be else (new, base)
+    (es, ee), (ls, le) = _period(earlier), _period(later)
+    lo, hi = max(es, ls), min(ee, le)
+    a, b = _traded(earlier, lo, hi), _traded(later, lo, hi)
+    if a and b and not a & b:
+        raise ValueError(f"The two Trading 212 files show different trades for the dates both "
+                         f"cover ({lo} to {hi}): they look like two different accounts. Nothing "
+                         f"was changed. Upload one account's files only.")
+    # an older file only adds history: the saved statement's holdings stand
+    st, joined = merge(earlier, later, keep_new_positions=True if later is base else None)
+    warnings = [w for w in warnings if not w.startswith(_SHORT)]   # merge checks that again
+    if ls > (date.fromisoformat(ee) + timedelta(days=1)).isoformat():
+        st["warnings"].append(f"Nothing covers {(date.fromisoformat(ee) + timedelta(days=1))} to "
+                              f"{(date.fromisoformat(ls) - timedelta(days=1))}: trades, dividends "
+                              f"and interest of those dates are missing. Upload a file that covers them.")
+        st["all_checks_ok"] = False
+    report.update(joined)
+    report["warnings"] = warnings + st["warnings"]
     return st, report
 
 

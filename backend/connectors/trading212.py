@@ -133,16 +133,25 @@ def _url(path: str) -> str:
     return _HOST + path if path.startswith("/api/") else BASE_URL + path
 
 
+# History endpoints allow 20 calls a minute per account and x-ratelimit-reset is
+# the Unix time the limit fully resets (docs.trading212.com/api), so a 429 can
+# need a wait of up to a whole minute. Giving up sooner silently dropped the
+# trades of accounts with a long history (more than ~20 pages).
+_RETRIES = 4
+_MAX_WAIT = 65.0
+
+
 def _get(acct: Account, path: str):
-    """GET with one polite retry on 429 (limits are per account, per endpoint)."""
-    for attempt in range(3):
+    """GET, waiting out a 429 until the limit resets (limits are per account,
+    per endpoint)."""
+    for attempt in range(_RETRIES + 1):
         resp = _session.get(_url(path), auth=acct.auth, timeout=30)
-        if resp.status_code == 429 and attempt < 2:
+        if resp.status_code == 429 and attempt < _RETRIES:
             try:
                 wait = float(resp.headers.get("x-ratelimit-reset", 0)) - time.time()
             except ValueError:
                 wait = 2
-            time.sleep(min(max(wait, 1.0), 15.0))
+            time.sleep(min(max(wait, 1.0), _MAX_WAIT))
             continue
         resp.raise_for_status()
         return resp.json()
@@ -333,13 +342,18 @@ def account_trades(acct: Account) -> list[Trade]:
     for item in _pages(acct, "/equity/history/orders?limit=50"):
         order = item.get("order") or {}
         fill = item.get("fill")
-        if order.get("status") != "FILLED" or not fill:
+        # A fill is shares that changed hands, whatever the order's final
+        # status: an order that was partly filled and then cancelled still
+        # bought (or sold) its filled shares.
+        if not fill or not float(fill.get("quantity") or order.get("filledQuantity") or 0):
             continue
         inst = order.get("instrument") or {}
         wallet = fill.get("walletImpact") or {}
         net = wallet.get("netValue")
         if net is None:
-            net = order.get("filledValue") or order.get("value")
+            net = order.get("filledValue")
+            if net is None and order.get("status") == "FILLED":
+                net = order.get("value")
         if net is None:
             continue
         # Fees (FX fee, stamp duty, ...) make a buy cost more and a sell net less.
@@ -449,9 +463,11 @@ def _statement_holdings(st: dict, label: str = STATEMENT_LABEL) -> list[Holding]
 
 
 def _statement_trades(st: dict) -> list[Trade]:
+    # side upper-cased: position math reads anything but "BUY" as a sale, and
+    # a hand-made statement JSON may say "buy"
     return [
         Trade(when=t["date"], key=t["isin"], name=t.get("name") or t["symbol"],
-              side=t["side"], quantity=float(t["quantity"]), amount=float(t["amount_eur"]),
+              side=str(t["side"]).upper(), quantity=float(t["quantity"]), amount=float(t["amount_eur"]),
               currency="EUR", ticker=t.get("ticker") or ticker_for(t["isin"]))
         for t in st.get("trades", [])
     ]
@@ -472,7 +488,10 @@ def _same_account_as_statement(acct: Account) -> bool:
     stmt = {(t.get("isin"), str(t.get("date", ""))[:10]) for t in st["trades"]}
     mine = {(t.key, t.when[:10]) for t in api}
     common = len(stmt & mine)
-    return common >= 3 and common >= 0.5 * min(len(stmt), len(mine))
+    # a statement with fewer than 3 trades is the same account when all of
+    # them are in the key's history (as traderepublic.same_account does)
+    small = min(len(stmt), len(mine))
+    return small > 0 and common >= min(3, small) and common >= 0.5 * small
 
 
 @_ttl_cache(seconds=900)
