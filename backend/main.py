@@ -194,7 +194,8 @@ def _refused(request: Request) -> str | None:
     host = request.headers.get("host") or ""
     origin = request.headers.get("origin")
     if request.method not in _READS and origin is not None:
-        ours = {host.lower(), (request.headers.get("x-forwarded-host") or host).lower()}
+        ours = {host.lower(), (request.headers.get("x-forwarded-host") or host).lower(),
+                os.getenv("RENDER_EXTERNAL_HOSTNAME", host).lower()}   # the host's public name
         try:
             theirs = urlsplit(origin).netloc.lower()
         except ValueError:
