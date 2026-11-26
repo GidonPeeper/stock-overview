@@ -27,6 +27,7 @@ TOKEN = "t" * 40
 HEADERS = {"Accept": "application/json, text/event-stream", "Content-Type": "application/json",
            "Authorization": f"Bearer {TOKEN}", "MCP-Protocol-Version": "2025-11-25"}
 TOOL_NAMES = {"get_portfolio_summary", "list_holdings", "get_performance", "get_realized_gains",
+              "get_country_tax_overview",
               "get_income", "get_net_worth", "get_risk_analysis", "get_tax_overview",
               "get_data_status", "get_watchlist"}
 RATES = {"EUR": 1.0, "USD": 0.9, "GBP": 1.2, "CHF": 1.05}   # EUR per unit
@@ -181,6 +182,21 @@ class ToolsTest(unittest.TestCase):
         with mock.patch.dict(os.environ, {"TAX_RESIDENCE": "NONE"}):
             off = self.t.get_tax_overview()
         self.assertIs(off["uk_tax_year"]["applies"], False)
+
+    def test_country_tax_overview(self):
+        fixtures = str(ROOT / "tests" / "countries")             # Exampleland (ZZ), made up
+        with mock.patch.dict(os.environ, {"COUNTRIES_EXTRA_DIR": fixtures}):
+            out = self.t.get_country_tax_overview("zz")
+            none = self.t.get_country_tax_overview("JP")
+        self.assertIs(out["available"], True)
+        self.assertEqual((out["country"], out["checked_on"]), ("ZZ", "2026-11-26"))
+        self.assertIn("not tax advice", out["not_advice"])
+        self.assertTrue(all(t["sources"] for t in out["topics"]))
+        self.assertIn("UK, the US and the Netherlands", out["app_tax_calculations"])
+        self.assertIs(none["available"], False)
+        self.assertIn("Japan", none["message"])
+        with self.assertRaises(self.t.ToolInputError):
+            self.t.get_country_tax_overview("Netherlands")
 
     def test_data_status_and_watchlist(self):
         st = self.t.get_data_status()

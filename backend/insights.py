@@ -3,9 +3,13 @@ sources, an earnings calendar for your holdings, and a transparent small-cap
 "Rising Stars" screener.
 
 Sources (all free, no key required):
-  * Headlines — RSS from CNBC, MarketWatch (Dow Jones) and Yahoo Finance,
-    de-duplicated and interleaved. If a NEWSAPI_KEY env var is set, NewsAPI
-    top business headlines are blended in as a fourth source (optional).
+  * Headlines — the news feeds of the country chosen for the news (Settings:
+    news_country, else country; backend/countries/<CC>.json), then the
+    international set that is always there: RSS from CNBC, MarketWatch (Dow
+    Jones) and Yahoo Finance. Read at the same time, de-duplicated and
+    interleaved. If a NEWSAPI_KEY env var is set, NewsAPI top business
+    headlines are blended in as one more source (optional). Feed text is
+    untrusted: titles become plain text, links must be http(s).
   * Earnings — upcoming earnings dates per holding via yfinance.
   * Rising Stars — Yahoo's small-cap screeners (small_cap_gainers +
     aggressive_small_caps + growth_technology_stocks), enriched and re-scored.
@@ -18,12 +22,15 @@ Everything is cached and fails soft: a dead feed or endpoint never breaks the ap
 
 from __future__ import annotations
 
+import html
 import os
 import re
 import urllib.request
 from concurrent.futures import ThreadPoolExecutor
 import xml.etree.ElementTree as ET
 from datetime import date, datetime, timezone
+from email.utils import parsedate_to_datetime
+from urllib.parse import urlsplit
 
 from . import cache
 
@@ -53,21 +60,91 @@ def _cached(key: str, ttl: int, fn, data: bool = DATA):
 
 
 # ---------------------------------------------------------------- headlines
-def _fetch_rss(name: str, url: str, limit: int = 10) -> list[dict]:
-    req = urllib.request.Request(url, headers=_UA)
-    root = ET.fromstring(urllib.request.urlopen(req, timeout=10).read())
+_MAX_FEED_BYTES = 3_000_000
+HEADLINES_MAX = 18
+
+
+def _http_url(u) -> str:
+    """`u` when it is an http(s) address, else "" (feeds are untrusted)."""
+    u = u.strip() if isinstance(u, str) else ""
+    try:
+        p = urlsplit(u)
+        ok = p.scheme in ("http", "https") and p.hostname and not any(c.isspace() for c in u)
+    except ValueError:                  # e.g. "http://[::1" (a broken IPv6 address)
+        ok = False
+    return u if ok else ""
+
+
+def _plain(text, limit: int = 300) -> str:
+    """Feed text as plain text: entities decoded, tags dropped, one line."""
+    t = html.unescape(text or "")
+    t = re.sub(r"<[^>]*>", " ", t)
+    t = re.sub(r"\s+", " ", t).strip()
+    return t if len(t) <= limit else t[:limit - 1].rstrip() + "…"
+
+
+def _when(text) -> str | None:
+    """An RSS (RFC 822) or Atom (ISO 8601) date as ISO UTC, or None."""
+    t = (text or "").strip()
+    if not t:
+        return None
+    try:
+        d = parsedate_to_datetime(t)
+    except (TypeError, ValueError, IndexError):
+        try:
+            d = datetime.fromisoformat(t.replace("Z", "+00:00"))
+        except ValueError:
+            return None
+    if d.tzinfo is None:
+        d = d.replace(tzinfo=timezone.utc)
+    return d.astimezone(timezone.utc).isoformat(timespec="seconds")
+
+
+def _local(tag) -> str:
+    return tag.rsplit("}", 1)[-1] if isinstance(tag, str) else ""
+
+
+def _parse_feed(root, name: str, limit: int) -> list[dict]:
+    """Items of an RSS 2.0, RSS 1.0 (RDF) or Atom feed."""
     items = []
-    for it in root.findall(".//item")[:limit]:
-        title = (it.findtext("title") or "").strip()
-        if not title:
+    for el in root.iter():
+        if _local(el.tag) not in ("item", "entry"):
             continue
-        items.append({
-            "title": title,
-            "url": (it.findtext("link") or "").strip(),
-            "source": name,
-            "published": (it.findtext("pubDate") or "").strip(),
-        })
+        kids: dict = {}
+        link = ""
+        for k in el:
+            n = _local(k.tag)
+            kids.setdefault(n, k)
+            if n == "link" and not link:
+                href = k.get("href")
+                if href is None:
+                    link = k.text or ""                             # RSS
+                elif k.get("rel") in (None, "alternate"):
+                    link = href                                      # Atom
+        title = _plain(kids["title"].text if "title" in kids else "")
+        url = _http_url(link)
+        if not title or not url:
+            continue
+        published = next((kids[n].text or "" for n in ("pubDate", "published", "updated", "date")
+                          if n in kids), "").strip()
+        items.append({"title": title, "url": url, "source": name, "published": published,
+                      "published_at": _when(published)})
+        if len(items) >= limit:
+            break
     return items
+
+
+def _fetch_rss(name: str, url: str, limit: int = 10) -> list[dict]:
+    if not _http_url(url):
+        raise ValueError("not an http(s) feed address")
+    req = urllib.request.Request(url, headers=_UA)
+    with urllib.request.urlopen(req, timeout=10) as resp:
+        body = resp.read(_MAX_FEED_BYTES + 1)
+    if len(body) > _MAX_FEED_BYTES:
+        raise ValueError("feed too large")
+    if b"<!ENTITY" in body:
+        raise ValueError("feed declares entities")       # no entity tricks from an untrusted feed
+    return _parse_feed(ET.fromstring(body), name, limit)
 
 
 def _newsapi(limit: int = 8) -> list[dict]:
@@ -79,23 +156,60 @@ def _newsapi(limit: int = 8) -> list[dict]:
            f"&pageSize={limit}&apiKey={key}")
     data = json.load(urllib.request.urlopen(
         urllib.request.Request(url, headers=_UA), timeout=10))
-    return [{"title": a["title"], "url": a.get("url", ""),
-             "source": a.get("source", {}).get("name", "NewsAPI"), "published": a.get("publishedAt", "")}
-            for a in data.get("articles", []) if a.get("title")]
+    out = []
+    for a in data.get("articles", []):
+        title, link = _plain(a.get("title")), _http_url(a.get("url"))
+        if title and link:
+            out.append({"title": title, "url": link, "source": a.get("source", {}).get("name", "NewsAPI"),
+                        "published": a.get("publishedAt", ""), "published_at": _when(a.get("publishedAt")),
+                        "language": "en", "country": ""})
+    return out
 
 
-def _try_rss(feed: tuple[str, str]) -> list[dict]:
+def news_country() -> str:
+    """The country the news comes from: chosen for the news in Settings, else
+    the country you live in ("" = the international feeds only)."""
+    from . import prefs
+    return prefs.value("news_country") or prefs.value("country")
+
+
+def feeds(code: str | None = None) -> list[tuple[str, str, str, str]]:
+    """(name, url, language, country) of every feed read for `code` (default:
+    news_country()): the country's own feeds first, then the international set."""
+    from . import countries
+    code = news_country() if code is None else code
+    local = [(f["name"], f["url"], f["language"], code) for f in countries.news_feeds(code)] if code else []
+    return local + [(n, u, "en", "") for n, u in RSS_FEEDS]
+
+
+def _try_rss(feed: tuple) -> list[dict]:
+    name, url, *rest = feed
+    lang, country = (list(rest) + ["en", ""])[:2]
     try:
-        return _fetch_rss(*feed)
+        items = _fetch_rss(name, url)
     except Exception:
-        return []
+        return []                       # one dead feed never empties the list
+    for it in items:
+        it.setdefault("language", lang)
+        it.setdefault("country", country)
+    return items
 
 
-def headlines() -> list[dict]:
+def _headlines_key(code: str) -> str:
+    return f"headlines:{code or '-'}"
+
+
+def headlines(code: str | None = None) -> list[dict]:
+    """Headlines for `code` (default: news_country()) and the international
+    feeds: each source's newest first, interleaved, the country's first."""
+    code = news_country() if code is None else code
+    feed_list = feeds(code)
+    key = _headlines_key(code)
+
     def build():
         # the feeds at the same time: a slow one costs its timeout once, not per feed
-        with ThreadPoolExecutor(max_workers=len(RSS_FEEDS)) as pool:
-            per_source = [items for items in pool.map(_try_rss, RSS_FEEDS) if items]
+        with ThreadPoolExecutor(max_workers=len(feed_list)) as pool:
+            per_source = [items for items in pool.map(_try_rss, feed_list) if items]
         extra = []
         try:
             extra = _newsapi()
@@ -108,14 +222,14 @@ def headlines() -> list[dict]:
         for i in range(10):
             for src in per_source:
                 if i < len(src):
-                    key = re.sub(r"\W+", "", src[i]["title"].lower())[:60]
-                    if key not in seen:
-                        seen.add(key)
+                    same = re.sub(r"\W+", "", src[i]["title"].lower())[:60]
+                    if same not in seen:
+                        seen.add(same)
                         out.append(src[i])
-        if not out and cache.peek(f"{__name__}.headlines")[0]:
+        if not out and cache.peek(f"{__name__}.{key}")[0]:
             return None            # every feed down: keep the last headlines
-        return out[:18]
-    return _cached("headlines", 900, build) or []
+        return out[:HEADLINES_MAX]
+    return _cached(key, 900, build) or []
 
 
 # ---------------------------------------------------------------- earnings
@@ -270,8 +384,9 @@ def daily_brief(portfolio: dict, analytics_data: dict, ccy: str = "EUR") -> dict
 def _headlines_now() -> list[dict]:
     """The headlines when they were fetched before; else none for now (and
     they are fetched in the background), so the brief never waits on a feed."""
-    if cache.peek(f"{__name__}.headlines")[0]:
-        return headlines()
+    code = news_country()
+    if cache.peek(f"{__name__}.{_headlines_key(code)}")[0]:
+        return headlines(code)
     import threading
-    threading.Thread(target=headlines, name="headlines", daemon=True).start()
+    threading.Thread(target=headlines, args=(code,), name="headlines", daemon=True).start()
     return []

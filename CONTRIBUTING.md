@@ -33,6 +33,12 @@ Fixes and new brokers are welcome. Open an issue first for anything large.
 The top of `backend/connectors/registry.py` explains how the catalog is linked
 to code.
 
+## Add your country
+
+| You have | Do this |
+|---|---|
+| How tax on investments works in your country, from official sources, or good news feeds | Write `backend/countries/<CC>.json` as `backend/countries/SCHEMA.md` describes. No code needed. Try it first with `COUNTRIES_EXTRA_DIR=<folder with your file> ./run.sh`; the tests check every file |
+
 ## Report a security problem
 
 Do not open a public issue. Use GitHub's **Security → Report a vulnerability**

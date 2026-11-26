@@ -541,7 +541,7 @@ def get_tax_overview(currency: Currency = None) -> dict:
         out["uk_tax_year"] = {k: v for k, v in uk.items() if k != "applies"}
     else:
         out["uk_tax_year"] = {"applies": False,
-                              "note": "Only shown for UK tax residents (TAX_RESIDENCE)."}
+                              "note": "Only shown when the country chosen in Settings is the UK."}
     hv = main.harvest_endpoint()
     harvest = {"applies": hv.get("applies"), "summary": hv.get("headline") or hv.get("message"),
                "amounts_currency": hv.get("currency")}
@@ -575,6 +575,43 @@ def get_tax_overview(currency: Currency = None) -> dict:
         "note": sv.get("note"),
         "disclaimer": sv.get("disclaimer"),
     }
+    return envelope(out)
+
+
+def get_country_tax_overview(
+        country: Annotated[str | None, Field(
+            description="Two-letter country code, e.g. GB, NL, US. Default: the country the "
+                        "user chose in the app's Settings.")] = None) -> dict:
+    """How tax on investments works in a country: general information from
+    the country's file (backend/countries/), not advice."""
+    from . import countries
+
+    try:
+        ov = countries.overview(country)
+    except ValueError as exc:
+        raise ToolInputError(str(exc)) from None
+    out: dict = {"country": ov["code"], "name": ov["name"], "available": ov["available"],
+                 "not_advice": ov["disclaimer"],
+                 "app_tax_calculations": ("The app's tax cards (UK tax year, tax-loss harvesting, "
+                                          "ways to save) apply to this country." if ov["tax_cards"]
+                                          else countries.CALCULATIONS_NOTE)}
+    if not ov["available"]:
+        out["message"] = ov["message"]
+        return envelope(out)
+    d = ov["overview"]
+    out.update({
+        "checked_on": d["checked_on"],
+        "summary": d["summary"],
+        "tax_year": d["tax_year"],
+        "topics": d["topics"],
+        "key_dates": d.get("dates", []),
+        "upcoming_changes": d["upcoming"],
+        "not_confirmed_officially": d.get("unverified", []),
+        "not_covered": d["not_covered"],
+        "official_links": d["official"],
+        "suggested_display_currency": d["currency"],
+        "currency_note": d["currency_note"] or None,
+    })
     return envelope(out)
 
 
@@ -635,6 +672,9 @@ def get_watchlist() -> dict:
 
 TOOLS = [get_portfolio_summary, list_holdings, get_performance, get_realized_gains, get_income,
          get_net_worth, get_risk_analysis, get_tax_overview, get_data_status, get_watchlist]
+
+# the country files (backend/countries.py)
+TOOLS.append(get_country_tax_overview)
 
 
 def touch() -> None:

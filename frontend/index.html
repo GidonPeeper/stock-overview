@@ -310,6 +310,38 @@
       #demo-pill{ display:none; }
       .card{ padding:16px; }
     }
+    /* ---- country ---- */
+    .w-country{ display:flex; align-items:center; justify-content:space-between; gap:6px 12px; flex-wrap:wrap; margin:-4px 0 16px;
+      padding:10px 14px; border-radius:14px; border:1px dashed var(--border); font-size:13.5px; color:var(--muted); }
+    .w-country b{ color:var(--text); font-weight:650; }
+    .ct-meta{ display:flex; flex-wrap:wrap; gap:6px 8px; align-items:center; font-size:12.5px; color:var(--muted); margin:-6px 0 10px; }
+    .ct-sum{ font-size:14px; margin:0 0 12px; line-height:1.55; }
+    .ct-facts{ display:grid; grid-template-columns:minmax(72px,max-content) minmax(0,1fr); gap:7px 14px; margin:0 0 4px; font-size:13.5px; }
+    .ct-facts dt{ color:var(--muted); } .ct-facts dd{ margin:0; min-width:0; overflow-wrap:anywhere; }
+    .ct-topics{ margin-top:4px; border-top:1px solid var(--border); }
+    details.ct-t{ border-bottom:1px solid var(--border); }
+    details.ct-t > summary{ list-style:none; cursor:pointer; display:flex; align-items:center; justify-content:space-between; gap:10px;
+      min-height:44px; font-size:14px; font-weight:600; }
+    details.ct-t > summary::-webkit-details-marker{ display:none; }
+    details.ct-t > summary .chev{ color:var(--muted); font-size:12px; transition:transform .2s; flex-shrink:0; }
+    details.ct-t[open] > summary .chev{ transform:rotate(180deg); }
+    details.ct-t > summary:hover{ color:var(--accent); }
+    .ct-body{ padding:0 0 12px; font-size:13.5px; }
+    .ct-body ul{ margin:0 0 8px; padding-left:18px; } .ct-body li{ margin:3px 0; line-height:1.5; }
+    .ct-fig{ border-collapse:collapse; margin:4px 0 8px; font-size:13px; min-width:min(100%,280px); }
+    .ct-fig th,.ct-fig td{ padding:5px 0; border-bottom:1px solid var(--border); text-align:left; vertical-align:top; }
+    .ct-fig th{ color:var(--muted); font-weight:500; padding-right:16px; }
+    .ct-fig td{ font-weight:650; font-variant-numeric:tabular-nums; }
+    .ct-src{ font-size:12px; color:var(--faint); overflow-wrap:anywhere; }
+    .ct-list{ margin:4px 0 6px; padding-left:18px; font-size:13.5px; } .ct-list li{ margin:3px 0; }
+    .ct-links{ list-style:none; padding:0; margin:4px 0 0; font-size:13.5px; }
+    .ct-links li{ padding:5px 0; overflow-wrap:anywhere; }
+    .ct-calc{ font-size:12.5px; color:var(--muted); background:var(--panel2); border-radius:10px; padding:8px 11px; margin-top:12px; }
+    .ct-btn{ margin-top:10px; }
+    .nf-row{ display:flex; align-items:center; gap:8px; flex-wrap:wrap; margin:0 0 6px; font-size:13px; color:var(--muted); }
+    .nf-sel{ background:var(--panel2); border:1px solid var(--border); color:var(--text); border-radius:10px; min-height:40px; padding:0 10px;
+      font:inherit; font-size:14px; max-width:100%; }
+    @media(max-width:640px){ .nf-sel{ min-height:44px; flex:1; } }
   </style>
 </head>
 <body>
@@ -345,6 +377,7 @@
           <li><span class="n">2</span><span><b>Connect it</b>With a read-only key, a statement file, or a balance you type in.</span></li>
           <li><span class="n">3</span><span><b>Come back here</b>The examples disappear and your own numbers show.</span></li>
         </ol>
+        <div class="w-country" id="w-country" hidden></div>
         <div class="w-acts">
           <a class="btn primary" href="/settings#add-account">Add your first account</a>
           <button class="btn ghost" type="button" onclick="hideWelcome(true)">Look around</button>
@@ -626,7 +659,8 @@
         </div>
         <div class="col">
           <details class="card" id="more-news">
-            <summary><span><h2>Market headlines</h2><span class="s">CNBC, MarketWatch and Yahoo Finance</span></span><span class="chev">▼</span></summary>
+            <summary><span><h2>Market headlines</h2><span class="s" id="news-sub">CNBC, MarketWatch and Yahoo Finance</span></span><span class="chev">▼</span></summary>
+            <div class="nf-row"><label for="news-from">News from</label><select id="news-from" class="nf-sel" onchange="setNewsFrom(this.value)"></select></div>
             <div id="headlines" class="news ph"></div>
           </details>
         </div>
@@ -670,6 +704,11 @@
           </div>
         </div>
         <div class="col">
+          <div class="card" id="country-tax">
+            <div class="ch"><h2 id="ct-title">How tax works where you live</h2>
+              <div class="acts"><a href="/settings#country" class="link-btn">Change</a></div></div>
+            <div id="ct-body" class="ph" style="--h:180px"></div>
+          </div>
           <div class="card">
             <div class="ch"><h2>UK tax year <span id="uktax-year"></span></h2>
               <div class="acts"><button class="info" data-help="uktax-method" aria-expanded="false" aria-label="How is this worked out?"><span>?</span></button></div></div>
@@ -768,7 +807,7 @@
     applyThemeUI();
     function renderCcyBtn(){ const b=$("ccybtn"); if(b) b.textContent=SYM[CUR]||"€"; }
     function toggleCcy(){
-      const order=["GBP","EUR"]; CUR=order[(order.indexOf(CUR)+1)%order.length];
+      const order=[...new Set(["GBP","EUR",FX.default||"EUR"])]; CUR=order[(order.indexOf(CUR)+1)%order.length];   // + USD when chosen in Settings
       try{ localStorage.setItem("ccy",CUR); }catch(e){}
       renderCcyBtn(); rerenderMoney();
     }
@@ -847,7 +886,7 @@
       if(name==="holdings"&&!loaded.has("holdings")){ loaded.add("holdings"); loadWatchlist(); loadEarnings(); }
       if(name==="income"){ if(!loaded.has("income")){ loaded.add("income"); loadIncome(); } else if(INC_YEARS) renderIncomeYears(); renderReceived(); }
       if(name==="analysis"){ if(!loaded.has("analysis")){ loaded.add("analysis"); loadAnalysis(); } else if(PROJ) renderProjection(); }
-      if(name==="money"&&!loaded.has("money")){ loaded.add("money"); loadSavings(); fetchJSON("/api/uk_tax").then(renderUkTax).catch(e=>failed("uktax","The tax summary",e)); }
+      if(name==="money"&&!loaded.has("money")){ loaded.add("money"); loadSavings(); fetchJSON("/api/uk_tax").then(renderUkTax).catch(e=>failed("uktax","The tax summary",e)); loadCountryTax(); }
     }
 
     /* ---- welcome: only while the app shows sample data ---- */
@@ -859,6 +898,7 @@
       $("welcome").hidden=!DEMO||welcomeHidden();
       $("welcome-mini").hidden=!DEMO||!welcomeHidden();
       $("demo-pill").hidden=!DEMO;
+      if(DEMO) fillWelcomeCountry();
     }
     function loadDataStatus(){
       // Sample data is shown only until you add something of your own
@@ -920,13 +960,7 @@
            <span class="r-end"><span class="num ${cls(p.change_pct)}">${pct(p.change_pct)}</span><span class="r-sub">score ${p.score}</span></span></div>`).join("");
       }).catch(e=>{ loaded.delete("stars"); failed("rising-stars","The screener",e); });
     });
-    $("more-news").addEventListener("toggle",e=>{ if(!e.target.open||loaded.has("news")) return; loaded.add("news");
-      fetchJSON("/api/headlines").then(items=>{
-        if(!items.length) return empty("headlines","No headlines right now.");
-        const el=$("headlines"); el.className="news";
-        el.innerHTML=items.map(n=>`<a href="${esc(n.url)}" target="_blank" rel="noopener">${esc(n.title)}<div class="src">${esc(n.source)}</div></a>`).join("");
-      }).catch(e=>{ loaded.delete("news"); failed("headlines","Headlines",e); });
-    });
+    $("more-news").addEventListener("toggle",e=>{ if(!e.target.open||loaded.has("news")) return; loaded.add("news"); loadHeadlines(); });
 
     /* ---- net worth (money tab), grouped by asset class ---- */
     const TYPE_META={
@@ -1464,6 +1498,110 @@
             <span class="tag ${o.kind==="bed_and_isa"?"green":""}">${esc(o.ticker||(o.kind==="bed_and_isa"?"Bed & ISA":"idea"))}</span>
             ${esc(o.name)} <span class="tiny">${esc(o.reason)}${o.corr!=null?` 1-year correlation ${o.corr}.`:""}</span></div>`).join("")}</div>
         </div>`).join("")+foot;
+    }
+
+    /* ---- country ---- */
+    /* "How tax works in <country>" (Money tab, /api/country), the welcome card's
+       "Where do you live?" and the headlines per country (/api/headlines).
+       Everything from a country file or a feed is text: escaped, links https only
+       (feeds: http or https). */
+    let COUNTRY=null, COUNTRY_LIST=null, welcomeCountryAsked=false;
+    const ctHost=u=>{ try{ return new URL(u).hostname.replace(/^www\./,""); }catch(e){ return String(u||""); } };
+    const ctLink=(u,text,http)=>(http?/^https?:\/\//i:/^https:\/\//i).test(u||"")
+      ?`<a href="${esc(u)}" target="_blank" rel="noopener noreferrer">${esc(text||ctHost(u))}</a>`:esc(text||"");
+    const ctDay=md=>{ const [m,d]=String(md||"").split("-").map(Number); const t=new Date(2000,(m||1)-1,d||1);
+      return isNaN(t)?esc(md):t.toLocaleDateString("en-GB",{day:"numeric",month:"short"}); };
+    function countriesList(){ return COUNTRY_LIST?Promise.resolve(COUNTRY_LIST):fetchJSON("/api/countries").then(c=>COUNTRY_LIST=c.countries||[]); }
+
+    function loadCountryTax(){
+      fetchJSON("/api/country").then(c=>{ COUNTRY=c; renderCountryTax(); }).catch(e=>failed("ct-body","How tax works where you live",e));
+    }
+    function renderCountryTax(){
+      const c=COUNTRY, el=$("ct-body"); if(!c) return; el.className="";
+      $("ct-title").textContent=c.available?`How tax works in ${c.in_name}`:"How tax works where you live";
+      const calc=c.calculations_note?`<div class="ct-calc">${esc(c.calculations_note)}</div>`:"";
+      if(!c.code){
+        el.innerHTML=`<div class="empty">Choose the country you live in to see how tax on investments works there, with links to the official pages.</div>
+          <a class="btn primary ct-btn" href="/settings#country">Choose your country</a>`;
+        return;
+      }
+      if(!c.available){
+        el.innerHTML=`<div class="empty">${esc(c.message)} <a href="/settings#country">Change your country in Settings</a>.</div>`+calc;
+        return;
+      }
+      const o=c.overview, ty=o.tax_year;
+      const assumed=c.source==="default"?`<div class="ct-calc" style="margin:0 0 12px">The app assumes you live in ${esc(c.in_name)}. Not right? <a href="/settings#country">Choose your country</a>.</div>`:"";
+      const li=a=>a.map(x=>`<li>${esc(x)}</li>`).join("");
+      const topic=t=>`<details class="ct-t"><summary><span>${esc(t.title)}</span><span class="chev" aria-hidden="true">▼</span></summary>
+          <div class="ct-body"><ul>${li(t.points||[])}</ul>
+          ${(t.figures||[]).length?`<table class="ct-fig"><tbody>${t.figures.map(f=>`<tr><th scope="row">${esc(f.label)}</th><td>${esc(f.value)}</td></tr>`).join("")}</tbody></table>`:""}
+          <div class="ct-src">Source${t.sources.length>1?"s":""}: ${t.sources.map(u=>ctLink(u)).join(", ")}</div></div></details>`;
+      let html=`<div class="ct-meta"><span class="pill grey">Checked ${dateGB(o.checked_on)}</span><span>General information, not advice. Rules change.</span></div>`+assumed+
+        `<p class="ct-sum">${esc(o.summary)}</p>
+        <dl class="ct-facts"><dt>Tax year ${esc(ty.label)}</dt><dd>${ctDay(ty.starts)} to ${ctDay(ty.ends)}</dd>
+          <dt>Tax return</dt><dd>${esc(ty.return_due)} <span class="ct-src">(${ctLink(ty.source,"source")})</span></dd></dl>`;
+      if((o.dates||[]).length) html+=`<div class="grp-h muted"><span>Key dates</span></div>
+        <dl class="ct-facts">${o.dates.map(d=>`<dt>${ctDay(d.when)}</dt><dd>${esc(d.what)}</dd>`).join("")}</dl>`;
+      html+=`<div class="grp-h muted"><span>The rules</span></div><div class="ct-topics">${o.topics.map(topic).join("")}</div>`;
+      if((o.upcoming||[]).length) html+=`<div class="grp-h muted"><span>Announced, not in force yet</span></div><ul class="ct-list">${li(o.upcoming)}</ul>`;
+      if((o.unverified||[]).length) html+=`<details class="ct-t"><summary><span class="muted">Not confirmed on an official page (${o.unverified.length})</span><span class="chev" aria-hidden="true">▼</span></summary>
+          <div class="ct-body"><ul>${o.unverified.map(u=>`<li>${esc(u.point)} <span class="ct-src">(${ctLink(u.source)})</span></li>`).join("")}</ul></div></details>`;
+      if((o.not_covered||[]).length) html+=`<div class="grp-h muted"><span>Not covered here</span></div><ul class="ct-list muted">${li(o.not_covered)}</ul>`;
+      html+=`<div class="grp-h muted"><span>Official pages</span></div><ul class="ct-links">${o.official.map(x=>`<li>${ctLink(x.url,x.title)} ↗</li>`).join("")}</ul>`;
+      html+=`<div class="note">${esc(c.disclaimer)}</div>`+calc;
+      el.innerHTML=html;
+    }
+
+    function fillWelcomeCountry(){
+      if(welcomeCountryAsked) return; welcomeCountryAsked=true;
+      fetchJSON("/api/country").then(c=>{
+        const el=$("w-country"); if(!el) return;
+        const set=c.source==="settings";
+        el.innerHTML=set&&c.code
+          ?`<span><b>Your country:</b> ${esc(c.name)}. It sets the tax overview and the news.</span><a class="link-btn" href="/settings#country">Change</a>`
+          :`<span><b>Where do you live?</b> It sets the tax overview, the news and the currency.${c.code?` For now the app assumes ${esc(c.in_name)}.`:""}</span>
+            <a class="link-btn" href="/settings#country">Choose your country</a>`;
+        el.hidden=false;
+      }).catch(()=>{ welcomeCountryAsked=false; });
+    }
+
+    /* headlines: the chosen country's feeds first, then international ones */
+    function ago(iso){
+      const t=Date.parse(iso||""); if(isNaN(t)) return "";
+      const s=(Date.now()-t)/1000; if(s<-600) return "";
+      if(s<3600) return Math.max(1,Math.round(s/60))+" min ago";
+      if(s<86400) return Math.round(s/3600)+" h ago";
+      if(s<7*86400){ const d=Math.round(s/86400); return d+(d===1?" day ago":" days ago"); }
+      return dateGB(iso.slice(0,10));
+    }
+    function loadHeadlines(){
+      Promise.all([fetchJSON("/api/prefs"),countriesList()]).then(([p,list])=>{
+        const own=list.find(x=>x.code===p.country), nc=p.news_country||p.country, from=list.find(x=>x.code===nc);
+        const opts=[["",`My country${own?` (${own.name})`:""}`]].concat(list.filter(x=>x.has_news).map(x=>[x.code,x.name]));
+        const sel=$("news-from");
+        sel.innerHTML=opts.map(([v,t])=>`<option value="${esc(v)}">${esc(t)}</option>`).join("");
+        sel.value=p.news_country||"";
+        $("news-sub").textContent=from&&from.has_news?`From ${from.in_name}, plus CNBC, MarketWatch and Yahoo Finance`:"CNBC, MarketWatch and Yahoo Finance";
+      }).catch(()=>{ $("news-from").closest(".nf-row").hidden=true; });
+      fetchJSON("/api/headlines").then(renderHeadlines).catch(e=>{ loaded.delete("news"); failed("headlines","Headlines",e); });
+    }
+    function renderHeadlines(items){
+      const rows=(items||[]).filter(n=>/^https?:\/\//i.test(n.url||"")&&n.title);
+      if(!rows.length) return empty("headlines","No headlines right now.");
+      const el=$("headlines"); el.className="news";
+      el.innerHTML=rows.map(n=>{
+        const lang=n.language&&n.language!=="en"?` lang="${esc(n.language)}"`:"";
+        const meta=[n.source,ago(n.published_at)].filter(Boolean).map(esc).join(" · ");
+        return `<a href="${esc(n.url)}" target="_blank" rel="noopener noreferrer"><span${lang}>${esc(n.title)}</span><div class="src">${meta}</div></a>`;
+      }).join("");
+    }
+    async function setNewsFrom(code){
+      const el=$("headlines"); el.className="news ph"; el.innerHTML="";
+      try{
+        const r=await fetch("/api/prefs",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({news_country:code||null})});
+        if(!r.ok) throw new Error("save");
+      }catch(e){ return failed("headlines","Your choice of news",e); }
+      loadHeadlines();
     }
 
     /* ---- overview: value, today, total return ---- */

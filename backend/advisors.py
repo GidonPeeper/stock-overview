@@ -14,8 +14,9 @@ which data it used, any deadline, and what to do.
     is written as a token, {{1234.56}} = an amount in EUR, which the browser
     shows in the viewer's currency. Fixed rules (the £20,000 ISA allowance)
     are written in pounds.
-  * TAX_RESIDENCE (env, default UK): any other value turns the UK-only
-    checks off; fund fees and loan-versus-cash still run.
+  * The country chosen in Settings (fallback TAX_RESIDENCE in .env, default
+    UK): any other country turns the UK-only checks off; fund fees and
+    loan-versus-cash still run.
   * UK_RESIDENT_FROM (env, optional, YYYY-MM-DD): enables the check for the
     4-year foreign income and gains regime for new UK residents.
 
@@ -892,8 +893,8 @@ def build(inp: Inputs) -> dict:
         "total_once_eur": round(once, 2),
         "prompts": list(c.prompts.values()),
         "all_clear": c.clear,
-        "note": None if c.uk else (f"UK tax checks are off because TAX_RESIDENCE is "
-                                   f"{inp.residence}."),
+        "note": None if c.uk else ("UK tax checks are off because the country chosen in Settings "
+                                   "is not the UK."),
         "assumptions": (f"Growth {_pct(ASSUMED_GROWTH)} a year; {CASH_BUFFER_MONTHS} months of "
                         "payments kept as cash; income entered in Settings is before tax. "
                         "Without your income, tax is priced at the basic rate."),

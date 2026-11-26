@@ -497,7 +497,8 @@ class OverallTest(Base):
                   cash=cash(("Saver", 20_000, 4.0)))
         self.assertEqual({t["id"] for t in out["tips"]}, {"fund_fees", "loan_payoff:Car loan"})
         self.assertEqual(out["prompts"], [])
-        self.assertIn("TAX_RESIDENCE", out["note"])
+        self.assertIn("country chosen in Settings", out["note"])
+        self.assertNotIn("TAX_RESIDENCE", out["note"])
         # no UK tax on the cash rate: 6% − 4%
         self.assertAlmostEqual(tip(out, "loan_payoff:Car loan")["saving_gbp"], 200)
 

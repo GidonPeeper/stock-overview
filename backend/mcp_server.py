@@ -102,6 +102,14 @@ _DESCRIPTIONS = {
         "allowances left, dividends, ISA allowance, 30-day rule), positions that could be sold for "
         "a tax loss, and 'ways to save' tips with amounts, working and deadlines. Depends on the "
         "tax residence set in the app (UK by default)."),
+    "get_country_tax_overview": (
+        "How tax works in a country",
+        "General information, not advice: how tax on investments works in the user's country "
+        "(or another, by two-letter code). The tax year and key dates, then rules per topic "
+        "(gains, dividends, interest, funds, wealth tax, allowances, tax-free accounts, losses, "
+        "foreign shares, reporting, crypto) with figures, official source links, the date they "
+        "were checked, announced changes and what is not covered. Says when the app has no "
+        "overview for that country yet."),
     "get_data_status": (
         "Data status",
         "Which statements and accounts feed the dashboard, whether it shows sample data, "

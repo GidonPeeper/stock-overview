@@ -147,6 +147,18 @@
       .row > span:first-child{ flex:1 1 150px; min-width:0; }
       .row > :last-child{ margin-left:auto; }
     }
+    /* ---- country ---- */
+    .ctry-effects{ display:grid; gap:8px; margin:14px 0 6px; }
+    .ctry-effects .state{ font-size:13.5px; }
+    .ctry-effects .state .d{ margin-top:7px; }
+    .ctry-suggest{ display:flex; flex-wrap:wrap; gap:8px; align-items:center; color:var(--text); font-size:13.5px; padding:10px 12px; }
+    .ctry-suggest p{ margin:0; flex:1 1 100%; }
+    .ctry-grid{ display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:0 12px; margin-top:4px; }
+    .ctry-grid .chips{ margin:0; }
+    .ctry-grid .chip{ flex:1 1 0; justify-content:center; }
+    .ctry-save{ display:flex; gap:10px; align-items:center; flex-wrap:wrap; margin-top:10px; }
+    #ctry-list .tag + .tag{ margin-left:4px; }
+    @media(max-width:640px){ .ctry-grid{ grid-template-columns:1fr; } .ctry-save .btn{ flex:1 1 100%; } }
   </style>
 </head>
 <body>
@@ -360,6 +372,27 @@
     <!-- 4. App and data -->
     <section class="sec" id="app">
       <h2 class="st"><span class="n">4</span>App and data</h2>
+      <div class="card" id="country">
+        <h2>Your country</h2>
+        <div class="sub">Where you live sets the tax overview on the Money tab, the news, and which tax cards the dashboard shows.</div>
+        <div class="combo">
+          <input id="ctry-q" class="ipt q" type="search" placeholder="Search countries…" autocomplete="off"
+            role="combobox" aria-expanded="false" aria-controls="ctry-list" aria-autocomplete="list" aria-label="The country you live in" />
+          <div id="ctry-list" class="combo-list" role="listbox" hidden></div>
+        </div>
+        <div id="ctry-effects" class="ctry-effects" aria-live="polite"></div>
+        <div id="ctry-suggest" class="note ctry-suggest" hidden></div>
+        <div class="ctry-grid">
+          <div class="fld"><span id="ctry-ccy-l">Show amounts in</span>
+            <div class="chips" id="ctry-ccy" role="group" aria-labelledby="ctry-ccy-l"></div></div>
+          <label class="fld">Time zone: when “today” starts<select id="ctry-tz" class="ipt"></select></label>
+          <label class="fld">News from<select id="ctry-news" class="ipt"></select></label>
+        </div>
+        <div class="ctry-save"><button class="btn" id="ctry-save" type="button">Save</button>
+          <span id="ctry-dirty" class="fine" style="margin:0" hidden>Not saved yet</span></div>
+        <div class="msg" id="m-ctry"></div>
+      </div>
+
       <div class="card" id="storage">
         <h2>Where your data is saved</h2>
         <div id="sync-status" class="state" style="margin:8px 0 4px"><span style="color:var(--faint)">Checking…</span></div>
@@ -703,6 +736,183 @@
       }
       else { const e=await r.json().catch(()=>({detail:"Upload failed"})); msg.textContent="✗ "+(e.detail||"Upload failed"); msg.className="msg err"; }
     }
+  </script>
+  <script>
+    /* ---- country ---- */
+    /* "Your country": country, display currency, time zone and news, saved with
+       POST /api/prefs. Picking a country suggests its currency and time zone
+       (from backend/countries/<CC>.json); nothing changes until Save. */
+    (() => {
+      const $ = id => document.getElementById(id);
+      const norm = s => String(s || "").normalize("NFKD").replace(/[̀-ͯ]/g, "").toLowerCase();
+      const dayGB = iso => new Date(iso + "T12:00:00").toLocaleDateString("en-GB", {day: "numeric", month: "short", year: "numeric"});
+      const CCY = [["EUR", "€ EUR"], ["GBP", "£ GBP"], ["USD", "$ USD"]];
+      const CALC = {GB: "UK tax year, tax-loss harvesting and UK tax tips", US: "tax-loss harvesting with US rules",
+                    NL: "tax-loss harvesting (it explains why box 3 makes selling at a loss save nothing)"};
+      let LIST = [], BY = {}, P = null, shown = [], active = -1;
+      let st = {country: "", currency: "EUR", timezone: "", news: ""}, touched = false;
+
+      const nameOf = c => c ? (BY[c] ? BY[c].name : c) : "";
+      const inName = c => c ? (BY[c] ? BY[c].in_name : c) : "";
+
+      async function init() {
+        try {
+          const [c, p] = await Promise.all([getJSON("/api/countries"), getJSON("/api/prefs")]);
+          LIST = c.countries || []; BY = Object.fromEntries(LIST.map(x => [x.code, x])); P = p;
+        } catch (e) {
+          $("ctry-effects").innerHTML = `<span class="err">Your country settings could not load: ${esc(e.message)}</span>`;
+          return;
+        }
+        st = {country: P.country || "", currency: P.currency, timezone: P.timezone, news: P.news_country || ""};
+        $("ctry-q").value = nameOf(st.country);
+        fillTz(); fillNews(); render();
+      }
+
+      /* ---- the country list (searchable) ---- */
+      function matches(x, q) {
+        if (!q) return true;
+        const hay = norm(x.name + " " + x.code + " " + (x.aka || ""));
+        return norm(q).split(/\s+/).every(w => hay.includes(w));
+      }
+      function optHTML(x, n) {
+        const tags = [x.has_overview ? "Tax overview" : "", x.has_news ? "News" : "", x.tax_cards ? "Tax cards" : ""]
+          .filter(Boolean).map(t => `<span class="tag">${t}</span>`).join("");
+        return `<div class="opt" role="option" id="ctry-opt-${n}" data-n="${n}" aria-selected="${x.code === st.country}">
+          <span class="opt-name">${esc(x.name)}</span>${tags}</div>`;
+      }
+      function openList() {
+        const q = $("ctry-q").value.trim(), typed = q && q !== nameOf(st.country);
+        const qq = typed ? q : "";
+        shown = []; let html = "";
+        const none = {code: "", name: "Another country, or none"};
+        if (!qq || "another country none other".includes(norm(qq))) {
+          html += `<div class="opt" role="option" id="ctry-opt-0" data-n="0"><span class="opt-name">${esc(none.name)}
+            <span class="opt-meta">No tax overview or tax cards; international news</span></span></div>`;
+          shown.push(none);
+        }
+        const groups = [["With a tax overview", x => x.has_overview], ["All countries", x => !x.has_overview]];
+        for (const [title, test] of groups) {
+          const items = LIST.filter(x => test(x) && matches(x, qq));
+          if (!items.length) continue;
+          html += `<div class="grp">${title}</div>` + items.map(x => optHTML(x, shown.push(x) - 1)).join("");
+        }
+        const list = $("ctry-list");
+        list.innerHTML = html || '<div class="opt" style="cursor:default;color:var(--faint)">No match. Choose “Another country, or none”.</div>';
+        list.hidden = false; $("ctry-q").setAttribute("aria-expanded", "true"); active = -1;
+      }
+      function closeList() {
+        $("ctry-list").hidden = true; $("ctry-q").setAttribute("aria-expanded", "false");
+        $("ctry-q").removeAttribute("aria-activedescendant");
+      }
+      function highlight(n) {
+        document.querySelectorAll("#ctry-list .opt.act").forEach(o => o.classList.remove("act"));
+        const el = $("ctry-opt-" + n); if (!el) return;
+        el.classList.add("act"); el.scrollIntoView({block: "nearest"});
+        $("ctry-q").setAttribute("aria-activedescendant", el.id);
+      }
+      function pick(x) {
+        st.country = x.code; touched = true;
+        $("ctry-q").value = nameOf(x.code); closeList();
+        suggest(); render();
+      }
+      $("ctry-q").addEventListener("focus", () => { $("ctry-q").select(); openList(); });
+      $("ctry-q").addEventListener("input", openList);
+      $("ctry-q").addEventListener("keydown", e => {
+        if (e.key === "ArrowDown" || e.key === "ArrowUp") {
+          e.preventDefault(); if ($("ctry-list").hidden) openList();
+          active = Math.max(0, Math.min(shown.length - 1, active + (e.key === "ArrowDown" ? 1 : -1))); highlight(active);
+        } else if (e.key === "Enter") {
+          e.preventDefault(); const x = shown[active >= 0 ? active : (shown.length > 1 && !shown[0].code ? 1 : 0)]; if (x) pick(x);
+        } else if (e.key === "Escape") { closeList(); $("ctry-q").value = nameOf(st.country); }
+      });
+      $("ctry-q").addEventListener("blur", () => setTimeout(() => {
+        if ($("ctry-list").hidden || document.activeElement !== $("ctry-q")) { closeList(); $("ctry-q").value = nameOf(st.country); }
+      }, 150));
+      $("ctry-list").addEventListener("mousedown", e => e.preventDefault());
+      $("ctry-list").addEventListener("click", e => { const o = e.target.closest(".opt[data-n]"); if (o) pick(shown[+o.dataset.n]); });
+
+      /* ---- suggestion: the country's currency and time zone, never applied silently ---- */
+      function suggest() {
+        const box = $("ctry-suggest"), x = BY[st.country];
+        const want = x && x.currency ? {currency: x.currency, timezone: x.timezone} : null;
+        if (!want || (want.currency === st.currency && want.timezone === st.timezone)) { box.hidden = true; return; }
+        box.innerHTML = `<p><b>Suggested for ${esc(x.in_name)}:</b> amounts in ${esc(want.currency)}, time zone ${esc(want.timezone.replace(/_/g, " "))}.
+            ${x.currency_note ? `<br><span class="fine" style="margin:0">${esc(x.currency_note)}</span>` : ""}</p>
+          <button class="btn sm" type="button" id="ctry-use">Use these</button>
+          <button class="btn sm ghost" type="button" id="ctry-keep">Keep ${esc(st.currency)} and ${esc(st.timezone.replace(/_/g, " "))}</button>`;
+        box.hidden = false;
+        $("ctry-use").onclick = () => { st.currency = want.currency; st.timezone = want.timezone; fillTz(); box.hidden = true; render(); };
+        $("ctry-keep").onclick = () => { box.hidden = true; };
+      }
+
+      /* ---- what the choice changes ---- */
+      function effects() {
+        const c = st.country, x = BY[c], dot = on => `<span class="d" style="background:${on ? "var(--green)" : "var(--panel3)"}"></span>`;
+        const row = (on, title, text) => `<div class="state">${dot(on)}<span><b>${title}:</b> ${text}</span></div>`;
+        const rows = [];
+        if (P && !c && !P.chosen.includes("country")) rows.push(`<div class="fine" style="margin:0">No country chosen yet.</div>`);
+        else if (P && c && !touched && !P.chosen.includes("country"))
+          rows.push(`<div class="fine" style="margin:0">Not chosen yet: the app assumes ${esc(inName(c))}. Pick your country and press Save.</div>`);
+        rows.push(row(!!(x && x.has_overview), "Tax overview on the Money tab",
+          !c ? "choose a country to see one" : x && x.has_overview ? `how tax on investments works in ${esc(x.in_name)}, checked on ${dayGB(x.checked_on)}`
+             : `not written for ${esc(inName(c))} yet`));
+        rows.push(row(!!(x && x.tax_cards), "Tax calculations",
+          x && x.tax_cards ? esc(CALC[c] || "on") : "off: they cover the UK, the US and the Netherlands only"));
+        const nc = st.news || c, nx = BY[nc];
+        rows.push(row(!!(nx && nx.has_news), "News",
+          nx && nx.has_news ? `from ${esc(nx.in_name)}, plus international news (CNBC, MarketWatch, Yahoo Finance)`
+             : `international (CNBC, MarketWatch, Yahoo Finance)${nc ? `: no news feeds for ${esc(inName(nc))} yet` : ""}`));
+        $("ctry-effects").innerHTML = rows.join("");
+      }
+
+      /* ---- currency, time zone, news ---- */
+      function fillCcy() {
+        $("ctry-ccy").innerHTML = CCY.map(([c, label]) =>
+          `<button type="button" class="chip${c === st.currency ? " on" : ""}" aria-pressed="${c === st.currency}" data-c="${c}">${label}</button>`).join("");
+      }
+      $("ctry-ccy").addEventListener("click", e => { const b = e.target.closest(".chip"); if (!b) return; st.currency = b.dataset.c; suggest(); render(); });
+      function fillTz() {
+        let zones = [];
+        try { zones = Intl.supportedValuesOf("timeZone"); } catch (e) {}
+        if (!zones.length) zones = ["Europe/London", "Europe/Amsterdam", "Europe/Berlin", "Europe/Paris", "America/New_York", "America/Los_Angeles", "Asia/Singapore", "Australia/Sydney"];
+        zones = [...new Set([...zones, st.timezone, P && P.timezone].filter(Boolean))].sort();
+        $("ctry-tz").innerHTML = zones.map(z => `<option value="${esc(z)}"${z === st.timezone ? " selected" : ""}>${esc(z.replace(/_/g, " "))}</option>`).join("");
+      }
+      $("ctry-tz").addEventListener("change", e => { st.timezone = e.target.value; suggest(); render(); });
+      function fillNews() {
+        $("ctry-news").innerHTML = `<option value="">My country</option>` + LIST.filter(x => x.has_news)
+          .map(x => `<option value="${esc(x.code)}"${x.code === st.news ? " selected" : ""}>${esc(x.name)}</option>`).join("");
+        $("ctry-news").value = st.news;
+      }
+      $("ctry-news").addEventListener("change", e => { st.news = e.target.value; render(); });
+
+      function changes() {
+        if (!P) return {};
+        const ch = {};
+        if (touched && (st.country !== P.country || !P.chosen.includes("country"))) ch.country = st.country;
+        if (st.currency !== P.currency) ch.currency = st.currency;
+        if (st.timezone !== P.timezone) ch.timezone = st.timezone;
+        if (st.news !== (P.news_country || "")) ch.news_country = st.news || null;
+        return ch;
+      }
+      function render() {
+        fillCcy(); effects();             // the News line names the country "My country" stands for
+        $("ctry-dirty").hidden = !Object.keys(changes()).length;
+      }
+      $("ctry-save").addEventListener("click", async () => {
+        const ch = changes(), msg = $("m-ctry");
+        if (!Object.keys(ch).length) { msg.textContent = "Nothing changed."; msg.className = "msg"; return; }
+        const r = await fetch("/api/prefs", {method: "POST", headers: {"Content-Type": "application/json"}, body: JSON.stringify(ch)}).catch(() => null);
+        if (!r) { msg.textContent = "✗ Could not reach the server."; msg.className = "msg err"; return; }
+        const b = await r.json().catch(() => ({}));
+        if (!r.ok) { msg.textContent = "✗ " + (typeof b.detail === "string" ? b.detail : "Could not save."); msg.className = "msg err"; return; }
+        P = b; touched = false;
+        if (ch.currency) { try { localStorage.setItem("ccy", ch.currency); } catch (e) {} CUR = ch.currency; }   // the dashboard opens in it
+        msg.textContent = savedMsg(); msg.className = "msg ok";
+        $("ctry-suggest").hidden = true; render();
+      });
+      init();
+    })();
   </script>
   <script src="/accounts.js"></script>
 </body>
