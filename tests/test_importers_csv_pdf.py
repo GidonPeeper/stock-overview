@@ -253,6 +253,8 @@ class Trading212PdfTest(unittest.TestCase):
         # the same overview twice (a repeated page) is still one account
         st = trading212_pdf.parse([page(1, "€1,000.00", "€1,200.00"), page(2, "€1,000.00", "€1,200.00")])
         self.assertEqual(st["overview"]["deposits"], 1000.0)
+        # a figure the checks do not use may repeat (start and end values)
+        trading212_pdf.parse([page(1, "€1,000.00", "€900.00"), page(2, "€1,000.00", "€1,200.00")])
 
 
 # ---- Trade Republic transaction export (made-up rows, real column layout) ----

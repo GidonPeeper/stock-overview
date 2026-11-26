@@ -116,6 +116,9 @@ def parse(pages: list[dict]) -> dict:
     return out
 
 
+_CHECKED = {"period", "deposits", "withdrawals", "dividends", "interest", "realised_return"}
+
+
 def _parse_overview(texts, ov):
     keys = {"deposits": "deposits", "withdrawals": "withdrawals", "bonus": "bonus",
             "realised return": "realised_return", "open return change": None,
@@ -124,8 +127,10 @@ def _parse_overview(texts, ov):
             "third-party fees": "third_party_fees", "account value": "account_value"}
     def put(key, value):
         # A second overview with other figures: the statement covers more than
-        # one account (Trading 212 ticks every account by default).
-        if key in ov and ov[key] != value:
+        # one account (Trading 212 ticks every account by default). Only the
+        # figures the checks use count, so a repeated other line cannot refuse
+        # a one-account statement.
+        if key in _CHECKED and key in ov and ov[key] != value:
             ov.setdefault("_conflicts", []).append(key)
         ov[key] = value
 
