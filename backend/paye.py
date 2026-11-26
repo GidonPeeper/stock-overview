@@ -24,16 +24,21 @@ from __future__ import annotations
 
 from datetime import date
 
+# All checked on 2026-11-26 against
+#   https://www.gov.uk/guidance/rates-and-thresholds-for-employers-2026-to-2027
+#   https://www.gov.uk/income-tax-rates
+# Frozen until 5 April 2031:
+#   https://www.gov.uk/government/publications/maintaining-income-tax-and-equivalent-national-insurance-contributions-thresholds-until-5-april-2031
 PERSONAL_ALLOWANCE = 12_570
-TAPER_FROM = 100_000           # allowance falls £1 for every £2 above this
+TAPER_FROM = 100_000           # allowance falls £1 for every £2 above this (income-tax-rates/income-over-100000)
 BASIC_BAND = 37_700            # taxable income taxed at 20%
 ADDITIONAL_FROM = 125_140      # taxable income above this is taxed at 45%
 RATES = (0.20, 0.40, 0.45)
 
-NI_PRIMARY = 12_570            # employee NI starts here (per year)
-NI_UPPER = 50_270              # 8% below, 2% above
+NI_PRIMARY = 12_570            # employee NI starts here (per year): primary threshold
+NI_UPPER = 50_270              # upper earnings limit: 8% below, 2% above (category A)
 NI_MAIN, NI_ABOVE = 0.08, 0.02
-NI_MONTHLY = (1_048, 4_189)    # HMRC's monthly thresholds (rounded), as payroll uses
+NI_MONTHLY = (1_048, 4_189)    # HMRC's monthly PT and UEL, as payroll uses
 
 PENSION_TYPES = ("sacrifice", "net_pay", "relief_at_source")
 RULES_NOTE = ("UK income tax and National Insurance, 2026/27 rates (England, Wales and "
