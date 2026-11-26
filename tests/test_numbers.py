@@ -6,9 +6,11 @@ Every test works out the right answer by hand in its comments. No network:
 prices, exchange rates and Yahoo calls are small made-up tables.
 """
 
+import importlib.util
 import json
 import shutil
 import subprocess
+import tempfile
 import sys
 import types
 import unittest
@@ -312,7 +314,7 @@ class McpIncomeByYearTest(unittest.TestCase):
         # tax (fees -1).
         from backend import connections, datafiles, income, mcp_tools
         from backend.connectors import trading212
-        tmp = Path(self.enterContext(__import__("tempfile").TemporaryDirectory()))
+        tmp = Path(self.enterContext(tempfile.TemporaryDirectory()))
         f = tmp / "income_trade_republic.json"
         f.write_text(json.dumps({"income": [{"date": "2025-03-05", "type": "dividend", "amount_eur": 4.0}]}))
         tr = {"account": "Trade Republic"}
@@ -379,8 +381,7 @@ class McpPeriodTest(unittest.TestCase):
         self.assertEqual(mcp_tools._thin(pts, 2), [0, 22])
 
 
-@unittest.skipIf(sys.modules.get("mcp") is None and __import__("importlib").util.find_spec("mcp") is None,
-                 "the MCP SDK is not installed")
+@unittest.skipIf(importlib.util.find_spec("mcp") is None, "the MCP SDK is not installed")
 class McpMatchesDashboardTest(unittest.TestCase):
     """Every figure Claude is given equals the dashboard's figure for the same
     thing, and every amount follows the requested currency (sample data)."""
