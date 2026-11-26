@@ -656,8 +656,10 @@ def status() -> list[dict]:
 
 
 def _sample_holdings() -> list[Holding]:
+    # No own price: the demo is priced like any other holding (live quote, or
+    # prices.SAMPLE_PRICES offline), so "today" is a real one-day move.
     return [
-        Holding("Trading212", "AAPL", "Apple Inc.", 12, 165.0, "USD", price=212.4),
-        Holding("Trading212", "MSFT", "Microsoft Corp.", 5, 330.0, "USD", price=441.8),
-        Holding("Trading212", "VWRL.L", "Vanguard FTSE All-World", 8, 98.5, "GBP", price=118.2),
+        Holding("Trading212", "AAPL", "Apple Inc.", 12, 165.0, "USD", isin="US0378331005"),
+        Holding("Trading212", "MSFT", "Microsoft Corp.", 5, 330.0, "USD", isin="US5949181045"),
+        Holding("Trading212", "VWRL.L", "Vanguard FTSE All-World", 8, 98.5, "GBP", isin="IE00B3RBWM25"),
     ]
