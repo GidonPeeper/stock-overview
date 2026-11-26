@@ -606,6 +606,13 @@ class UploadTest(TRCase):
         self.assertEqual([h.broker for h in traderepublic.get_holdings()], ["Trade Republic"])
         self.assertEqual(traderepublic.income_rows()[1], self.INCOME)
 
+    def test_hand_written_lowercase_sides(self):
+        # A hand-made JSON with "buy"/"sell": 2.333333 bought, 1 sold leaves
+        # 1.333333 held. Before: "buy" was read as a sale, so nothing was held.
+        self.write_upload([{**t, "side": t["side"].lower()} for t in self.SAME])
+        (h,) = traderepublic.get_holdings()
+        self.assertAlmostEqual(h.quantity, 1.333333)
+
     def test_same_account_live_wins_once_history_is_read(self):
         self.write_upload(self.SAME, self.INCOME)
         conn = self.sign_in()

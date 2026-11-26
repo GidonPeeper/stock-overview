@@ -86,7 +86,7 @@ def get_trades() -> list[Trade]:
             when=t["date"],
             key=t["isin"],
             name=t["name"],
-            side=t["side"],
+            side=str(t["side"]).upper(),   # a hand-made JSON may say "buy"; anything but BUY is a sale
             quantity=float(t["quantity"]),
             amount=float(t["amount_eur"]),   # exact EUR
             currency="EUR",

@@ -311,7 +311,10 @@ class ClosedAccountTest(Base):
     def test_history_is_kept_with_live_accounts(self):
         self.assertEqual(set(t212.trade_sources()), {"T212 Invest", "Trading212"})
         statement_trades = t212.trade_sources()["Trading212"][1]()
-        self.assertEqual([t.side for t in statement_trades], ["buy", "sell"])
+        # the statement says "buy"/"sell"; position math needs BUY/SELL (a
+        # lowercase "buy" was read as a sale: -2 shares, no realized gain)
+        self.assertEqual([t.side for t in statement_trades], ["BUY", "SELL"])
+        self.assertAlmostEqual(compute_positions(statement_trades)["NL0010273215"].realized, 100.0)
         self.assertEqual({d["account"] for d in t212.get_dividends()}, {"Trading212", "T212 Invest"})
         self.assertIn(("Trading212", 2.5), {(i["account"], i["amount_eur"]) for i in t212.get_interest()})
         # closed: nothing held there, the live positions are all still shown
@@ -371,6 +374,25 @@ class SameAccountTest(Base):
     def test_closed_account_that_still_lists_no_positions(self):
         sources, divs, interest, replaced = self.run_with([])  # readable, but empty
         self.assertEqual(replaced, ["Trading212"])
+
+    def test_small_closed_account_is_counted_once(self):
+        # A closed account with only 2 trades (buy 2 ASML for 1,200, sell 2
+        # for 1,300: +100 realized). Its old key and its statement are the
+        # same account. Before: fewer than 3 shared trades never counted as
+        # "the same", so both were used and the +100 showed as +200.
+        small = {**CLOSED_STATEMENT, "trades": [{**t, "side": t["side"].upper()}
+                                                for t in CLOSED_STATEMENT["trades"]]}
+        orders ={"items": [_order("2024-03-01", "BUY", 2, 1200.0), _order("2025-06-01", "SELL", 2, 1300.0)],
+                  "nextPagePath": None}
+        routes = {"/equity/positions": http_error(403), "/equity/history/orders": orders,
+                  "/equity/history/dividends": DIVIDENDS, "/equity/history/transactions": TRANSACTIONS,
+                  "/equity/account/info": {"currencyCode": "EUR"}}
+        with mock.patch.object(t212, "_statement", return_value=small), \
+                mock.patch.object(t212, "_get", fake_get(routes)), \
+                mock.patch.object(t212, "accounts", return_value=[self.old]):
+            trades = t212.get_trades()
+            self.assertEqual(t212.replaced_by_statement(), ["Trading212"])
+        self.assertAlmostEqual(sum(e["realized"] for e in realized_events(trades)), 100.0)
 
     def test_live_key_makes_the_statement_redundant(self):
         sources, divs, interest, replaced = self.run_with(POSITIONS)

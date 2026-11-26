@@ -463,9 +463,11 @@ def _statement_holdings(st: dict, label: str = STATEMENT_LABEL) -> list[Holding]
 
 
 def _statement_trades(st: dict) -> list[Trade]:
+    # side upper-cased: position math reads anything but "BUY" as a sale, and
+    # a hand-made statement JSON may say "buy"
     return [
         Trade(when=t["date"], key=t["isin"], name=t.get("name") or t["symbol"],
-              side=t["side"], quantity=float(t["quantity"]), amount=float(t["amount_eur"]),
+              side=str(t["side"]).upper(), quantity=float(t["quantity"]), amount=float(t["amount_eur"]),
               currency="EUR", ticker=t.get("ticker") or ticker_for(t["isin"]))
         for t in st.get("trades", [])
     ]
@@ -486,7 +488,10 @@ def _same_account_as_statement(acct: Account) -> bool:
     stmt = {(t.get("isin"), str(t.get("date", ""))[:10]) for t in st["trades"]}
     mine = {(t.key, t.when[:10]) for t in api}
     common = len(stmt & mine)
-    return common >= 3 and common >= 0.5 * min(len(stmt), len(mine))
+    # a statement with fewer than 3 trades is the same account when all of
+    # them are in the key's history (as traderepublic.same_account does)
+    small = min(len(stmt), len(mine))
+    return small > 0 and common >= min(3, small) and common >= 0.5 * small
 
 
 @_ttl_cache(seconds=900)

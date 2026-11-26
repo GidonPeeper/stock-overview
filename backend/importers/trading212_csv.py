@@ -262,7 +262,8 @@ def _period(st: dict | None) -> tuple[str, str] | None:
 
 
 def _traded(st: dict, lo: str, hi: str) -> set[tuple[str, str]]:
-    return {(t["isin"], t["side"]) for t in st.get("trades") or [] if lo <= str(t["date"])[:10] <= hi}
+    return {(t.get("isin"), str(t.get("side", "")).upper()) for t in st.get("trades") or []
+            if lo <= str(t.get("date", ""))[:10] <= hi}
 
 
 def combine(base: dict | None, new: dict, report: dict | None = None) -> tuple[dict, dict]:
