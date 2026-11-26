@@ -213,8 +213,11 @@ def _finish(st: dict, source: str) -> None:
     st["_generated"] = time.strftime("%Y-%m-%d %H:%M")
 
 
-def merge(base: dict, new: dict) -> tuple[dict, dict]:
-    """`base` (an earlier statement) + the rows of `new` dated after base's end."""
+def merge(base: dict, new: dict, keep_new_positions: bool | None = None) -> tuple[dict, dict]:
+    """`base` (an earlier statement) + the rows of `new` dated after base's end.
+    Positions are base's carried through the added trades, or `new`'s own
+    when it already knows them at the end date (a statement PDF, or
+    `keep_new_positions`)."""
     end = ((base.get("overview") or {}).get("period") or [None, None])[1]
     if not end:
         raise ValueError("The existing Trading 212 statement has no period; upload it again.")
@@ -229,7 +232,7 @@ def merge(base: dict, new: dict) -> tuple[dict, dict]:
     for p in st["positions"]:
         p.pop("_cost", None)
     st["warnings"] = []
-    if new.get("_source") == PDF_SOURCE:
+    if keep_new_positions or (keep_new_positions is None and new.get("_source") == PDF_SOURCE):
         # a later activity statement has the exact open-positions table at the
         # new end date (Trading 212's own cost, FX included): use it, and say
         # so if it does not hold the shares the joined trades add up to
@@ -310,7 +313,8 @@ def combine(base: dict | None, new: dict, report: dict | None = None) -> tuple[d
         raise ValueError(f"The two Trading 212 files show different trades for the dates both "
                          f"cover ({lo} to {hi}): they look like two different accounts. Nothing "
                          f"was changed. Upload one account's files only.")
-    st, joined = merge(earlier, later)
+    # an older file only adds history: the saved statement's holdings stand
+    st, joined = merge(earlier, later, keep_new_positions=True if later is base else None)
     warnings = [w for w in warnings if not w.startswith(_SHORT)]   # merge checks that again
     if ls > (date.fromisoformat(ee) + timedelta(days=1)).isoformat():
         st["warnings"].append(f"Nothing covers {(date.fromisoformat(ee) + timedelta(days=1))} to "

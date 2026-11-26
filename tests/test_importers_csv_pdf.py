@@ -221,6 +221,20 @@ class Trading212CombineTest(unittest.TestCase):
         self.assertEqual(st["positions"], later["positions"])
         self.assertEqual(report["warnings"], [])
 
+    def test_an_older_file_keeps_the_holdings_of_a_joined_statement(self):
+        # Saved: a 2025 PDF joined with a CSV (so its _source is no longer the
+        # PDF's). It holds 3 META and 2 AAPL; AAPL was bought before 2025.
+        # An export of 2024-06-01 .. 2025-03-01 arrives without that AAPL buy
+        # (it was in 2023). The 2 AAPL are still held: carrying the older
+        # file's holdings forward would have dropped them.
+        saved = {**BASE, "_source": "Trading 212 activity statement + Trading 212 history CSV"}
+        older = trading212_csv.convert(t212_csv(
+            "Interest on cash,2024-06-01 00:10:00+00:00,,,,,i0,,,,,,,0.10,EUR,,,,,,", META_2025))[0]
+        st, report = trading212_csv.combine(saved, older)
+        self.assertEqual({p["isin"]: p["quantity"] for p in st["positions"]},
+                         {"US30303M1027": 3.0, "US0378331005": 2.0})
+        self.assertIn("US0378331005", " ".join(report["warnings"]))   # the history before is missing
+
     def test_files_of_two_accounts_are_refused(self):
         other = trading212_csv.convert(t212_csv(
             "Market buy,2025-12-01 10:00:00+00:00,US0378331005,AAPL,Apple,,X1,1.0,190,USD,1.1,,,"
