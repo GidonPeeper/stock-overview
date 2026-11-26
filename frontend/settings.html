@@ -363,11 +363,12 @@
       <div class="card" id="storage">
         <h2>Where your data is saved</h2>
         <div id="sync-status" class="state" style="margin:8px 0 4px"><span style="color:var(--faint)">Checking…</span></div>
-        <div id="sync-howto" class="sub" style="margin:10px 0 0" hidden>Free hosting wipes its disk on every restart. To keep your
-          changes, set a GitHub token: GitHub → Settings → Developer settings → Fine-grained tokens → new token with
-          <b>Contents: read &amp; write</b> on this repo only → add it as the setting <code>GITHUB_TOKEN</code> on the host.
-          Every change is then encrypted and saved to a <code>data-sync</code> branch, so balances and uploads survive restarts
-          and deploys. (Or re-upload your files after each deploy, or add them as Render Secret Files.)</div>
+        <div id="sync-howto" class="sub" style="margin:10px 0 0" hidden>This host wipes its disk on every restart. To keep
+          your changes, give the app a private place to save them: create a <b>private</b> GitHub repository, make a
+          fine-grained token with <b>Contents: read &amp; write</b> on that repository only, and add two settings on the
+          host: <code>GITHUB_TOKEN</code> (the token) and <code>GITHUB_REPO</code> (<code>your-name/your-repository</code>).
+          Every change is then saved there, encrypted. Step by step:
+          <a href="https://github.com/GidonPeeper/stock-overview/blob/main/SETUP.md" target="_blank" rel="noopener">SETUP.md</a>.</div>
       </div>
 
       <div class="card" id="datafiles">
@@ -378,11 +379,12 @@
       </div>
 
       <div class="card" id="mcp">
-        <h2>Connect Claude (MCP)</h2>
-        <div class="sub" style="margin-bottom:6px">Ask Claude about your portfolio in plain words, for example “How did my investments do this year?”.
-          A small connector (an MCP server: the standard way to let Claude use an app) gives Claude access to your numbers.</div>
-        <div class="sub" style="margin:0">How to set it up, and what Claude can see:
-          <a href="https://github.com/GidonPeeper/stock-overview/blob/main/MCP.md" target="_blank" rel="noopener">MCP.md</a> in the project.</div>
+        <h2>Ask Claude about your portfolio</h2>
+        <div class="sub" style="margin-bottom:6px">Connect Claude and ask in plain words, for example “How did my investments do this year?”.
+          Claude can only read your numbers: it can never trade or change anything.</div>
+        <div id="mcp-how" class="sub" style="margin:0"></div>
+        <div class="sub" style="margin:8px 0 0">All steps, and what Claude can see:
+          <a href="https://github.com/GidonPeeper/stock-overview/blob/main/MCP.md" target="_blank" rel="noopener">MCP.md</a>.</div>
       </div>
     </section>
   </div>
@@ -452,6 +454,24 @@
         html=dot("var(--amber)")+`<span><b style="color:var(--amber)">Cloud backup off.</b> Saving works now, but this host resets its disk on the next restart or deploy. Add a <code>GITHUB_TOKEN</code> to keep your changes.</span>`;
       if(el) el.innerHTML=html;
       document.getElementById("sync-howto").hidden = !!sy.token || window.DISK_KEPT;
+      renderMcp(s._mcp||{});
+    }
+    function renderMcp(m){
+      const el=document.getElementById("mcp-how"); if(!el) return;
+      if(m.dir){
+        const cmd=`claude mcp add stock-overview --scope user -e PYTHONPATH="${m.dir}" -- "${m.python}" -P -m backend.mcp_server`;
+        el.innerHTML=`<b>Claude Code:</b> run this once in a terminal.
+          <div style="display:flex;gap:8px;align-items:flex-start;margin:6px 0 8px">
+            <code id="mcp-cmd" style="flex:1;padding:8px 10px;display:block">${esc(cmd)}</code>
+            <button class="btn ghost" id="mcp-copy" type="button">Copy</button></div>
+          <b>Claude Desktop:</b> see the short steps in MCP.md.`;
+        document.getElementById("mcp-copy").onclick=e=>{
+          navigator.clipboard.writeText(cmd).then(()=>{e.target.textContent="Copied";setTimeout(()=>e.target.textContent="Copy",1500);}).catch(()=>{});};
+      } else if(m.url_on){
+        el.innerHTML=`<b>On.</b> Address for Claude: <code>${esc(location.origin)}/mcp</code>. Claude also needs the token you set as <code>MCP_TOKEN</code>.`;
+      } else {
+        el.innerHTML=`<b>Off.</b> To turn it on, add the setting <code>MCP_TOKEN</code> (a long random text, 32+ characters) on the host. The address is then <code>${esc(location.origin)}/mcp</code>.`;
+      }
     }
     function savedMsg(){
       if(window.SYNC_ON) return "✓ Saved (backed up to the cloud)";

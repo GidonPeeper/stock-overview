@@ -1,89 +1,35 @@
-"""History store for the profit/value trendline.
+"""The trendline for the sample portfolio (demo mode only).
 
-A tiny SQLite database holding one row per day: total value, total cost and
-profit. We record a snapshot whenever the portfolio is computed (deduped per
-day, last write wins), and the dashboard reads the series back for the chart.
-
-In demo mode we seed ~60 days of synthetic history on first run so the trendline
-isn't empty before you've used the app for a while.
+Real data gets its chart from the trades themselves (trend.py). The sample
+holdings have no full trade history, so the demo shows a made-up past instead:
+a gentle climb from what was paid to today's value. It is rebuilt from today's
+totals on every request, so it always ends on the numbers in the header and
+nothing is written to disk.
 """
 
 from __future__ import annotations
 
 import math
-import sqlite3
-from datetime import date, timedelta
-from pathlib import Path
+from datetime import timedelta
 
-DATA_DIR = Path(__file__).resolve().parents[1] / "data"
-DB_PATH = DATA_DIR / "history.db"
+from . import clock
 
 
-def _conn() -> sqlite3.Connection:
-    DATA_DIR.mkdir(exist_ok=True)
-    conn = sqlite3.connect(DB_PATH)
-    conn.execute(
-        """
-        CREATE TABLE IF NOT EXISTS snapshots (
-            day         TEXT PRIMARY KEY,
-            total_value REAL NOT NULL,
-            total_cost  REAL NOT NULL,
-            profit      REAL NOT NULL,
-            realized    REAL NOT NULL DEFAULT 0
-        )
-        """
-    )
-    return conn
-
-
-def record_snapshot(total_value: float, total_cost: float,
-                    realized: float = 0.0, day: str | None = None) -> None:
-    day = day or date.today().isoformat()
-    unrealized = total_value - total_cost
-    conn = _conn()
-    with conn:
-        conn.execute(
-            "INSERT INTO snapshots (day, total_value, total_cost, profit, realized) "
-            "VALUES (?, ?, ?, ?, ?) "
-            "ON CONFLICT(day) DO UPDATE SET "
-            "total_value=excluded.total_value, "
-            "total_cost=excluded.total_cost, "
-            "profit=excluded.profit, "
-            "realized=excluded.realized",
-            (day, total_value, total_cost, unrealized, realized),
-        )
-    conn.close()
-
-
-def get_history() -> list[dict]:
-    conn = _conn()
-    rows = conn.execute(
-        "SELECT day, total_value, total_cost, profit, realized FROM snapshots ORDER BY day"
-    ).fetchall()
-    conn.close()
-    return [
-        # profit = unrealized (value-cost); total_profit = unrealized + realized
-        {"day": d, "total_value": v, "total_cost": c,
-         "unrealized": p, "realized": r, "total_profit": round(p + r, 2)}
-        for (d, v, c, p, r) in rows
-    ]
-
-
-def seed_demo_history(total_value: float, total_cost: float, days: int = 60) -> None:
-    """Synthesize a plausible past so the demo trendline looks real. No-op if
-    any history already exists."""
-    conn = _conn()
-    existing = conn.execute("SELECT COUNT(*) FROM snapshots").fetchone()[0]
-    conn.close()
-    if existing:
-        return
-
-    today = date.today()
+def demo_history(total_value: float, total_cost: float, other_profit: float = 0.0,
+                 days: int = 60) -> list[dict]:
+    """`days` daily points ending today. `other_profit` is what was earned
+    besides price gains (profit from selling, dividends, interest, fees): it
+    builds up evenly, so the last point equals the dashboard's total return."""
+    today = clock.today()
+    out = []
     for i in range(days, -1, -1):
-        d = today - timedelta(days=i)
         progress = (days - i) / days  # 0 -> 1 toward today
-        # Gentle upward drift from cost basis to today's value, plus a wave.
-        base = total_cost + (total_value - total_cost) * progress
-        wobble = math.sin(i / 5.0) * (total_value * 0.01)
-        value = base + wobble
-        record_snapshot(round(value, 2), round(total_cost, 2), day=d.isoformat())
+        value = total_cost + (total_value - total_cost) * progress \
+            + math.sin(i / 5.0) * total_value * 0.01          # a wave; 0 today
+        unrealized = value - total_cost
+        realized = other_profit * progress
+        out.append({"day": (today - timedelta(days=i)).isoformat(),
+                    "total_value": round(value, 2), "total_cost": round(total_cost, 2),
+                    "unrealized": round(unrealized, 2), "realized": round(realized, 2),
+                    "total_profit": round(unrealized + realized, 2)})
+    return out

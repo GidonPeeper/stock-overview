@@ -268,8 +268,6 @@ def get_performance(
     if start and start > end:
         raise ToolInputError("start_date is after end_date")
 
-    if datafiles.demo():
-        main.portfolio()   # seeds the demo trendline, as the dashboard's first request does
     hist = sorted(main._history(), key=lambda h: h["day"])
     s, e = start.isoformat() if start else "", end.isoformat()
     inside = [h for h in hist if h["day"] >= s and h["day"] <= e]

@@ -36,8 +36,7 @@ def sample_world(case) -> None:
     """Start patches on a TestCase class: sample data only, fake Yahoo with
     fixed quotes (ASML down 40%, so tax-loss harvesting has a candidate),
     fixed FX, no files written, no background market threads."""
-    from backend import (advisors, cache, datafiles, fx, harvest, market, prices, sectors, store,
-                         trend)
+    from backend import advisors, cache, datafiles, fx, harvest, market, prices, sectors, trend
     from tests.test_cache import fake_yf
 
     tmp = tempfile.TemporaryDirectory()
@@ -49,8 +48,6 @@ def sample_world(case) -> None:
                 "RENDER": "", "RENDER_EXTERNAL_URL": "", "MCP_TOKEN": TOKEN, "MCP_ALLOWED_ORIGINS": ""})
     for p in (mock.patch.object(datafiles, "_SEARCH_DIRS", [empty]),
               mock.patch.dict(os.environ, env),
-              mock.patch.object(store, "DATA_DIR", Path(tmp.name)),
-              mock.patch.object(store, "DB_PATH", Path(tmp.name) / "history.db"),
               mock.patch.object(fx, "_live_rates", return_value=dict(RATES)),
               mock.patch.object(sectors, "get_sectors", side_effect=lambda ts: {t: "Technology" for t in ts if t}),
               mock.patch.object(harvest, "_sector_map", return_value={}),
@@ -147,11 +144,7 @@ class ToolsTest(unittest.TestCase):
 
     def test_performance_as_the_first_question(self):
         """Sample data: the demo trendline exists even before any other tool ran."""
-        from backend import store
-        with tempfile.TemporaryDirectory() as d, \
-                mock.patch.object(store, "DATA_DIR", Path(d)), \
-                mock.patch.object(store, "DB_PATH", Path(d) / "history.db"):
-            out = self.t.get_performance(period="year")
+        out = self.t.get_performance(period="year")
         self.assertNotIn("message", out)
         self.assertGreater(len(out["series"]), 2)
 

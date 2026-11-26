@@ -272,15 +272,16 @@ def hindsight() -> dict:
 
 
 # ------------------------------------------------------------- projection
-def projection() -> dict:
+def projection(start_value: float | None = None) -> dict:
     """Project net worth 10 years out under three return scenarios, using the
-    portfolio's real average monthly contribution."""
+    portfolio's real average monthly contribution. Starts from `start_value`
+    (today's portfolio value), else from the last day of the history."""
     from . import trend
 
     hist = trend.series()
-    if not hist:
+    if not hist and not start_value:
         return {"scenarios": {}}
-    start = hist[-1]["total_value"]
+    start = start_value or hist[-1]["total_value"]
     # median positive monthly contribution over the last 24 months
     by_month: dict[str, float] = {}
     for s in hist:

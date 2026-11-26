@@ -13,6 +13,7 @@ Open: http://127.0.0.1:8000
 from __future__ import annotations
 
 import os
+import sys
 import threading
 import time
 from contextlib import asynccontextmanager
@@ -408,10 +409,6 @@ def portfolio() -> dict:
     daily = round(sum(h["daily_eur"] for h in holdings if h["daily_eur"] is not None), 2)
     prev_value = total_value - daily
 
-    if _demo():  # sample data: a synthetic trendline (real data: trend.py)
-        store.seed_demo_history(total_value, total_cost)
-        store.record_snapshot(total_value, total_cost, realized=realized_total)
-
     return {
         "base_currency": BASE_CURRENCY,
         "fx": display_rates(),
@@ -471,10 +468,11 @@ def profit() -> dict:
 def _history() -> list[dict]:
     """Value and profit per day since the first trade, ending with today's
     live totals (trend.py)."""
-    if _demo():
-        return store.get_history()
     _, total_value, total_cost, _ = _open_holdings_rows()
     inc = income.summary()
+    if _demo():  # sample data: a made-up past ending on today's totals (store.py)
+        return store.demo_history(total_value, total_cost,
+                                  realized.summary()["total_realized_eur"] + inc["total"] + inc["fees"])
     return trend.history(total_value, total_cost, realized.summary()["total_realized_eur"],
                          inc["total"] + inc["fees"])
 
@@ -521,6 +519,12 @@ def datastatus() -> dict:
     out["_sync"] = {**github_sync.last_result, "pending": github_sync.pending(),
                     "token": bool(os.getenv("GITHUB_TOKEN")),
                     "disk_kept": not os.getenv("RENDER")}
+    # Settings shows how to connect Claude (MCP.md): the start command with
+    # this copy's own path on your computer, or the /mcp address on a host.
+    own_computer = not os.getenv("RENDER") and not os.path.exists("/.dockerenv")
+    out["_mcp"] = {"dir": str(datafiles.ROOT) if own_computer else None,
+                   "python": sys.executable if own_computer else None,
+                   "url_on": bool(os.getenv("MCP_TOKEN"))}
     return out
 
 
@@ -877,7 +881,7 @@ def hindsight_endpoint() -> dict:
 def projection_endpoint() -> dict:
     """10-year net-worth projection under 3/6/9% scenarios with your real
     contribution rate."""
-    return reports.projection()
+    return reports.projection(_open_holdings_rows()[1])
 
 
 @app.get("/api/export/holdings.csv")
