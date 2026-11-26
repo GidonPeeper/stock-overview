@@ -219,7 +219,7 @@
         "DE",
         "NL"
       ],
-      "recommended": "api",
+      "recommended": "upload",
       "methods": [
         {
           "type": "api",

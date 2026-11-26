@@ -34,7 +34,7 @@ own. Open **Settings**:
 | You use | What to do |
 |---|---|
 | Trading 212 | Add an account → Trading 212 → paste a read-only API key |
-| Trade Republic | Add an account → Trade Republic → sign in with your phone number, PIN and the code you get |
+| Trade Republic | Add an account → Trade Republic → upload the **Transaction export**. Or choose **Sign in (unofficial)**: phone number and PIN, then approve in the Trade Republic app |
 | DEGIRO | Upload the **Account statement** PDF (all dates) |
 | Interactive Brokers, eToro, Bitvavo, Starling, Wise | Add an account, then follow the steps shown |
 | Any other broker | Upload its positions CSV |
@@ -52,8 +52,10 @@ Copy `.env.sample` to `.env` and change what you need, then restart:
 
 ## 4. Ask Claude about your portfolio (optional)
 
-The app can act as a connector for Claude, so you can ask things like "how
-did my portfolio do this month?". See [MCP.md](MCP.md).
+Claude can answer questions from your own numbers, such as "how did my
+portfolio do this month?". Run `./run.sh claude` for the command to connect
+it, or copy it from **Settings → App and data**. Claude can only read.
+Details: [MCP.md](MCP.md).
 
 ## Good to know
 

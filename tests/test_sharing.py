@@ -141,6 +141,36 @@ class LoginTest(unittest.TestCase):
         self.assertEqual(self.main._client_key(r), "1.2.3.4")
 
 
+class OtherWebsitesTest(unittest.TestCase):
+    """Requests another website makes through the user's browser."""
+
+    def refused(self, method="GET", password=None, **headers):
+        from backend import main as m
+        req = SimpleNamespace(method=method, headers=headers)
+        with mock.patch.object(m, "_DASH_PASS", password), \
+                mock.patch.dict(os.environ, {"ALLOWED_HOSTS": "my.example.org"}):
+            return m._refused(req)
+
+    def test_a_change_from_another_site_is_refused(self):
+        self.assertIsNone(self.refused("POST", host="127.0.0.1:8000", origin="http://127.0.0.1:8000"))
+        self.assertIsNone(self.refused("POST", host="127.0.0.1:8000"))            # curl, scripts
+        self.assertIsNotNone(self.refused("POST", host="127.0.0.1:8000", origin="https://evil.example"))
+        self.assertIsNotNone(self.refused("DELETE", host="127.0.0.1:8000", origin="null"))
+        self.assertIsNone(self.refused("GET", host="127.0.0.1:8000", origin="https://evil.example"))
+        # behind a proxy that passes the public name along
+        self.assertIsNone(self.refused("POST", "pw", host="10.0.0.2:10000", origin="https://d.onrender.com",
+                                       **{"x-forwarded-host": "d.onrender.com"}))
+        self.assertIsNotNone(self.refused("POST", "pw", host="d.onrender.com", origin="https://evil.example"))
+
+    def test_without_a_password_only_local_addresses_are_answered(self):
+        for host in ("127.0.0.1:8000", "localhost:8000", "[::1]:8000", "192.168.1.20:8000",
+                     "nas:8000", "nas.local", "my.example.org"):
+            self.assertIsNone(self.refused(host=host), host)
+        self.assertIsNotNone(self.refused(host="evil.example:8000"))
+        self.assertIsNotNone(self.refused(host="127.0.0.1.evil.example"))
+        self.assertIsNone(self.refused(password="pw", host="d.onrender.com"))    # a password: any name
+
+
 class TaxResidenceTest(unittest.TestCase):
     def test_other_countries_turn_the_tax_cards_off(self):
         from backend import main

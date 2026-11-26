@@ -9,3 +9,4 @@ lxml>=5.0
 cryptography>=42.0
 pdfplumber>=0.11
 mcp>=2.3,<3
+websockets>=13

@@ -12,12 +12,14 @@ Open: http://127.0.0.1:8000
 
 from __future__ import annotations
 
+import ipaddress
 import os
 import sys
 import threading
 import time
 from contextlib import asynccontextmanager
 from pathlib import Path
+from urllib.parse import urlsplit
 
 from fastapi import FastAPI, File, Form, HTTPException, Request, UploadFile
 from fastapi.staticfiles import StaticFiles
@@ -159,11 +161,65 @@ def _needs_password(request: Request) -> bool:
     return bool(proxied) or host not in _LOCAL_CLIENTS
 
 
+# Two checks against other websites open in the same browser, which can send
+# requests to an app on this computer:
+#  * a change (POST, PUT, DELETE) sent by a page of another site is refused;
+#  * without a password, the app answers only when opened by a local address
+#    (localhost, an IP address, a home-network name). A site on the internet
+#    can point its own name at 127.0.0.1 and read the answers otherwise ("DNS
+#    rebinding"). Other names go in ALLOWED_HOSTS (comma-separated).
+_READS = {"GET", "HEAD", "OPTIONS"}
+_HOME_NAMES = (".local", ".lan", ".home", ".internal", ".localhost", ".home.arpa")
+
+
+def _hostname(netloc: str) -> str:
+    try:
+        return (urlsplit("//" + netloc).hostname or "").lower().rstrip(".")
+    except ValueError:
+        return ""
+
+
+def _local_name(host: str) -> bool:
+    if not host or host == "localhost" or host.endswith(_HOME_NAMES) or "." not in host:
+        return bool(host)
+    try:
+        ipaddress.ip_address(host)
+        return True
+    except ValueError:
+        return False
+
+
+def _refused(request: Request) -> str | None:
+    """Why this request is not served, or None."""
+    host = request.headers.get("host") or ""
+    origin = request.headers.get("origin")
+    if request.method not in _READS and origin is not None:
+        ours = {host.lower(), (request.headers.get("x-forwarded-host") or host).lower()}
+        try:
+            theirs = urlsplit(origin).netloc.lower()
+        except ValueError:
+            theirs = ""
+        if not theirs or theirs not in ours:
+            return "This request came from another website and was refused."
+    if not _DASH_PASS:
+        name = _hostname(host)
+        allowed = {h.strip().lower() for h in os.getenv("ALLOWED_HOSTS", "").split(",") if h.strip()}
+        if name and not _local_name(name) and name not in allowed:
+            return (f"This dashboard has no password and was opened as {name}, an address it "
+                    f"does not know. Set DASHBOARD_PASSWORD, or add ALLOWED_HOSTS={name} to .env.")
+    return None
+
+
 @app.middleware("http")
 async def _auth(request: Request, call_next):
     path = request.url.path
     if path == mcp_server.PATH:  # MCP clients have no login cookie: /mcp checks MCP_TOKEN itself
         return await call_next(request)
+    setup_first = not _DASH_PASS and _needs_password(request)   # gets the "set a password" page
+    if path != "/healthz" and not setup_first:
+        why = _refused(request)
+        if why:
+            return Response(why, status_code=403)
     if not _DASH_PASS:  # auth disabled on your own computer
         if _needs_password(request) and path not in ("/healthz", "/sw.js"):
             if path.startswith("/api"):

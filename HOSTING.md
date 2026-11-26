@@ -16,7 +16,8 @@ phone ──HTTPS──▶ Cloudflare (Access login: you@example.com)
 1. **Cloudflare Access** — a login wall locked to your Google account.
 2. **App password** — `DASHBOARD_PASSWORD` in `.env` (defence in depth). The app
    refuses to show anything through the tunnel without it. To rely on
-   Cloudflare Access alone, set `ALLOW_NO_PASSWORD=1` instead.
+   Cloudflare Access alone, set `ALLOW_NO_PASSWORD=1` and
+   `ALLOWED_HOSTS=<your address, e.g. dash.example.com>` instead.
 
 The T212 key is read-only, so even a total breach cannot move money.
 
