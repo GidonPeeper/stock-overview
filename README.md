@@ -1,7 +1,7 @@
 # 📈 Stock Overview
 
 ![Python](https://img.shields.io/badge/Python-3.10+-3776AB?logo=python&logoColor=white)
-![License](https://img.shields.io/badge/License-MIT-green)
+![License](https://img.shields.io/badge/License-AGPL--3.0-blue)
 ![Runs locally](https://img.shields.io/badge/Runs-on%20your%20computer-0a7)
 ![MCP](https://img.shields.io/badge/Claude-MCP%20server-d97757)
 
@@ -12,6 +12,16 @@ earns you. Open source, and it runs on your own computer.
   There is no account to create and no company server.
 - **Read-only.** The app can look, never trade or move money.
 - **Ask Claude.** Connect Claude and ask "how did my portfolio do this month?"
+
+![The Overview tab: portfolio value, total return and a performance chart](docs/screenshots/overview.png)
+
+| Holdings | Analysis |
+|---|---|
+| ![Every position across brokers, with today's change and total gain](docs/screenshots/holdings.png) | ![A plain-language summary, a health score, diversification and a stress test](docs/screenshots/analysis.png) |
+| **Money** | **On a phone, in dark mode** |
+| ![Net worth and monthly budget](docs/screenshots/money.png) | <img src="docs/screenshots/phone.png" width="300" alt="The Overview tab on a phone in dark mode"> |
+
+All screenshots show the example data the app starts with.
 
 ## Start
 
@@ -157,4 +167,11 @@ steps, dependencies, releases): [MAINTAINING.md](MAINTAINING.md).
 
 ## License
 
-MIT. See [LICENSE](LICENSE).
+[AGPL-3.0](LICENSE). You can use, change and run it for free, for
+yourself or for others. If you run a changed version for other people over
+the internet, you must offer them your changed code under the same licence.
+
+Credits: the Trade Republic sign-in follows the protocol used by
+[pytr](https://github.com/pytr-org/pytr) (MIT). Chart.js (MIT) and the Inter
+font (SIL Open Font License) are included in `frontend/vendor/` with their
+licences.

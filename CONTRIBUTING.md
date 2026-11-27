@@ -42,4 +42,16 @@ to code.
 ## Report a security problem
 
 Do not open a public issue. Use GitHub's **Security → Report a vulnerability**
-on this repo.
+on this repo. See [SECURITY.md](SECURITY.md).
+
+## Licence of your contribution
+
+Stock Overview is licensed under [AGPL-3.0](LICENSE). By opening a pull
+request you confirm that:
+
+- the contribution is your own work, or you have the right to submit it;
+- it is licensed under AGPL-3.0; and
+- you also allow Gidon Peeper to license it under other terms, for example
+  for a paid hosted version that helps pay for the project.
+
+If you do not agree, say so in the pull request before it is merged.
