@@ -166,6 +166,16 @@
       display:grid; place-items:center; font-size:var(--fs-xs); font-weight:800; }
     .notice{ border:1px solid var(--amber); border-radius:var(--r-md); padding:10px 14px; margin:0 0 14px; font-size:var(--fs-sm); line-height:1.5; color:var(--text); background:var(--panel); overflow-wrap:anywhere; }
     .notice ul{ margin:4px 0 0; padding-left:18px; }
+    /* the check-up (Settings): a count on the settings button; a card whose rules are out of date */
+    #setbtn, #hdr-more{ position:relative; }
+    .cu-badge{ position:absolute; top:-6px; right:-6px; min-width:20px; height:20px; padding:0 5px; border-radius:var(--r-pill); border:2px solid var(--bg);
+      background:var(--amber); color:var(--bg); font-size:var(--fs-2xs); font-weight:800; line-height:16px; text-align:center; pointer-events:none; }
+    .cu-badge.red{ background:var(--red); }
+    .menu .cu-badge{ position:static; margin-left:auto; border:0; line-height:20px; }
+    .rules-old{ display:flex; gap:10px; align-items:flex-start; color:var(--text); background:var(--amber-bg); border-radius:var(--r-md); padding:10px 12px; margin:0 0 12px; font-size:var(--fs-sm); line-height:1.5; }
+    .rules-old::before{ content:"!"; flex:0 0 20px; height:20px; border-radius:50%; background:var(--amber); color:var(--bg); display:grid; place-items:center; font-size:var(--fs-xs); font-weight:800; }
+    .app-foot{ display:flex; flex-wrap:wrap; gap:4px 14px; justify-content:center; align-items:center; font-size:var(--fs-xs); color:var(--muted); padding:18px 0 4px; }
+    .app-foot a{ display:inline-flex; align-items:center; min-height:44px; padding:0 4px; font-weight:600; }
     .linkbtn{ background:none; border:0; padding:0; color:var(--accent); font:inherit; font-weight:600; cursor:pointer; text-decoration:underline; text-underline-offset:2px; }
     .note{ font-size:var(--fs-xs); color:var(--faint); margin-top:12px; line-height:1.5; }
 
@@ -577,8 +587,9 @@
             <button type="button" role="menuitemradio" aria-checked="false" data-ccy="USD"><span class="m-ico" aria-hidden="true">$</span>US dollars</button>
             <div class="menu-sep" role="separator"></div>
             <button type="button" role="menuitem" id="m-theme" onclick="closeMenu(true);toggleTheme()"><span class="m-ico" aria-hidden="true"></span><span>Dark theme</span></button>
-            <a role="menuitem" href="/settings"><span class="m-ico" aria-hidden="true"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg></span>Settings</a>
+            <a role="menuitem" id="m-settings" href="/settings"><span class="m-ico" aria-hidden="true"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg></span>Settings</a>
             <button type="button" role="menuitem" onclick="closeMenu(true);refreshAll()"><span class="m-ico" aria-hidden="true"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20.5 12a8.5 8.5 0 1 1-2.5-6"/><path d="M20.5 3.5V9H15"/></svg></span>Refresh</button>
+            <a role="menuitem" href="https://github.com/GidonPeeper/stock-overview/blob/main/TROUBLESHOOTING.md" target="_blank" rel="noopener" class="help-link"><span class="m-ico" aria-hidden="true">?</span>Help</a>
           </div>
         </div>
       </div>
@@ -954,6 +965,9 @@
         </div>
       </div>
     </section>
+    <footer class="app-foot" aria-label="About this app"><span id="app-ver">Stock Overview</span>
+      <a href="/settings#checkup">Check-up</a>
+      <a class="help-link" href="https://github.com/GidonPeeper/stock-overview/blob/main/TROUBLESHOOTING.md" target="_blank" rel="noopener">Help ↗</a></footer>
   </div>
 
   <!-- detail sheet -->
@@ -1468,7 +1482,8 @@
         ${f.income.map(x=>row(x,"+","pos")).join("")||'<div class="empty">None</div>'}
         <div class="grp-h muted"><span>Going out</span></div>
         ${f.outgoings.map(x=>row(x,"−","neg")).join("")||'<div class="empty">None</div>'}
-        <div class="note">Regular items only: variable spending such as groceries is left out (mark items "variable" in Settings).${f.income.some(x=>x.taxed)?" Pay entered before tax is shown after UK income tax, National Insurance and pension.":""}</div>`;
+        <div class="note">Regular items only: variable spending such as groceries is left out (mark items "variable" in Settings).${f.income.some(x=>x.taxed)?" Pay entered before tax is shown after UK income tax, National Insurance and pension.":""}</div>`+
+        (f.income.some(x=>x.taxed)&&FIN.tax&&FIN.tax.outdated?`<div class="rules-old" role="note" style="margin:10px 0 0">${esc(FIN.tax.outdated.text)}</div>`:"");
     }
 
     /* ---- health score ---- */
@@ -1728,7 +1743,7 @@
       const how=`class="sv-how help" style="margin:8px 0 0" ${helpOpen?"":"hidden"}`;
       const badge=t=>!t.deadline_label?"":`<span class="tag ${t.urgency==="high"?"red":t.urgency==="medium"?"amber":""}">${esc(t.deadline_label)} · ${t.days_left} days left</span>`;
       const more=t=>!t.link?"":` <a href="${esc(t.link)}"${t.link.startsWith("http")?' target="_blank" rel="noopener"':""}>More</a>`;
-      let html="";
+      let html=s.outdated?`<div class="rules-old" role="note">${esc(s.outdated.text)}</div>`:"";
       if(s.tips.length) html+=`<div class="tiles">
           <div class="stat"><div class="k">Could save each year</div><div class="v num pos">${money0(s.total_per_year_eur)}</div></div>
           <div class="stat"><div class="k">Plus once</div><div class="v num pos">${money0(s.total_once_eur)}</div></div></div>`;
@@ -1744,7 +1759,7 @@
       if(!s.tips.length) html+='<div class="empty">Nothing to act on right now.</div>';
       html+=s.prompts.map(p=>`<div style="font-size:var(--fs-sm);margin-top:8px">＋ ${p.link?`<a href="${esc(p.link)}">${esc(p.text)}</a>`:esc(p.text)}</div>`).join("");
       if(s.all_clear.length) html+=`<div ${how}><b>Also checked, nothing to do:</b><br>${s.all_clear.map(txt).join("<br>")}</div>`;
-      html+=`<div ${how}>${esc(s.assumptions)} UK rates for ${esc(s.tax_year)}, checked ${esc(s.rates_checked)}.</div>`;
+      html+=`<div ${how}>${esc(s.assumptions)} UK rates for ${esc(s.rules_year||s.tax_year)}, checked ${esc(s.rates_checked)}.</div>`;
       if(s.note) html+=`<div class="small muted" style="margin-top:8px">${esc(s.note)}</div>`;
       html+=`<div class="note">${esc(s.disclaimer)}</div>`;
       el.innerHTML=html;
@@ -1817,10 +1832,11 @@
       if(t.applies===false){ el.closest(".card").hidden=true; return; }   // not a UK tax resident
       $("uktax-year").textContent=t.tax_year;
       $("uktax-method").textContent=t.method;
+      const old=t.outdated?`<div class="rules-old" role="note">${esc(t.outdated.text)}</div>`:"";
       const stat=(k,v,sub,c)=>`<div class="stat"><div class="k">${k}</div>
         <div class="v num ${c||""}">${v}</div><div class="d">${sub}</div></div>`;
       const net=t.net_gain_gbp, isa=t.isa;
-      let html=`<div class="tiles">`+
+      let html=old+`<div class="tiles">`+
         stat("Gains outside ISA", (net>0?"+":"")+gbp0(net), `${gbp0(t.gains_gbp)} gains · ${gbp0(t.losses_gbp)} losses · ${t.disposals} sales`, net?cls(net):"")+
         stat("Tax-free gains left", gbp0(t.exempt_left_gbp), `of ${gbp0(t.annual_exempt_gbp)} this year`)+
         stat("Dividends outside ISA", gbp0(t.dividends_gbp), `tax-free up to ${gbp0(t.dividend_allowance_gbp)}`, t.dividends_gbp>t.dividend_allowance_gbp?"neg":"")+
@@ -1854,9 +1870,9 @@
       const sym={GBP:"£",USD:"$",EUR:"€"}[h.currency]||(h.currency?h.currency+" ":"");   // always says which currency
       const t0=n=>sym+Math.abs(Number(n)).toLocaleString("en-GB",{maximumFractionDigits:0});
       $("harvest-how").innerHTML=(h.how_it_works||[]).map(p=>`<p>${p}</p>`).join("");
-      const foot=`<div class="note">${h.disclaimer||""}</div>`;
-      if(!h.applies||!h.candidates.length){ el.innerHTML=`<div class="empty">${h.message||"Nothing to do right now."}</div>`+(h.skipped||[]).map(s=>`<div class="tiny" style="margin-top:4px">${esc(s.name)}: ${esc(s.reason)}</div>`).join("")+foot; return; }
-      el.innerHTML=`<div style="font-size:var(--fs-md);margin-bottom:6px">${h.headline}</div>`+
+      const foot=`<div class="note">${h.disclaimer||""}</div>`, old=h.outdated?`<div class="rules-old" role="note">${esc(h.outdated.text)}</div>`:"";
+      if(!h.applies||!h.candidates.length){ el.innerHTML=old+`<div class="empty">${h.message||"Nothing to do right now."}</div>`+(h.skipped||[]).map(s=>`<div class="tiny" style="margin-top:4px">${esc(s.name)}: ${esc(s.reason)}</div>`).join("")+foot; return; }
+      el.innerHTML=old+`<div style="font-size:var(--fs-md);margin-bottom:6px">${h.headline}</div>`+
         (h.tip?`<div class="small muted" style="margin-bottom:6px">${h.tip}</div>`:"")+
         (h.notes||[]).map(n=>`<div class="small muted">${n}</div>`).join("")+
         h.candidates.map(c=>`<div class="row" style="display:block">
@@ -1908,7 +1924,8 @@
           <div class="ct-body"><ul>${li(t.points||[])}</ul>
           ${(t.figures||[]).length?`<table class="ct-fig"><tbody>${t.figures.map(f=>`<tr><th scope="row">${esc(f.label)}</th><td>${esc(f.value)}</td></tr>`).join("")}</tbody></table>`:""}
           <div class="ct-src">Source${t.sources.length>1?"s":""}: ${t.sources.map(u=>ctLink(u)).join(", ")}</div></div></details>`;
-      let html=`<div class="ct-meta"><span class="pill grey">Checked ${dateGB(o.checked_on)}</span><span>General information, not advice. Rules change.</span></div>`+assumed+
+      let html=(c.outdated?`<div class="rules-old" role="note">${esc(c.outdated.text)}</div>`:"")+
+        `<div class="ct-meta"><span class="pill ${c.outdated?"amber":"grey"}">Checked ${dateGB(o.checked_on)}</span><span>General information, not advice. Rules change.</span></div>`+assumed+
         `<p class="ct-sum">${esc(o.summary)}</p>
         <dl class="ct-facts"><dt>Tax year ${esc(ty.label)}</dt><dd>${ctDay(ty.starts)} to ${ctDay(ty.ends)}</dd>
           <dt>Tax return</dt><dd>${esc(ty.return_due)} <span class="ct-src">(${ctLink(ty.source,"source")})</span></dd></dl>`;
@@ -2307,7 +2324,7 @@
       if(q.unpriced) items.push(`${q.unpriced} holding${q.unpriced===1?" has":"s have"} no live price and ${q.unpriced===1?"is":"are"} counted at what you paid.`);
       if(q.fx_live===false&&PORT.holdings.some(h=>h.currency&&h.currency!=="EUR")) items.push("Live exchange rates could not be loaded: amounts in other currencies use built-in rates for now.");
       el.hidden=!items.length;
-      el.innerHTML=items.length?`<b>Some numbers are incomplete right now.</b><ul>${items.map(i=>`<li>${i}</li>`).join("")}</ul>`:"";
+      el.innerHTML=items.length?`<b>Some numbers are incomplete right now.</b><ul>${items.map(i=>`<li>${i}</li>`).join("")}</ul><a href="/settings#checkup">What to do: the check-up in Settings</a>`:"";
     }
 
     // One /api/portfolio request at a time, shared by the first load and the live refresh.
@@ -2364,7 +2381,27 @@
       loadFinances();
       if(loaded.has("holdings")) loadWatchlist();
       loadHarvest();
+      loadCheckupBadge();
       firstLoadDone=true;
+    }
+    /* ---- check-up (Settings → App and data): a count on the settings button when something needs doing ---- */
+    function loadCheckupBadge(){
+      fetchJSON("/api/checkup",20000).then(c=>{
+        const n=(c.counts.problem||0)+(c.counts.attention||0), say=n?`${n} ${n===1?"thing needs":"things need"} attention`:"";
+        ["setbtn","hdr-more","m-settings"].forEach(id=>{
+          const el=$(id); if(!el) return;
+          let b=el.querySelector(".cu-badge");
+          if(!n){ if(b) b.remove(); return; }
+          if(!b){ b=document.createElement("span"); b.className="cu-badge"; b.setAttribute("aria-hidden","true"); el.appendChild(b); }
+          b.textContent=n>9?"9+":String(n); b.classList.toggle("red",c.counts.problem>0);
+        });
+        $("setbtn").href=$("m-settings").href=n?"/settings#checkup":"/settings";
+        $("setbtn").setAttribute("aria-label",n?`Settings: ${say}`:"Settings"); $("setbtn").title=n?`Settings: ${say}`:"Settings: accounts and data";
+        if(n) $("m-settings").setAttribute("aria-label",`Settings: ${say}`); else $("m-settings").removeAttribute("aria-label");
+        $("hdr-more").setAttribute("aria-label","More: currency, theme, settings, refresh"+(n?`. ${say}`:""));
+        if(c.help) document.querySelectorAll(".help-link").forEach(a=>{ a.href=c.help; });
+        const v=c.version; if(v&&v.short) $("app-ver").textContent=`Stock Overview · version ${v.short}${v.date?" of "+dateGB(v.date):""}`;
+      }).catch(()=>{});
     }
     async function refreshLive(){
       if(document.hidden||!firstLoadDone) return;

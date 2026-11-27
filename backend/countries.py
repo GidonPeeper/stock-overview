@@ -449,7 +449,9 @@ def overview(code: str | None = None) -> dict:
         out.update(available=False,
                    message=f"There is no tax overview for {out['in_name']} yet.")
     else:
-        out.update(available=True, overview=data)
+        from . import rules
+        # its tax year has ended, or it was checked long ago: the card says so
+        out.update(available=True, overview=data, outdated=rules.country_notice(data))
     if code not in TAX_CARDS:
         out["calculations_note"] = CALCULATIONS_NOTE
     return out

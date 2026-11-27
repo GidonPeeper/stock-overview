@@ -63,7 +63,7 @@
   </form>
   <script>
     const e = new URLSearchParams(location.search).get("e");
-    if (e === "1") document.getElementById("err").textContent = "Wrong username or password";
+    if (e === "1") document.getElementById("err").textContent = "Wrong username or password. Forgot it? It is DASHBOARD_PASSWORD in the .env file, or in your host's settings (see TROUBLESHOOTING.md).";
     if (e === "2") document.getElementById("err").textContent = "Too many attempts. Try again in 15 minutes.";
   </script>
 </body>

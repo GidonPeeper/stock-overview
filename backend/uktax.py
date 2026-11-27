@@ -24,7 +24,8 @@ sales the 30-day ("bed and breakfast") rule still covers.
 Allowances below are for 2026/27, checked on 2026-11-26 against the Budget
 2026 rates annex (unchanged for 2026/27 and 2027/28):
 https://www.gov.uk/government/publications/budget-2026-overview-of-tax-legislation-and-rates-ootlar/annex-a-rates-and-allowances
-Update them if a Budget changes them.
+Update them if a Budget changes them. The tax year they are for is set in
+rules.py (UK_TAX_YEAR); the card says so once a later tax year has started.
 """
 
 from __future__ import annotations
@@ -32,7 +33,7 @@ from __future__ import annotations
 import os
 from datetime import date, datetime, timedelta
 
-from . import cache, connections, sources
+from . import cache, connections, rules, sources
 from .connectors import trading212
 from .fx import from_eur
 
@@ -168,6 +169,7 @@ def match_disposals(trades: list, accounts: dict[int, str] | None = None,
 # fresh for 5 min and then refreshed in the background.
 @cache.cached(ttl=300, stale=3600, copy=True)
 def summary(today: date | None = None) -> dict:
+    outdated = rules.uk_notice(today)      # the figures are for an earlier tax year
     today = today or date.today()
     start, end, label = tax_year(today)
     resident = _resident_from()
@@ -277,6 +279,8 @@ def summary(today: date | None = None) -> dict:
             "left_gbp": round(max(ISA_ALLOWANCE_GBP - isa_paid, 0), 2),
         },
         "recent_sales": recent,
+        "rules_year": rules.UK_TAX_YEAR,
+        "outdated": outdated,
         "method": (
             "Taxable accounts only (ISAs left out). Each sale is matched as HMRC does: shares "
             "bought the same day first, then shares bought in the next 30 days, then one average "

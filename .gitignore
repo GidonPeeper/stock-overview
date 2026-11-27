@@ -22,11 +22,16 @@ data/manual_holdings.json
 # encrypted data: saved to your private data repo by the app (DEPLOY_RENDER.md)
 data/vault.enc
 data/.*.tmp
+# the files a restore replaced (Settings → Back up and restore), and backups saved here
+data/before-restore-*/
+data/.restoring-*/
+*backup*.zip
 # bank links in progress (single-use states, 30 min) and bank-link private keys
 data/bank_link_states.json
 *.pem
 
 # generated at runtime (rebuilt automatically)
+data/app_state.json
 data/history.db
 data/t212_instruments.json
 data/sectors.json

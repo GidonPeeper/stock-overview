@@ -1,0 +1,2 @@
+# Windows runs .bat files most reliably with Windows line endings (labels, goto).
+*.bat text eol=crlf

@@ -14,6 +14,8 @@ a default, so an existing copy keeps working unchanged:
   color_base, color_secondary
                  "#rrggbb", or "" for the built-in colours.
   news_country   country code for the news, or "" to follow `country`.
+  update_check   true to ask GitHub once a day whether a newer version of the
+                 app exists (version.py). Off unless switched on in Settings.
 
 Other modules read one value with `prefs.value("country")`. A value that is
 not valid is refused on save and ignored on read.
@@ -73,6 +75,17 @@ def _color(v) -> str:
     return v.lower()
 
 
+def _switch(v) -> bool:
+    if isinstance(v, bool):
+        return v
+    s = str(v).strip().lower()
+    if s in ("1", "true", "on", "yes"):
+        return True
+    if s in ("0", "false", "off", "no", ""):
+        return False
+    raise ValueError("Use true or false")
+
+
 def _env_country() -> str:
     try:
         return _country(os.getenv("TAX_RESIDENCE") or "UK")
@@ -93,6 +106,7 @@ _KEYS = {
     "color_base": (_color, lambda: ""),
     "color_secondary": (_color, lambda: ""),
     "news_country": (_country, lambda: ""),
+    "update_check": (_switch, lambda: False),
 }
 
 

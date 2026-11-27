@@ -25,7 +25,8 @@ cd stock-overview
 
 Your browser opens http://127.0.0.1:8000 with sample data. Add your first
 account in **Settings** and the samples disappear. Full guide:
-[SETUP.md](SETUP.md).
+[SETUP.md](SETUP.md). Update later with `./run.sh update`. Something not
+working? [TROUBLESHOOTING.md](TROUBLESHOOTING.md).
 
 ## What you get
 
@@ -103,7 +104,10 @@ Details and privacy notes: [MCP.md](MCP.md).
 ## Your data and safety
 
 - Everything you add is saved in the `data` folder, which git ignores. Back
-  it up by copying it. Never share it.
+  it up with **Settings → Download a backup**, and keep that file private.
+- **Check-up.** Settings → App and data → Check-up says when something needs
+  attention and what to do: a refused key, an old statement, no recent
+  backup, tax rules for a past year, a newer version.
 - Broker keys must be read-only: the steps say which boxes to tick. Keys are
   never sent back to the browser.
 - Without a password the app answers only your own computer. To use it from
@@ -143,6 +147,8 @@ Statement files can also be converted from the command line, for example
 `python -m backend.importers.degiro_pdf "Account.pdf" data/degiro_account.csv`.
 
 Want to add a broker or fix a step? See [CONTRIBUTING.md](CONTRIBUTING.md).
+Keeping the app right over the years (UK tax year, country pages, broker
+steps, dependencies, releases): [MAINTAINING.md](MAINTAINING.md).
 
 ## License
 

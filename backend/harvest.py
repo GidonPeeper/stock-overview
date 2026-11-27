@@ -423,6 +423,7 @@ def suggest(rows: list[dict], *, today: date | None = None, res: str | None = No
             sector_map: dict[str, str] | None = None) -> dict:
     """Everything the 'Tax-loss harvesting' card shows. `uk` (uktax.summary())
     and `sector_map` can be passed in; otherwise they are read here."""
+    asked = today
     today = today or date.today()
     res = (res or residence()).upper()
     if res == "NL":
@@ -522,7 +523,9 @@ def suggest(rows: list[dict], *, today: date | None = None, res: str | None = No
                       if res == "UK" else "Estimates, not tax advice. Check with a tax adviser before you sell.",
     }
     if res == "UK":
+        from . import rules
         out["exempt"] = UK_EXEMPT
+        out["outdated"] = rules.uk_notice(asked)   # UK figures for an earlier tax year
         out["claim_by"] = date(year_end.year + CLAIM_YEARS, 4, 5).isoformat()
     out["headline"], out["tip"] = _headline(out, ccy)
     if not cands:

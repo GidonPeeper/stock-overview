@@ -129,7 +129,7 @@ def start(request: Request, institution: str = Form(""), method: str = Form(""),
     if renew:
         conn = connections.get(renew)
         if conn is None or conn.get("connector") != eb.PROVIDER:
-            raise HTTPException(404, "Connection not found.")
+            raise HTTPException(404, "That account is no longer connected (it may have been removed in another window). Reload the page.")
         meta = conn.get("bank") or {}
         aspsp, country = meta.get("aspsp", ""), meta.get("country", "")
         info = {"renew": conn["id"], "institution": conn["institution"],
@@ -137,10 +137,10 @@ def start(request: Request, institution: str = Form(""), method: str = Form(""),
     else:
         inst = catalog.find(institution)
         if inst is None:
-            raise HTTPException(404, "Unknown bank or broker.")
+            raise HTTPException(404, "That bank or broker is not in the list. Reload the page and pick it again.")
         m = catalog.method(inst, method)
         if m is None or m.get("connector") != eb.PROVIDER:
-            raise HTTPException(400, "This option can't be linked in the app.")
+            raise HTTPException(400, "This option can't be linked in the app. Choose another way to add the account.")
         info = {"renew": "", "institution": inst["id"], "institution_name": inst.get("name", ""),
                 "label": label.strip()[:60]}
     try:
