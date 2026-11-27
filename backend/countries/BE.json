@@ -1,0 +1,211 @@
+{
+  "code": "BE",
+  "name": "Belgium",
+  "currency": "EUR",
+  "currency_note": "",
+  "timezone": "Europe/Brussels",
+  "languages": ["nl", "fr", "de"],
+  "checked_on": "2026-11-26",
+  "tax_year": {
+    "label": "2026",
+    "starts": "01-01",
+    "ends": "12-31",
+    "return_due": "Income of 2026 goes in the 2027 return; the 2027 dates were not yet published, and in 2026 they were 30 June on paper and 19 July online.",
+    "source": "https://fin.belgium.be/nl/particulieren/belastingaangifte/indienen/belastingaangifte"
+  },
+  "summary": "A Belgian bank withholds 30% on most dividends and interest (roerende voorheffing), and that settles the tax. Since 1 January 2026, profits on shares, funds, bonds and crypto are taxed at 10%, with the first €10,000 of gains a year tax-free per person. Buying and selling securities also costs a stock-exchange tax, and securities accounts worth more than €1 million on average pay a yearly tax.",
+  "topics": [
+    {
+      "id": "gains",
+      "title": "Profit when you sell",
+      "points": [
+        "Since 1 January 2026, profits on financial assets are taxed at 10% (meerwaardebelasting). This covers shares, bonds, ETFs and other funds, options, savings and investment insurance, currency and crypto, Belgian or foreign.",
+        "The gain is the sale price minus the purchase price. Costs and taxes cannot be deducted.",
+        "For assets bought before 2026, the purchase price is their value on 31 December 2025. If you paid more than that, you may use your original price, but a loss compared with that original price cannot be deducted.",
+        "Leaving Belgium can trigger an exit tax on gains not yet realised."
+      ],
+      "figures": [
+        {"label": "Tax rate on gains", "value": "10%"},
+        {"label": "Reference value for older holdings", "value": "31 December 2025"}
+      ],
+      "sources": [
+        "https://fin.belgium.be/nl/particulieren/belastingaangifte/inkomsten/meerwaardebelasting"
+      ]
+    },
+    {
+      "id": "dividends",
+      "title": "Dividends",
+      "points": [
+        "Most dividends are taxed at 30%. A Belgian bank withholds this and it is the final tax; you do not need to declare those dividends.",
+        "The first €833 of ordinary dividends per person is tax-free. Belgian banks still withhold tax on it, so you reclaim it in your return (codes 1437/2437), up to €249.90.",
+        "Dividends from investment funds do not get this exemption."
+      ],
+      "figures": [
+        {"label": "Withholding tax (roerende voorheffing)", "value": "30%"},
+        {"label": "Tax-free dividends per person, 2026", "value": "€833"}
+      ],
+      "sources": [
+        "https://fin.belgium.be/nl/particulieren/belastingaangifte/inkomsten/spaargeld-beleggingen",
+        "https://fin.belgium.be/nl/particulieren/belastingvoordelen/vrijstellingen-dividenden"
+      ]
+    },
+    {
+      "id": "interest",
+      "title": "Interest on savings",
+      "points": [
+        "Most interest is taxed at 30%, withheld by a Belgian bank.",
+        "On a regulated savings account (gereglementeerde spaarrekening), the first €1,020 of interest per person is tax-free, and interest above that is taxed at 15%.",
+        "Interest from a foreign bank has no Belgian tax withheld, so you must declare it in your return."
+      ],
+      "figures": [
+        {"label": "Tax-free interest on regulated savings, per person", "value": "€1,020"},
+        {"label": "Rate above that", "value": "15%"}
+      ],
+      "sources": [
+        "https://fin.belgium.be/nl/particulieren/belastingaangifte/inkomsten/spaargeld-beleggingen"
+      ]
+    },
+    {
+      "id": "funds",
+      "title": "Funds and ETFs",
+      "points": [
+        "Funds and trackers (ETFs) fall under the 10% tax on gains when you sell them.",
+        "Dividends paid by funds do not get the €833 dividend exemption.",
+        "Buying or selling fund units also pays the stock-exchange tax; the rate depends on the type of security (see What your broker does)."
+      ],
+      "sources": [
+        "https://fin.belgium.be/nl/particulieren/belastingaangifte/inkomsten/meerwaardebelasting",
+        "https://fin.belgium.be/nl/particulieren/belastingvoordelen/vrijstellingen-dividenden",
+        "https://financien.belgium.be/nl/ondernemingen/overige-belastingen/diverse-taksen/taks-%20beursverrichtingen"
+      ]
+    },
+    {
+      "id": "wealth",
+      "title": "Tax on what you own",
+      "points": [
+        "There is a yearly tax on securities accounts (effectentaks) whose average value over the reference period, normally 1 October to 30 September, is more than €1 million.",
+        "The rate is 0.15% for periods ending up to 31 May 2026 and 0.30% for periods ending from 1 June 2026. A Belgian bank withholds and files it; where the holder must file it, the deadline is 15 July of the following year."
+      ],
+      "figures": [
+        {"label": "Threshold (average value)", "value": "€1,000,000"},
+        {"label": "Rate from periods ending 1 June 2026", "value": "0.30%"}
+      ],
+      "sources": [
+        "https://financien.belgium.be/nl/ondernemingen/overige-belastingen/diverse-taksen/jaarlijkse-taks-effectenrekeningen"
+      ]
+    },
+    {
+      "id": "allowances",
+      "title": "Tax-free amounts",
+      "points": [
+        "Gains: the first €10,000 of gains a year is tax-free (for income of 2026). If you do not use it, up to €1,000 of it carries to the next year, for up to five years, to a maximum of €15,000.",
+        "Dividends: the first €833 a year is tax-free. Interest on regulated savings accounts: the first €1,020 a year is tax-free.",
+        "These amounts are per person, so each partner in a couple has their own."
+      ],
+      "figures": [
+        {"label": "Tax-free gains, 2026", "value": "€10,000"},
+        {"label": "Maximum with carried-forward amounts", "value": "€15,000"},
+        {"label": "Tax-free dividends", "value": "€833"},
+        {"label": "Tax-free savings interest", "value": "€1,020"}
+      ],
+      "sources": [
+        "https://fin.belgium.be/nl/particulieren/belastingaangifte/inkomsten/meerwaardebelasting",
+        "https://fin.belgium.be/nl/particulieren/belastingaangifte/inkomsten/spaargeld-beleggingen"
+      ]
+    },
+    {
+      "id": "accounts",
+      "title": "Tax-free and tax-deferred accounts",
+      "points": [
+        "Pension saving (pensioensparen) gives a tax reduction: 30% of up to €1,050 paid in 2026, or 25% of up to €1,350. Only one contract per person counts each year.",
+        "Pension saving accounts, group insurance and long-term saving contracts are exempt from the new tax on gains. Payouts have their own tax rules, not covered here."
+      ],
+      "figures": [
+        {"label": "Pension saving, 30% reduction", "value": "up to €1,050"},
+        {"label": "Pension saving, 25% reduction", "value": "up to €1,350"}
+      ],
+      "sources": [
+        "https://fin.belgium.be/nl/particulieren/belastingvoordelen/pensioensparen",
+        "https://fin.belgium.be/nl/particulieren/belastingaangifte/inkomsten/meerwaardebelasting"
+      ]
+    },
+    {
+      "id": "losses",
+      "title": "Losses",
+      "points": [
+        "Under certain conditions, losses realised in a year can be deducted from that year's taxable gains.",
+        "Losses that arose before 2026 cannot be deducted: if a holding bought earlier is sold below its original price, the result counts as zero."
+      ],
+      "sources": [
+        "https://fin.belgium.be/nl/particulieren/belastingaangifte/inkomsten/meerwaardebelasting"
+      ]
+    },
+    {
+      "id": "foreign",
+      "title": "Foreign shares",
+      "points": [
+        "As a resident you declare your income from anywhere in the world.",
+        "Tax withheld abroad on a dividend is not Belgian tax and is not credited. You declare the dividend after the foreign tax, and Belgium then taxes it at 30%; the first €833 of ordinary dividends is tax-free.",
+        "Accounts abroad must be reported to the Central Point of Contact (CAP) of the National Bank and in your tax return."
+      ],
+      "sources": [
+        "https://fin.belgium.be/nl/particulieren/belastingaangifte/inkomsten/spaargeld-beleggingen",
+        "https://fin.belgium.be/nl/particulieren/internationaal/buitenlandse-inkomsten-rekeningen"
+      ]
+    },
+    {
+      "id": "reporting",
+      "title": "What your broker does and what you do",
+      "points": [
+        "A Belgian bank or broker withholds 30% on dividends and interest. For gains it withholds 10% by default (opt in); exempt gains can be reclaimed in your return. If you opt out, nothing is withheld, you declare the gains yourself, and the bank reports them to the tax office.",
+        "A foreign broker withholds no Belgian tax. You declare dividends and interest above the exemptions and your gains in the return, and report the account to the National Bank.",
+        "Each trade pays the stock-exchange tax (taks op de beursverrichtingen) of 0.12%, 0.35% or 1.32% depending on the security, capped at €1,300, €1,600 or €4,000 per trade. With a foreign broker that does not pay it for you, you file and pay it yourself in MyMinfin by the last working day of the second month after the trade."
+      ],
+      "figures": [
+        {"label": "Stock-exchange tax rates", "value": "0.12%, 0.35% or 1.32%"}
+      ],
+      "sources": [
+        "https://fin.belgium.be/nl/particulieren/belastingaangifte/inkomsten/meerwaardebelasting",
+        "https://fin.belgium.be/nl/particulieren/belastingaangifte/inkomsten/spaargeld-beleggingen",
+        "https://financien.belgium.be/nl/ondernemingen/overige-belastingen/diverse-taksen/taks-%20beursverrichtingen",
+        "https://fin.belgium.be/nl/particulieren/internationaal/buitenlandse-inkomsten-rekeningen"
+      ]
+    },
+    {
+      "id": "crypto",
+      "title": "Crypto",
+      "points": [
+        "Crypto is listed as a financial asset, so gains on it are taxed at 10% from 2026 under the same rules and yearly exemption as shares."
+      ],
+      "sources": [
+        "https://fin.belgium.be/nl/particulieren/belastingaangifte/inkomsten/meerwaardebelasting"
+      ]
+    }
+  ],
+  "dates": [
+    {"when": "06-30", "what": "Deadline for a paper return in 2026 (check the date set each year)."},
+    {"when": "07-15", "what": "Last day to file the securities account tax yourself for a reference period that ended the year before."},
+    {"when": "07-19", "what": "Deadline for an online return (MyMinfin) in 2026 (check the date set each year)."}
+  ],
+  "official": [
+    {"title": "FOD Financiën: capital gains tax", "url": "https://fin.belgium.be/nl/particulieren/belastingaangifte/inkomsten/meerwaardebelasting"},
+    {"title": "FOD Financiën: savings and investments", "url": "https://fin.belgium.be/nl/particulieren/belastingaangifte/inkomsten/spaargeld-beleggingen"},
+    {"title": "FOD Financiën: foreign income and accounts", "url": "https://fin.belgium.be/nl/particulieren/internationaal/buitenlandse-inkomsten-rekeningen"},
+    {"title": "FOD Financiën: stock-exchange tax", "url": "https://financien.belgium.be/nl/ondernemingen/overige-belastingen/diverse-taksen/taks-%20beursverrichtingen"},
+    {"title": "FOD Financiën: securities account tax", "url": "https://financien.belgium.be/nl/ondernemingen/overige-belastingen/diverse-taksen/jaarlijkse-taks-effectenrekeningen"}
+  ],
+  "upcoming": [],
+  "not_covered": [
+    "Large stakes in one company and gains outside normal management of private wealth, which have special rules.",
+    "The tax on the debt part of some bond funds when you sell them (Reynders tax).",
+    "How pension saving and life insurance payouts are taxed.",
+    "Real estate and rental income.",
+    "Moving into or out of Belgium (including the exit tax in detail), and non-residents.",
+    "Which stock-exchange tax rate applies to which security."
+  ],
+  "news": [
+    {"name": "De Tijd Markten Live", "url": "https://www.tijd.be/rss/markten_live.xml", "language": "nl"},
+    {"name": "RTBF Info Économie", "url": "https://rss.rtbf.be/article/rss/highlight_rtbf_info-economie.xml?source=internal", "language": "fr"},
+    {"name": "L'Echo Actualité", "url": "https://www.lecho.be/rss/actualite.xml", "language": "fr"}
+  ]
+}

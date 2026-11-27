@@ -1,0 +1,195 @@
+{
+  "code": "FR",
+  "name": "France",
+  "currency": "EUR",
+  "currency_note": "",
+  "timezone": "Europe/Paris",
+  "languages": ["fr"],
+  "checked_on": "2026-11-26",
+  "tax_year": {
+    "label": "2026",
+    "starts": "01-01",
+    "ends": "12-31",
+    "return_due": "Income of 2026 is declared in spring 2027; the dates are set each year, and in 2026 the online deadline was 21 May, 28 May or 4 June depending on your département (paper: 19 May).",
+    "source": "https://www.impots.gouv.fr/les-modalites-de-la-declaration-de-revenus-en-2026"
+  },
+  "summary": "Dividends, interest and gains on shares and funds are taxed by default at a flat rate (prélèvement forfaitaire unique, PFU) of 31.4% since 1 January 2026: 12.8% income tax plus 18.6% social levies. Each year you can choose the progressive income tax scale for all of this income instead. Some accounts give tax relief, mainly the PEA for European shares and tax-free savings books such as the Livret A.",
+  "topics": [
+    {
+      "id": "gains",
+      "title": "Profit when you sell",
+      "points": [
+        "Gains on shares, bonds and funds are taxed at 12.8% income tax plus 18.6% social levies, 31.4% in total, whatever the holding period.",
+        "The gain is the sale price minus fees, less the purchase price plus purchase fees. Your bank or broker normally calculates gains and losses and sends you the figures early in the year; otherwise you use form 2074.",
+        "If you choose the progressive scale instead (box 2OP), shares bought before 1 January 2018 get an allowance for the holding period: 50% after 2 years and 65% after 8 years. Shares bought since 2018 get none. Social levies are always charged on the full gain."
+      ],
+      "figures": [
+        {"label": "Flat rate (PFU) from 1 January 2026", "value": "31.4%"},
+        {"label": "Of which income tax", "value": "12.8%"},
+        {"label": "Of which social levies", "value": "18.6%"}
+      ],
+      "sources": [
+        "https://www.impots.gouv.fr/particulier/les-cessions-mobilieres"
+      ]
+    },
+    {
+      "id": "dividends",
+      "title": "Dividends",
+      "points": [
+        "Dividends are taxed at the same flat 31.4% by default.",
+        "A French bank deducts the social levies and a 12.8% advance on income tax when it pays the dividend. The advance is credited against your final tax, and refunded if it is more.",
+        "You can ask your bank, before 30 November, not to take the advance for the next year if your household's reference income two years earlier was below €50,000 (single) or €75,000 (couple filing jointly).",
+        "With the progressive scale instead, 40% of most dividends is tax-free and part of the social levies (6.8%) is deductible."
+      ],
+      "figures": [
+        {"label": "Advance on income tax", "value": "12.8%"},
+        {"label": "Exemption from the advance, single", "value": "reference income below €50,000"}
+      ],
+      "sources": [
+        "https://www.impots.gouv.fr/particulier/les-revenus-mobiliers"
+      ]
+    },
+    {
+      "id": "interest",
+      "title": "Interest on savings",
+      "points": [
+        "Interest on ordinary accounts, bonds and money-market funds is taxed at the flat 31.4% by default, with the same 12.8% advance at a French bank.",
+        "The advance can be waived if your household's reference income two years earlier was below €25,000 (single) or €50,000 (couple filing jointly).",
+        "Interest on some savings books is free of income tax, including the Livret A, the livret de développement durable (LDDS), the livret d'épargne populaire (LEP) and the livret jeune.",
+        "Interest on housing savings plans (PEL, CEL) opened before 2018 stays at 17.2% social levies instead of 18.6%."
+      ],
+      "figures": [
+        {"label": "Exemption from the advance, single", "value": "reference income below €25,000"}
+      ],
+      "sources": [
+        "https://www.impots.gouv.fr/particulier/les-revenus-mobiliers"
+      ]
+    },
+    {
+      "id": "funds",
+      "title": "Funds and ETFs",
+      "points": [
+        "Selling or redeeming units of funds (SICAV, FCP, ETFs) is taxed like a sale of shares.",
+        "Funds held in a PEA are covered by the PEA rules instead (see Tax-free and tax-deferred accounts)."
+      ],
+      "sources": [
+        "https://www.impots.gouv.fr/particulier/les-cessions-mobilieres",
+        "https://www.impots.gouv.fr/particulier/lassurance-vie-et-le-pea-0"
+      ]
+    },
+    {
+      "id": "wealth",
+      "title": "Tax on what you own",
+      "points": [
+        "There is no tax on financial wealth as such. The real estate wealth tax (impôt sur la fortune immobilière, IFI) applies when your household's net real estate on 1 January is worth more than €1.3 million.",
+        "It only covers real estate, but that includes the real estate part of shares, funds and life insurance contracts you hold, with some exceptions."
+      ],
+      "figures": [
+        {"label": "IFI threshold (net real estate)", "value": "€1,300,000"}
+      ],
+      "sources": [
+        "https://www.impots.gouv.fr/particulier/calcul-de-lifi",
+        "https://www.impots.gouv.fr/particulier/questions/quels-biens-dois-je-declarer-limpot-sur-la-fortune-immobiliere-ifi"
+      ]
+    },
+    {
+      "id": "accounts",
+      "title": "Tax-free and tax-deferred accounts",
+      "points": [
+        "PEA (plan d'épargne en actions): an account for eligible shares and funds. You can pay in up to €150,000, or €225,000 together with a PEA-PME. Income and gains inside are not taxed while they stay in the plan.",
+        "After 5 years, withdrawals are free of income tax, but social levies are due on the gains. A withdrawal before 5 years generally closes the plan, and the gain is taxed at 12.8% plus social levies.",
+        "Life insurance (assurance-vie): for contracts older than 8 years, income from withdrawals gets a yearly allowance of €4,600 (€9,200 for couples), and income tax is 7.5% on premiums paid since 27 September 2017 up to €150,000. Social levies on life insurance stay at 17.2%."
+      ],
+      "figures": [
+        {"label": "PEA deposit limit", "value": "€150,000"},
+        {"label": "PEA tax-free after", "value": "5 years (social levies still due)"},
+        {"label": "Life insurance allowance after 8 years, single", "value": "€4,600"}
+      ],
+      "sources": [
+        "https://www.impots.gouv.fr/particulier/lassurance-vie-et-le-pea-0",
+        "https://www.impots.gouv.fr/particulier/les-revenus-mobiliers"
+      ]
+    },
+    {
+      "id": "losses",
+      "title": "Losses",
+      "points": [
+        "Losses on shares, bonds and funds can be set against such gains in the same year and the 10 following years, not against other income.",
+        "You must use all available losses against the year's gains; you cannot keep part of them for later."
+      ],
+      "figures": [
+        {"label": "Carry-forward period", "value": "10 years"}
+      ],
+      "sources": [
+        "https://www.impots.gouv.fr/particulier/les-cessions-mobilieres"
+      ]
+    },
+    {
+      "id": "foreign",
+      "title": "Foreign shares",
+      "points": [
+        "Where France's tax treaty with the other country provides for it, tax withheld abroad on dividends or interest gives a tax credit against French income tax (line 2AB). It is not refunded if it is more than the tax due.",
+        "Every account abroad, including a broker account, that was open, used or closed during the year must be declared with the return (form 3916 / 3916 bis)."
+      ],
+      "sources": [
+        "https://www.impots.gouv.fr/www2/fichiers/documentation/brochure/ir_2026/pdf_som/08-RCM_121a136.pdf",
+        "https://www.impots.gouv.fr/particulier/questions/dois-je-declarer-mon-compte-paypal-ou-un-compte-bancaire-ouvert-letranger-et"
+      ]
+    },
+    {
+      "id": "reporting",
+      "title": "What your broker does and what you do",
+      "points": [
+        "A French bank or broker deducts social levies and the 12.8% advance on dividends and interest, calculates your gains and losses, and sends you a yearly statement for your return.",
+        "A foreign broker does not do this. You declare the income and gains yourself, pay the social levies through your tax bill, and declare the account on form 3916.",
+        "In the return you choose each year between the flat rate and the progressive scale (box 2OP); the choice covers all your investment income and gains for that year."
+      ],
+      "sources": [
+        "https://www.impots.gouv.fr/particulier/les-revenus-mobiliers",
+        "https://www.impots.gouv.fr/particulier/les-cessions-mobilieres",
+        "https://www.impots.gouv.fr/particulier/questions/dois-je-declarer-mon-compte-paypal-ou-un-compte-bancaire-ouvert-letranger-et"
+      ]
+    },
+    {
+      "id": "crypto",
+      "title": "Crypto",
+      "points": [
+        "Gains on crypto held privately are taxed at the flat 31.4%, however many trades you make; you can choose the progressive scale instead (box 3CN), separately from your other investments.",
+        "If your total crypto sales in the year (the sale amounts, not the gains) are €305 or less, the gains are tax-free. Swapping one crypto for another without receiving money is not taxed until later.",
+        "A crypto loss can only be set against crypto gains of the same year; it does not carry forward.",
+        "Accounts at crypto platforms abroad must be declared. Mining and staking income is taxed differently, as non-commercial profits (BNC)."
+      ],
+      "figures": [
+        {"label": "Tax-free if yearly sales total at most", "value": "€305"}
+      ],
+      "sources": [
+        "https://www.impots.gouv.fr/particulier/questions/comment-declarer-les-plus-ou-moins-values-sur-cessions-dactifs-numeriques"
+      ]
+    }
+  ],
+  "dates": [
+    {"when": "01-01", "what": "Reference date for the real estate wealth tax (IFI)."},
+    {"when": "11-30", "what": "Last day to ask your bank to skip the 12.8% advance on next year's dividends and interest, if your income allows it."}
+  ],
+  "official": [
+    {"title": "impots.gouv.fr: investment income", "url": "https://www.impots.gouv.fr/particulier/les-revenus-mobiliers"},
+    {"title": "impots.gouv.fr: gains on securities", "url": "https://www.impots.gouv.fr/particulier/les-cessions-mobilieres"},
+    {"title": "impots.gouv.fr: life insurance and PEA", "url": "https://www.impots.gouv.fr/particulier/lassurance-vie-et-le-pea-0"},
+    {"title": "impots.gouv.fr: crypto gains", "url": "https://www.impots.gouv.fr/particulier/questions/comment-declarer-les-plus-ou-moins-values-sur-cessions-dactifs-numeriques"},
+    {"title": "impots.gouv.fr: accounts abroad", "url": "https://www.impots.gouv.fr/particulier/questions/dois-je-declarer-mon-compte-paypal-ou-un-compte-bancaire-ouvert-letranger-et"}
+  ],
+  "upcoming": [],
+  "not_covered": [
+    "Retirement plans (PER) and employee savings plans (PEE).",
+    "Life insurance in detail, including payments made before 27 September 2017 and inheritance rules.",
+    "Real estate, rental income and the IFI calculation.",
+    "Professional or very frequent crypto trading.",
+    "Moving into or out of France (including the exit tax), and non-residents."
+  ],
+  "news": [
+    {"name": "franceinfo Économie", "url": "https://www.franceinfo.fr/economie.rss", "language": "fr"},
+    {"name": "Le Monde Économie", "url": "https://www.lemonde.fr/economie/rss_full.xml", "language": "fr"},
+    {"name": "Le Monde Argent", "url": "https://www.lemonde.fr/argent/rss_full.xml", "language": "fr"},
+    {"name": "Le Figaro Économie", "url": "https://www.lefigaro.fr/rss/figaro_economie.xml", "language": "fr"}
+  ]
+}

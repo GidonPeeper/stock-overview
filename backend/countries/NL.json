@@ -1,0 +1,214 @@
+{
+  "code": "NL",
+  "name": "Netherlands",
+  "currency": "EUR",
+  "currency_note": "",
+  "timezone": "Europe/Amsterdam",
+  "languages": ["nl"],
+  "checked_on": "2026-11-26",
+  "tax_year": {
+    "label": "2026",
+    "starts": "01-01",
+    "ends": "12-31",
+    "return_due": "File by the date in your letter from the tax office, usually 1 May 2027; ask before then and you get until 1 September.",
+    "source": "https://www.belastingdienst.nl/wps/wcm/connect/nl/belastingaangifte/content/wanneer-moet-ik-aangifte-doen"
+  },
+  "summary": "Savings and investments fall in box 3 (sparen en beleggen). You do not pay tax on each sale, dividend or interest payment. Instead, the tax office assumes a fixed return on what you own on 1 January and taxes that at 36%. If your actual return for the year was lower, you can report it and pay tax on that instead. A new system that taxes actual returns is planned, currently from 1 January 2029.",
+  "topics": [
+    {
+      "id": "gains",
+      "title": "Profit when you sell",
+      "points": [
+        "A sale is not taxed on its own. Box 3 looks at the value of your investments on 1 January; what happens after that day does not change the assumed (deemed) return for that year.",
+        "If you choose to report your actual return (see Tax on what you own), price rises and falls count in the year they happen, whether or not you sold."
+      ],
+      "sources": [
+        "https://www.belastingdienst.nl/wps/wcm/connect/nl/box-3/content/wat-is-mijn-werkelijk-rendement",
+        "https://www.belastingdienst.nl/wps/wcm/connect/nl/box-3/content/berekening-box-3-inkomen-2026"
+      ]
+    },
+    {
+      "id": "dividends",
+      "title": "Dividends",
+      "points": [
+        "Dividends are not taxed one by one. Box 3 taxes a deemed return on your wealth instead; if you choose to report your actual return, dividends received are part of it.",
+        "A Dutch company usually withholds 15% Dutch dividend tax (dividendbelasting) when it pays out. You enter this in your return and it is subtracted from your income tax.",
+        "Only Dutch dividend tax goes in that part of the return. Tax withheld abroad is handled differently (see Foreign shares)."
+      ],
+      "figures": [
+        {"label": "Dutch dividend tax", "value": "15%"}
+      ],
+      "sources": [
+        "https://www.belastingdienst.nl/wps/wcm/connect/bldcontentnl/belastingdienst/zakelijk/winst/dividendbelasting/als_u_dividend_ontvangt/als_u_dividend_ontvangt",
+        "https://www.belastingdienst.nl/wps/wcm/connect/fisin/fisin2026/te_verrekenen_belasting"
+      ]
+    },
+    {
+      "id": "interest",
+      "title": "Interest on savings",
+      "points": [
+        "Interest is not taxed on its own. Your bank and savings balances on 1 January, in the Netherlands and abroad, count in box 3 with their own deemed return.",
+        "For 2026 that deemed return on bank balances is 1.28%. This figure is provisional; the final one is set in early 2027.",
+        "If a bank abroad withholds tax on your interest, you can usually credit it in your Dutch return, up to a limit."
+      ],
+      "figures": [
+        {"label": "Deemed return on bank balances, 2026 (provisional)", "value": "1.28%"}
+      ],
+      "sources": [
+        "https://www.belastingdienst.nl/wps/wcm/connect/nl/box-3/content/berekening-box-3-inkomen-2026",
+        "https://www.belastingdienst.nl/wps/wcm/connect/fisin/fisin2026/te_verrekenen_belasting"
+      ]
+    },
+    {
+      "id": "funds",
+      "title": "Funds and ETFs",
+      "points": [
+        "Shares in investment funds, including ETFs, count as investments in box 3, valued on 1 January like shares. Because box 3 looks at value, a fund that reinvests its income is treated the same way as one that pays it out.",
+        "For securities listed on Euronext Amsterdam you use the official closing price at the reference date. For other securities you use their market value."
+      ],
+      "sources": [
+        "https://www.belastingdienst.nl/wps/wcm/connect/fisin/fisin2026/bezittingen_en_schulden_box_3_"
+      ]
+    },
+    {
+      "id": "wealth",
+      "title": "Tax on what you own",
+      "points": [
+        "Box 3 starts from your assets minus debts on 1 January. Each kind gets a fixed deemed return: bank balances, other assets (shares, funds, bonds, crypto, a second home) and debts each have their own rate.",
+        "The deemed return is applied to your wealth above the tax-free amount and taxed at 36%. Fiscal partners may split the taxable part between them in any way.",
+        "Courts ruled that this may not tax more than you really earned. Since the 2025 tax year you can report your actual return in the tax return; the tax office then uses whichever result is lower for you. Reporting it is optional.",
+        "Your actual return is the interest and dividends you received, plus the rise or fall in value of everything you own, including gains you have not taken. There is no tax-free amount in this calculation and costs such as trading fees cannot be deducted; interest paid on box 3 debts can.",
+        "Your provisional assessment (voorlopige aanslag) for 2026 uses the deemed returns. The actual return can only be taken into account in the return after the year ends."
+      ],
+      "figures": [
+        {"label": "Tax rate, 2026", "value": "36%"},
+        {"label": "Deemed return on investments and other assets, 2026", "value": "6.00%"},
+        {"label": "Deemed return on bank balances, 2026 (provisional)", "value": "1.28%"},
+        {"label": "Deemed return on debts, 2026 (provisional)", "value": "2.70%"},
+        {"label": "Reference date", "value": "1 January 2026"}
+      ],
+      "sources": [
+        "https://www.belastingdienst.nl/wps/wcm/connect/nl/box-3/content/berekening-box-3-inkomen-2026",
+        "https://www.belastingdienst.nl/wps/wcm/connect/nl/box-3/content/wat-is-mijn-werkelijk-rendement"
+      ]
+    },
+    {
+      "id": "allowances",
+      "title": "Tax-free amounts",
+      "points": [
+        "The tax-free amount (heffingsvrij vermogen) is €59,357 per person in 2026, or €118,714 for fiscal partners together. It applies only to the deemed-return calculation.",
+        "Only debts above €3,800 per person (€7,600 for partners) reduce your wealth.",
+        "Recognised green investments (groene beleggingen) are exempt up to €26,715 per person (€53,430 for partners).",
+        "Cash at home up to €672 per person (€1,344 for partners) is exempt."
+      ],
+      "figures": [
+        {"label": "Tax-free amount, single", "value": "€59,357"},
+        {"label": "Tax-free amount, fiscal partners", "value": "€118,714"},
+        {"label": "Debt threshold, single", "value": "€3,800"},
+        {"label": "Green investments exemption, single", "value": "€26,715"}
+      ],
+      "sources": [
+        "https://www.belastingdienst.nl/wps/wcm/connect/nl/box-3/content/heffingsvrij-vermogen",
+        "https://www.belastingdienst.nl/wps/wcm/connect/fisin/fisin2026/bezittingen_en_schulden_box_3_"
+      ]
+    },
+    {
+      "id": "accounts",
+      "title": "Tax-free and tax-deferred accounts",
+      "points": [
+        "There is no general tax-free investment account. The main tax-deferred option is an annuity account (lijfrenterekening or lijfrentebeleggingsrecht) for retirement income.",
+        "Deposits are deductible from income only if you have a pension shortfall, measured by your annual room (jaarruimte). The account then falls in box 1 instead of box 3, and later payouts are taxed as income.",
+        "Dutch dividend tax on investments inside such an account cannot be credited in your return; it stays inside the account."
+      ],
+      "sources": [
+        "https://www.belastingdienst.nl/wps/wcm/connect/fisin/fisin2026/uitgaven_voor_inkomensvoorzieningen",
+        "https://www.belastingdienst.nl/wps/wcm/connect/fisin/fisin2026/bezittingen_en_schulden_box_3_",
+        "https://www.belastingdienst.nl/wps/wcm/connect/fisin/fisin2026/te_verrekenen_belasting"
+      ]
+    },
+    {
+      "id": "losses",
+      "title": "Losses",
+      "points": [
+        "Under the deemed return there is nothing to offset: a loss on a sale is not deductible, and a fall in value only shows in next year's 1 January value.",
+        "If you report your actual return, gains and losses within the year are netted. A negative total counts as €0 and cannot be carried to another year."
+      ],
+      "sources": [
+        "https://www.belastingdienst.nl/wps/wcm/connect/nl/box-3/content/wat-is-mijn-werkelijk-rendement"
+      ]
+    },
+    {
+      "id": "foreign",
+      "title": "Foreign shares",
+      "points": [
+        "Investments and accounts abroad count in box 3 just like Dutch ones. Convert foreign-currency values at the European Central Bank rate of 1 January.",
+        "Tax withheld abroad on dividends or interest can be credited against Dutch tax (credit method), but not more than the Dutch tax on that income.",
+        "If a country withheld more than its tax treaty with the Netherlands allows, you reclaim the excess from that country. It usually asks for a certificate of Dutch residence (woonplaatsverklaring) from the Belastingdienst, and time limits apply."
+      ],
+      "sources": [
+        "https://www.belastingdienst.nl/wps/wcm/connect/fisin/fisin2026/bezittingen_en_schulden_box_3_",
+        "https://www.belastingdienst.nl/wps/wcm/connect/fisin/fisin2026/te_verrekenen_belasting",
+        "https://www.belastingdienst.nl/wps/wcm/connect/bldcontentnl/belastingdienst/zakelijk/internationaal/vermogen/teruggaaf_of_vrijstelling_van_buitenlandse_bronbelasting/buitenlandse-bronbelasting-terug-met-verklaring-nederlandse-belastingdienst"
+      ]
+    },
+    {
+      "id": "reporting",
+      "title": "What your broker does and what you do",
+      "points": [
+        "Dutch companies withhold the 15% dividend tax; your dividend statement shows the amount.",
+        "Your online return comes partly pre-filled with data the tax office received. Check it and add what is missing, such as an account or broker abroad.",
+        "You report the 1 January values of all box 3 assets and debts, including those of your fiscal partner and of children under 18 in your care.",
+        "To use your actual return, you also need each investment's value at the end of the year, purchases, sales, dividends and interest received."
+      ],
+      "sources": [
+        "https://www.belastingdienst.nl/wps/wcm/connect/nl/belastingaangifte/content/vooraf-ingevulde-gegevens-kloppen-niet",
+        "https://www.belastingdienst.nl/wps/wcm/connect/fisin/fisin2026/bezittingen_en_schulden_box_3_",
+        "https://www.belastingdienst.nl/wps/wcm/connect/nl/box-3/content/rekenvoorbeelden-berekening-werkelijk-rendement"
+      ]
+    },
+    {
+      "id": "crypto",
+      "title": "Crypto",
+      "points": [
+        "Crypto (for example bitcoin or NFTs) counts in box 3 as an other asset, valued on 1 January, with the 6.00% deemed return in 2026.",
+        "In the actual-return calculation, the rise or fall in value of your crypto during the year counts."
+      ],
+      "sources": [
+        "https://www.belastingdienst.nl/wps/wcm/connect/nl/box-3/content/berekening-box-3-inkomen-2026",
+        "https://www.belastingdienst.nl/wps/wcm/connect/fisin/fisin2026/bezittingen_en_schulden_box_3_"
+      ]
+    }
+  ],
+  "dates": [
+    {"when": "01-01", "what": "Reference date: your box 3 assets and debts are valued on this day."},
+    {"when": "05-01", "what": "Usual deadline for the return for the year before (check the date in your letter)."},
+    {"when": "09-01", "what": "Deadline if you asked for an extension before 1 May."}
+  ],
+  "official": [
+    {"title": "Belastingdienst: box 3", "url": "https://www.belastingdienst.nl/wps/wcm/connect/nl/box-3/box-3"},
+    {"title": "Belastingdienst: box 3 calculation for 2026", "url": "https://www.belastingdienst.nl/wps/wcm/connect/nl/box-3/content/berekening-box-3-inkomen-2026"},
+    {"title": "Belastingdienst: your actual return", "url": "https://www.belastingdienst.nl/wps/wcm/connect/nl/box-3/content/wat-is-mijn-werkelijk-rendement"},
+    {"title": "Belastingdienst: box 3 assets and debts 2026 (guide)", "url": "https://www.belastingdienst.nl/wps/wcm/connect/fisin/fisin2026/bezittingen_en_schulden_box_3_"},
+    {"title": "Rijksoverheid: plans for tax on actual returns", "url": "https://www.rijksoverheid.nl/themas/werk/inkomstenbelasting/plannen-werkelijk-rendement-box-3"}
+  ],
+  "upcoming": [
+    "New box 3 on actual returns (Wet werkelijk rendement box 3): the lower house passed it on 12 February 2026 and the Senate has not yet voted; on 3 November 2026 the government proposed to start on 1 January 2029 instead of 2028 (2028 if banks can be ready).",
+    "Under the latest proposal, gains on shares, bonds, ETFs and other financial instruments would be taxed when you sell, while bank balances, insurance products and crypto in your own wallet would be taxed on yearly value changes in 2029; details may still change.",
+    "The government page lists proposed rates of 35.5% on returns between €1,800 and €60,000 and 38.5% above that, with the first €1,800 of return tax-free; these are proposals, not law.",
+    "The 2027 box 3 figures were not yet on the tax office's pages when this was checked; a previously proposed cut in the tax-free amount was dropped on 3 November 2026."
+  ],
+  "not_covered": [
+    "Holdings of 5% or more in one company (aanmerkelijk belang, box 2).",
+    "Your own home, second homes and rental property.",
+    "Pensions and employee share plans.",
+    "Moving into or out of the Netherlands, and non-residents.",
+    "Claims for earlier years (2017 to 2024) and objections.",
+    "Business income and professional trading."
+  ],
+  "news": [
+    {"name": "NOS Economie", "url": "https://feeds.nos.nl/nosnieuwseconomie", "language": "nl"},
+    {"name": "NU.nl Economie", "url": "https://www.nu.nl/rss/Economie", "language": "nl"},
+    {"name": "Het Financieele Dagblad", "url": "https://fd.nl/?rss", "language": "nl"},
+    {"name": "AD Geld", "url": "https://www.ad.nl/geld/rss.xml", "language": "nl"}
+  ]
+}

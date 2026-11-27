@@ -1,0 +1,183 @@
+{
+  "code": "CH",
+  "name": "Switzerland",
+  "currency": "EUR",
+  "currency_note": "Switzerland uses Swiss francs (CHF); the app shows amounts in euros, so convert where needed. Amounts on this page are in CHF.",
+  "timezone": "Europe/Zurich",
+  "languages": ["de", "fr", "it"],
+  "checked_on": "2026-11-26",
+  "tax_year": {
+    "label": "2026",
+    "starts": "01-01",
+    "ends": "12-31",
+    "return_due": "Your canton or commune sends one return covering federal, cantonal and communal tax, with its own deadline; deadlines differ by canton.",
+    "source": "https://www.estv.admin.ch/dam/de/sd-web/br6OroPN2ZBz/estv-leitfaden-steuerpflichtige-de.pdf"
+  },
+  "summary": "Gains from selling shares, funds and crypto you hold privately are normally tax-free. Interest and dividends are taxed as income by the federal government, your canton and your commune, and Swiss dividends and interest carry a 35% withholding tax that you get back by declaring them. Your canton also taxes your net wealth each year, with rates and tax-free amounts that differ a lot between cantons.",
+  "topics": [
+    {
+      "id": "gains",
+      "title": "Profit when you sell",
+      "points": [
+        "Gains from selling movable private assets, such as shares, bonds and funds, are tax-free at federal and cantonal level. Losses cannot be deducted.",
+        "This changes if your trading counts as a business (professional securities trading), judged by the kind, size and financing of your trades. Then gains are taxed as income."
+      ],
+      "sources": [
+        "https://www.estv2.admin.ch/stp/ds/d-einkommenssteuer-natuerlicher-personen-gesamter-text-de.pdf",
+        "https://www.estv2.admin.ch/d/steuerverguenstigungen/33.htm",
+        "https://www.estv.admin.ch/de/kryptowaehrungen-besteuerung"
+      ]
+    },
+    {
+      "id": "dividends",
+      "title": "Dividends",
+      "points": [
+        "Dividends are taxable income for federal, cantonal and communal income tax, at your personal rates, which depend on your canton and commune.",
+        "Swiss companies withhold 35% withholding tax (Verrechnungssteuer). You get it back in full by listing the dividend in the securities list (Wertschriftenverzeichnis) of your return; the canton usually offsets it against your cantonal tax bill.",
+        "Only large holdings (qualifying participations) get partial taxation of dividends."
+      ],
+      "figures": [
+        {"label": "Swiss withholding tax", "value": "35% (refunded when declared)"}
+      ],
+      "sources": [
+        "https://www.ch.ch/de/steuern-und-finanzen/steuerarten/verrechnungssteuer/",
+        "https://www.estv2.admin.ch/stp/ds/d-einkommenssteuer-natuerlicher-personen-gesamter-text-de.pdf"
+      ]
+    },
+    {
+      "id": "interest",
+      "title": "Interest on savings",
+      "points": [
+        "Interest is taxable income at your personal rates.",
+        "Swiss banks withhold 35% withholding tax on interest, which you get back by declaring it. No withholding tax is taken if the interest on an account is CHF 200 or less for the year, but that interest is still taxable income."
+      ],
+      "figures": [
+        {"label": "No withholding on bank interest up to", "value": "CHF 200 a year"}
+      ],
+      "sources": [
+        "https://www.ch.ch/de/steuern-und-finanzen/steuerarten/verrechnungssteuer/",
+        "https://fedlex.data.admin.ch/filestore/fedlex.data.admin.ch/eli/cc/1966/371_385_384/20250101/de/pdf-a/fedlex-data-admin-ch-eli-cc-1966-371_385_384-20250101-de-pdf-a-3.pdf"
+      ]
+    },
+    {
+      "id": "funds",
+      "title": "Funds and ETFs",
+      "points": [
+        "The income a fund earns (interest, dividends) is taxable for you, whether the fund pays it out or reinvests it. Paid-out income is taxed when due; reinvested income when the fund credits it.",
+        "Capital gains a fund makes are tax-free for you if the fund shows them separately in its accounts or pays them on a separate coupon. Gains when you sell fund units are tax-free like other private capital gains.",
+        "For wealth tax, listed funds are valued at the year-end price in the Federal Tax Administration's price list (Kursliste)."
+      ],
+      "sources": [
+        "https://www.estv2.admin.ch/dvs/kreisschreiben/dbst-ks-2018-1-025-d-de.pdf",
+        "https://www.estv2.admin.ch/stp/ds/d-vermoegenssteuer-np-de.pdf"
+      ]
+    },
+    {
+      "id": "wealth",
+      "title": "Tax on what you own",
+      "points": [
+        "Each canton and commune taxes your net wealth (assets minus debts) every year. There is no federal wealth tax. Rates and tax-free amounts are set by the canton, so the tax differs a lot depending on where you live.",
+        "Wealth is valued on 31 December. Listed securities are valued using the Federal Tax Administration's yearly price list (Kursliste), usually at the 31 December price."
+      ],
+      "figures": [
+        {"label": "Valuation date", "value": "31 December"}
+      ],
+      "sources": [
+        "https://www.estv2.admin.ch/stp/ds/d-vermoegenssteuer-np-de.pdf"
+      ]
+    },
+    {
+      "id": "accounts",
+      "title": "Tax-free and tax-deferred accounts",
+      "points": [
+        "Pillar 3a (Säule 3a) is a tied pension account. Contributions are deducted from taxable income; payouts are taxed later, as with occupational pensions, and you cannot withdraw freely.",
+        "In 2026 you can deduct up to CHF 7,258 if you are in an occupational pension fund, or up to CHF 36,288 if you are not.",
+        "Missed contributions from 2025 onwards can be paid in later, up to ten years back, with up to CHF 7,258 a year extra in 2026."
+      ],
+      "figures": [
+        {"label": "Pillar 3a, with pension fund, 2026", "value": "CHF 7,258"},
+        {"label": "Pillar 3a, without pension fund, 2026", "value": "CHF 36,288"}
+      ],
+      "sources": [
+        "https://www.bsv.admin.ch/de/die-dritte-saeule",
+        "https://www.bsv.admin.ch/dam/de/sd-web/sAgdISSXenMT/d_Betr%C3%A4ge%202026.pdf"
+      ]
+    },
+    {
+      "id": "losses",
+      "title": "Losses",
+      "points": [
+        "Because private capital gains are tax-free, private capital losses cannot be deducted."
+      ],
+      "sources": [
+        "https://www.estv.admin.ch/de/kryptowaehrungen-besteuerung"
+      ]
+    },
+    {
+      "id": "foreign",
+      "title": "Foreign shares",
+      "points": [
+        "Foreign dividends and interest are taxable income like Swiss ones, and the holdings count for wealth tax.",
+        "Where a tax treaty applies, foreign withholding tax that cannot be reclaimed from the other country can be credited in Switzerland. You ask for this each year with form DA-1, attached to the securities list, within three years.",
+        "No credit is given in small cases, where the non-reclaimable foreign tax is CHF 100 or less. Tax withheld above the treaty rate must be reclaimed from the other country."
+      ],
+      "figures": [
+        {"label": "Minimum for a foreign tax credit", "value": "more than CHF 100"}
+      ],
+      "sources": [
+        "https://www.estv.admin.ch/dam/de/sd-web/i-sMWISTUVAc/vst-mb-da-m-de.pdf"
+      ]
+    },
+    {
+      "id": "reporting",
+      "title": "What your broker does and what you do",
+      "points": [
+        "A Swiss bank withholds the 35% withholding tax on Swiss dividends and interest. It does not withhold income tax.",
+        "You list all accounts and securities, Swiss and foreign, with their year-end values and income in the securities list of your return. This is also your claim for the withholding tax refund, and you lose the refund on income you do not declare.",
+        "A foreign broker withholds no Swiss tax. You declare its holdings and income in the same list."
+      ],
+      "sources": [
+        "https://www.ch.ch/de/steuern-und-finanzen/steuerarten/verrechnungssteuer/",
+        "https://www.estv.admin.ch/dam/de/sd-web/i-sMWISTUVAc/vst-mb-da-m-de.pdf",
+        "https://fedlex.data.admin.ch/filestore/fedlex.data.admin.ch/eli/cc/1966/371_385_384/20250101/de/pdf-a/fedlex-data-admin-ch-eli-cc-1966-371_385_384-20250101-de-pdf-a-3.pdf"
+      ]
+    },
+    {
+      "id": "crypto",
+      "title": "Crypto",
+      "points": [
+        "Crypto held privately counts for cantonal wealth tax, at its value at the end of the year. The Federal Tax Administration publishes tax values for the main coins.",
+        "Gains from buying and selling crypto privately are tax-free and losses are not deductible, unless your trading counts as a business.",
+        "Staking rewards and airdrops are taxable income, at their value when you receive them."
+      ],
+      "sources": [
+        "https://www.estv.admin.ch/de/kryptowaehrungen-besteuerung"
+      ]
+    }
+  ],
+  "dates": [
+    {"when": "12-31", "what": "Valuation date for wealth tax: the value of your securities, accounts and crypto on this day."}
+  ],
+  "official": [
+    {"title": "ch.ch: withholding tax", "url": "https://www.ch.ch/de/steuern-und-finanzen/steuerarten/verrechnungssteuer/"},
+    {"title": "ESTV: wealth tax of individuals (German, PDF)", "url": "https://www.estv2.admin.ch/stp/ds/d-vermoegenssteuer-np-de.pdf"},
+    {"title": "ESTV: income tax of individuals (German, PDF)", "url": "https://www.estv2.admin.ch/stp/ds/d-einkommenssteuer-natuerlicher-personen-gesamter-text-de.pdf"},
+    {"title": "ESTV: crypto taxation", "url": "https://www.estv.admin.ch/de/kryptowaehrungen-besteuerung"},
+    {"title": "BSV: pillar 3a", "url": "https://www.bsv.admin.ch/de/die-dritte-saeule"}
+  ],
+  "upcoming": [
+    "From 1 January 2027 the maximum pillar 3a deduction rises to CHF 7,373 for people with a pension fund and CHF 36,864 for people without one."
+  ],
+  "not_covered": [
+    "Cantonal and communal tax rates and wealth tax allowances, which differ by canton.",
+    "Large (qualifying) holdings in one company and their partial dividend taxation.",
+    "Occupational pensions (pillar 2) and buy-ins.",
+    "Real estate and property gains tax.",
+    "Moving into or out of Switzerland, and people taxed at source."
+  ],
+  "news": [
+    {"name": "SRF Wirtschaft", "url": "https://www.srf.ch/news/bnf/rss/1926", "language": "de"},
+    {"name": "NZZ Wirtschaft", "url": "https://www.nzz.ch/wirtschaft.rss", "language": "de"},
+    {"name": "RTS Économie", "url": "https://www.rts.ch/info/economie/?format=rss/news", "language": "fr"}
+  ]
+}

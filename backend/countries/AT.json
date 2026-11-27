@@ -1,0 +1,164 @@
+{
+  "code": "AT",
+  "name": "Austria",
+  "currency": "EUR",
+  "currency_note": "",
+  "timezone": "Europe/Vienna",
+  "languages": ["de"],
+  "checked_on": "2026-11-26",
+  "tax_year": {
+    "label": "2026",
+    "starts": "01-01",
+    "ends": "12-31",
+    "return_due": "File by 30 April 2027 on paper or by 30 June 2027 through FinanzOnline; the tax office can extend this on a reasoned request.",
+    "source": "https://www.bmf.gv.at/themen/steuern/fristen-verfahren/fristen-faelligkeiten.html"
+  },
+  "summary": "Most investment income, including dividends, fund income, crypto and gains on shares and funds, is taxed at a special rate of 27.5% (Kapitalertragsteuer, KESt); interest on bank deposits is taxed at 25%. An Austrian bank withholds the tax, which then settles it; income through a foreign broker goes in your tax return at the same rates. Gains are taxed however long you held the investment.",
+  "topics": [
+    {
+      "id": "gains",
+      "title": "Profit when you sell",
+      "points": [
+        "Gains on shares and fund units bought after 31 December 2010 are taxed at 27.5%, whatever the holding period. Older holdings (Altbestand) are generally not taxed on sale, except stakes of 1% or more.",
+        "The gain is the sale price minus the purchase price. Purchase fees and custody fees cannot be deducted.",
+        "Moving a holding to another person's account or to another bank can count as a sale unless the transfer is documented so that later taxation is secured. Moving abroad can also count as a sale (exit taxation).",
+        "If your normal income tax rate is lower, you can ask in your return for all capital income to be taxed at that rate instead (Regelbesteuerungsoption)."
+      ],
+      "figures": [
+        {"label": "Tax rate on gains", "value": "27.5%"},
+        {"label": "Taxed if bought after", "value": "31 December 2010"}
+      ],
+      "sources": [
+        "https://www.bmf.gv.at/themen/steuern/sparen-veranlagen/arten-von-kapitalertraegen.html",
+        "https://www.bmf.gv.at/themen/steuern/sparen-veranlagen/substanzgewinne-bzw-einkuenfte-aus-realisierten-wertsteigerungen.html",
+        "https://www.bmf.gv.at/themen/steuern/sparen-veranlagen/besteuerung-kapitalertraege-inland.html"
+      ]
+    },
+    {
+      "id": "dividends",
+      "title": "Dividends",
+      "points": [
+        "Dividends are taxed at 27.5%. An Austrian bank or company withholds it, and that settles the tax: you do not need to declare them.",
+        "Dividends paid through a foreign broker are not withheld in Austria and must be declared in your return, still at 27.5% and separate from your other income."
+      ],
+      "figures": [
+        {"label": "Tax on dividends", "value": "27.5%"}
+      ],
+      "sources": [
+        "https://www.bmf.gv.at/themen/steuern/sparen-veranlagen/kapitalertraege-im-engeren-sinn.html",
+        "https://www.bmf.gv.at/themen/steuern/sparen-veranlagen/besteuerung-kapitalertraege-inland.html"
+      ]
+    },
+    {
+      "id": "interest",
+      "title": "Interest on savings",
+      "points": [
+        "Interest on savings and current accounts is taxed at 25%; interest on bonds and other debt securities at 27.5%.",
+        "An Austrian bank withholds it. Interest from a foreign bank must be declared in your return, at the same rate."
+      ],
+      "figures": [
+        {"label": "Bank deposit interest", "value": "25%"},
+        {"label": "Bond interest", "value": "27.5%"}
+      ],
+      "sources": [
+        "https://www.bmf.gv.at/themen/steuern/sparen-veranlagen/information-zu-einkuenften-aus-kapitalvermoegen.html",
+        "https://www.bmf.gv.at/themen/steuern/sparen-veranlagen/besteuerung-kapitalertraege-inland.html"
+      ]
+    },
+    {
+      "id": "funds",
+      "title": "Funds and ETFs",
+      "points": [
+        "Fund income is taxed at 27.5% even if the fund keeps it. For a reporting fund (Meldefonds), a tax representative reports the taxable income each year, including income the fund keeps (ausschüttungsgleiche Erträge).",
+        "For a fund that does not report (Nichtmeldefonds), the taxable income is estimated at 90% of the price rise during the year, but at least 10% of the price at the end of the year, and counts as received on 31 December. You can prove the real figures yourself instead.",
+        "Gains when you sell fund units are taxed like gains on shares."
+      ],
+      "figures": [
+        {"label": "Non-reporting fund, yearly estimate", "value": "90% of price rise, at least 10% of year-end price"}
+      ],
+      "sources": [
+        "https://findok.bmf.gv.at/findok/iwg/145/145784/145784.1.pdf",
+        "https://www.bmf.gv.at/themen/steuern/sparen-veranlagen/arten-von-kapitalertraegen.html"
+      ]
+    },
+    {
+      "id": "losses",
+      "title": "Losses",
+      "points": [
+        "Losses on investments can only be set against capital income taxed at the same special rate, in the same year. They cannot be set against bank deposit interest or against wages.",
+        "Your Austrian bank offsets losses and gains within its accounts automatically. Offsetting across banks, with a foreign broker or between crypto and other investments is possible only in your tax return (Verlustausgleichsoption).",
+        "Since 2025 your bank must give you a tax report (Steuerreporting) on request, which you can use for this."
+      ],
+      "sources": [
+        "https://www.bmf.gv.at/themen/steuern/sparen-veranlagen/verluste-aus-veraeusserung-von-kapitalvermoegen-und-derivaten.html"
+      ]
+    },
+    {
+      "id": "foreign",
+      "title": "Foreign shares",
+      "points": [
+        "An Austrian bank can credit foreign withholding tax on dividends against the Austrian tax, but at most 15% of the dividend, whatever the tax treaty says.",
+        "For income declared in your return, foreign withholding tax is credited up to the rate set in the tax treaty with that country. Anything withheld above that must be reclaimed from the other country."
+      ],
+      "figures": [
+        {"label": "Maximum credit at an Austrian bank", "value": "15%"}
+      ],
+      "sources": [
+        "https://www.bmf.gv.at/themen/steuern/sparen-veranlagen/kapitalertraege-im-engeren-sinn.html"
+      ]
+    },
+    {
+      "id": "reporting",
+      "title": "What your broker does and what you do",
+      "points": [
+        "An Austrian bank withholds the tax on dividends, interest, fund income and gains, offsets losses and credits foreign tax up to 15%. That settles the tax and you need not declare the income.",
+        "A foreign broker withholds no Austrian tax. You must declare its income and gains in your return, and the special rates still apply.",
+        "If you move securities from one foreign account to another, you must tell the tax office within a month. Since 1 July 2026 this also applies when you move them from a foreign account to your Austrian account; otherwise the transfer counts as a sale."
+      ],
+      "sources": [
+        "https://www.bmf.gv.at/themen/steuern/sparen-veranlagen/besteuerung-kapitalertraege-inland.html",
+        "https://www.bmf.gv.at/themen/steuern/sparen-veranlagen/substanzgewinne-bzw-einkuenfte-aus-realisierten-wertsteigerungen.html"
+      ]
+    },
+    {
+      "id": "crypto",
+      "title": "Crypto",
+      "points": [
+        "Crypto bought after 28 February 2021 is taxed like other investments: gains at 27.5%, whatever the holding period. Crypto bought before that is old holding and follows the old rules.",
+        "Swapping one crypto for another is not taxed. Selling for euros or another currency, or paying with crypto, is.",
+        "Lending income is taxed when received. Staking rewards and airdrops are not taxed when received, but they count with a cost of zero, so the whole value is taxed when you sell.",
+        "Austrian crypto providers withhold the tax since 2024. For a foreign platform you declare the income in your return."
+      ],
+      "figures": [
+        {"label": "Tax on crypto gains", "value": "27.5%"}
+      ],
+      "sources": [
+        "https://www.bmf.gv.at/themen/steuern/sparen-veranlagen/steuerliche-behandlung-von-kryptowaehrungen.html"
+      ]
+    }
+  ],
+  "dates": [
+    {"when": "04-30", "what": "Paper tax return for the year before is due."},
+    {"when": "06-30", "what": "Tax return through FinanzOnline for the year before is due."},
+    {"when": "12-31", "what": "Non-reporting funds: the estimated yearly income counts as received on this day."}
+  ],
+  "official": [
+    {"title": "BMF: savings and investments", "url": "https://www.bmf.gv.at/themen/steuern/sparen-veranlagen.html"},
+    {"title": "BMF: taxation of capital income", "url": "https://www.bmf.gv.at/themen/steuern/sparen-veranlagen/besteuerung-kapitalertraege-inland.html"},
+    {"title": "BMF: losses on investments", "url": "https://www.bmf.gv.at/themen/steuern/sparen-veranlagen/verluste-aus-veraeusserung-von-kapitalvermoegen-und-derivaten.html"},
+    {"title": "BMF: crypto", "url": "https://www.bmf.gv.at/themen/steuern/sparen-veranlagen/steuerliche-behandlung-von-kryptowaehrungen.html"}
+  ],
+  "upcoming": [],
+  "not_covered": [
+    "Pension products and state-supported retirement saving (prämienbegünstigte Zukunftsvorsorge).",
+    "Life insurance.",
+    "Stakes of 1% or more in one company, private loans and unlisted derivatives.",
+    "Real estate.",
+    "Moving into or out of Austria in detail, and non-residents."
+  ],
+  "news": [
+    {"name": "Der Standard Wirtschaft", "url": "https://www.derstandard.at/rss/wirtschaft", "language": "de"},
+    {"name": "Die Presse Wirtschaft", "url": "https://www.diepresse.com/rss/wirtschaft", "language": "de"},
+    {"name": "Kurier Wirtschaft", "url": "https://kurier.at/wirtschaft/xml/rssd", "language": "de"}
+  ]
+}

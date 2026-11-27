@@ -1,0 +1,209 @@
+{
+  "code": "DE",
+  "name": "Germany",
+  "currency": "EUR",
+  "currency_note": "",
+  "timezone": "Europe/Berlin",
+  "languages": ["de"],
+  "checked_on": "2026-11-26",
+  "tax_year": {
+    "label": "2026",
+    "starts": "01-01",
+    "ends": "12-31",
+    "return_due": "If you must file, the 2026 return is due by 2 August 2027 (31 July is a Saturday), or by the end of February 2028 if a tax adviser prepares it.",
+    "source": "https://www.gesetze-im-internet.de/ao_1977/__149.html"
+  },
+  "summary": "Interest, dividends, fund income and gains on shares and funds are taxed at a flat 25% (Abgeltungsteuer), plus 5.5% solidarity surcharge on that tax and church tax if you are a church member. A German bank or broker withholds this for you, so for many people the tax is settled without a return. The first €1,000 of capital income a year is tax-free (€2,000 for married couples filing jointly). Funds have their own rules: part of their income is tax-free, and accumulating funds are taxed on a yearly minimum amount.",
+  "topics": [
+    {
+      "id": "gains",
+      "title": "Profit when you sell",
+      "points": [
+        "Gains from selling shares, bonds and funds are capital income, taxed at the flat 25% plus 5.5% solidarity surcharge on the tax, whatever the holding period (holdings bought before 2009 may follow older rules). Church members pay church tax on top, which slightly lowers the 25% part.",
+        "The gain is the sale price minus sale costs and the purchase price. For trades in another currency, both prices are converted to euros on their own dates.",
+        "When you hold several lots of the same security in a custody account, the ones bought first count as sold first.",
+        "On request, the tax office taxes your capital income at your personal income tax rate instead, if that is lower (Günstigerprüfung)."
+      ],
+      "figures": [
+        {"label": "Flat tax (Abgeltungsteuer)", "value": "25%"},
+        {"label": "With 5.5% solidarity surcharge, no church tax", "value": "26.375%"}
+      ],
+      "sources": [
+        "https://www.gesetze-im-internet.de/estg/__32d.html",
+        "https://www.gesetze-im-internet.de/estg/__20.html",
+        "https://www.gesetze-im-internet.de/solzg_1995/__4.html"
+      ]
+    },
+    {
+      "id": "dividends",
+      "title": "Dividends",
+      "points": [
+        "Dividends are taxed at the same flat rate. A German bank or broker withholds 25% capital gains tax (Kapitalertragsteuer) plus the surcharge, and church tax where it applies.",
+        "Once tax has been withheld, the income tax on that income is settled; you do not have to declare it again."
+      ],
+      "figures": [
+        {"label": "Withholding", "value": "25% + 5.5% surcharge on the tax"}
+      ],
+      "sources": [
+        "https://www.gesetze-im-internet.de/estg/__43a.html",
+        "https://www.gesetze-im-internet.de/estg/__43.html",
+        "https://www.bzst.de/DE/Privatpersonen/Kapitalertraege/KirchensteuerAbgeltungssteuer/kirchensteuerabgeltungssteuer_node.html"
+      ]
+    },
+    {
+      "id": "interest",
+      "title": "Interest on savings",
+      "points": [
+        "Interest is capital income at the same flat rate, withheld by a German bank.",
+        "It shares the €1,000 yearly allowance with your other capital income (see Tax-free amounts)."
+      ],
+      "sources": [
+        "https://www.gesetze-im-internet.de/estg/__43a.html",
+        "https://www.gesetze-im-internet.de/estg/__20.html"
+      ]
+    },
+    {
+      "id": "funds",
+      "title": "Funds and ETFs",
+      "points": [
+        "Part of a fund's income is tax-free (Teilfreistellung): 30% for equity funds (more than 50% in shares), 15% for mixed funds (at least 25% in shares), and 60% or 80% for real estate funds. This applies to payouts, the yearly minimum amount and sale gains.",
+        "Accumulating funds and funds that pay out little are taxed on a yearly minimum amount, the Vorabpauschale. It is the fund's price at the start of the year times 70% of a base rate set each January, minus payouts in the year, and never more than the fund's actual rise plus payouts.",
+        "For 2026 the base rate is 3.20%, so the Vorabpauschale is at most 2.24% of the fund's value on 1 January 2026, less in the year you bought. It counts as received on 4 January 2027.",
+        "A German bank withholds the tax on the Vorabpauschale and may take it from your account with it. When you sell, the Vorabpauschalen already taxed are deducted from the gain, so they are not taxed twice."
+      ],
+      "figures": [
+        {"label": "Tax-free part, equity funds", "value": "30%"},
+        {"label": "Tax-free part, mixed funds", "value": "15%"},
+        {"label": "Base rate for the 2026 Vorabpauschale", "value": "3.20%"}
+      ],
+      "sources": [
+        "https://www.gesetze-im-internet.de/invstg_2018/__20.html",
+        "https://www.gesetze-im-internet.de/invstg_2018/__2.html",
+        "https://www.gesetze-im-internet.de/invstg_2018/__18.html",
+        "https://www.gesetze-im-internet.de/invstg_2018/__19.html",
+        "https://www.bundesfinanzministerium.de/Content/DE/Downloads/BMF_Schreiben/Steuerarten/Investmentsteuer/2026-01-13-basiszins-berechnung-vorabpauschale.html",
+        "https://www.gesetze-im-internet.de/estg/__44.html"
+      ]
+    },
+    {
+      "id": "wealth",
+      "title": "Tax on what you own",
+      "points": [
+        "Germany has not levied a wealth tax (Vermögensteuer) since 1 January 1997, after a constitutional court ruling. The law was never repealed."
+      ],
+      "sources": [
+        "https://dserver.bundestag.de/btd/21/009/2100908.pdf"
+      ]
+    },
+    {
+      "id": "allowances",
+      "title": "Tax-free amounts",
+      "points": [
+        "The saver's allowance (Sparer-Pauschbetrag) is €1,000 a year per person, or €2,000 for married couples or civil partners filing jointly. Actual costs, such as fees, cannot be deducted instead.",
+        "To use it without filing a return, give your bank an exemption order (Freistellungsauftrag). In total you can have up to €1,000 (€2,000 for couples) exempted this way.",
+        "If you did not use the full allowance at your banks, you can claim the rest in your tax return."
+      ],
+      "figures": [
+        {"label": "Saver's allowance, single", "value": "€1,000"},
+        {"label": "Saver's allowance, joint filers", "value": "€2,000"}
+      ],
+      "sources": [
+        "https://www.gesetze-im-internet.de/estg/__20.html",
+        "https://www.bzst.de/DE/Privatpersonen/Kapitalertraege/KirchensteuerAbgeltungssteuer/kirchensteuerabgeltungssteuer_node.html",
+        "https://www.gesetze-im-internet.de/estg/__32d.html"
+      ]
+    },
+    {
+      "id": "losses",
+      "title": "Losses",
+      "points": [
+        "Losses on capital income cannot be set against wages or other income. Unused losses carry forward to later years.",
+        "Losses from selling shares can only be set against gains from selling shares. Other capital losses, for example on funds or bonds, can be set against all capital income.",
+        "Your bank offsets losses against gains during the year and carries the rest into the next year. To use them against income at another bank instead, ask for a loss certificate (Verlustbescheinigung) by 15 December and claim it in your return."
+      ],
+      "sources": [
+        "https://www.gesetze-im-internet.de/estg/__20.html",
+        "https://www.gesetze-im-internet.de/estg/__43a.html"
+      ]
+    },
+    {
+      "id": "foreign",
+      "title": "Foreign shares",
+      "points": [
+        "Tax withheld abroad on dividends or interest can be credited against the German tax, but only the part you cannot reclaim from that country under a tax treaty, and at most the German tax on that income.",
+        "A German bank applies this credit itself when it withholds tax. With a foreign broker you claim it in your return.",
+        "If the other country withheld more than the treaty allows, you reclaim the excess from that country."
+      ],
+      "sources": [
+        "https://www.gesetze-im-internet.de/estg/__32d.html",
+        "https://www.gesetze-im-internet.de/estg/__43a.html"
+      ]
+    },
+    {
+      "id": "reporting",
+      "title": "What your broker does and what you do",
+      "points": [
+        "A German bank or broker withholds the tax, the surcharge and church tax, applies your exemption order and offsets losses. For church tax it asks the Federal Central Tax Office (BZSt) about your church membership; you can block this, but then you must file a return.",
+        "A foreign broker usually withholds no German tax. You must then declare that income in your return (Anlage KAP; fund income in Anlage KAP-INV), even if it stays below the €1,000 allowance.",
+        "You can also file voluntarily to get tax back, for example for an unused allowance, losses at another bank, foreign tax not yet credited, or a lower personal tax rate."
+      ],
+      "sources": [
+        "https://www.bzst.de/DE/Privatpersonen/Kapitalertraege/KirchensteuerAbgeltungssteuer/kirchensteuerabgeltungssteuer_node.html",
+        "https://www.gesetze-im-internet.de/estg/__32d.html",
+        "https://www.gesetze-im-internet.de/estg/__43a.html",
+        "https://www.elster.de/eportal/helpGlobal?themaGlobal=help_est_ufa_10_2025"
+      ]
+    },
+    {
+      "id": "crypto",
+      "title": "Crypto",
+      "points": [
+        "Crypto held privately is not capital income. Selling it within one year of buying is a private sale, taxed at your normal income tax rate; after more than one year the gain is tax-free.",
+        "Gains from all private sales in a year are tax-free if together they are less than €1,000. At €1,000 or more, the whole amount is taxed.",
+        "Losses on such sales can only be set against gains from private sales, in the same year, the year before or later years.",
+        "Income from staking or lending is taxed as other income; it is tax-free if, together with similar income, it is less than €256 a year. Staking does not extend the one-year period to ten years for coins used as currency."
+      ],
+      "figures": [
+        {"label": "Holding period for a tax-free sale", "value": "more than 1 year"},
+        {"label": "Tax-free limit for private sale gains", "value": "less than €1,000 a year"}
+      ],
+      "sources": [
+        "https://www.bundesfinanzministerium.de/Content/DE/Downloads/BMF_Schreiben/Steuerarten/Einkommensteuer/2025-03-06-einzelfragen-kryptowerte.html",
+        "https://www.gesetze-im-internet.de/estg/__23.html"
+      ]
+    }
+  ],
+  "dates": [
+    {"when": "01-04", "what": "First working day of the year (4 January in 2027): last year's Vorabpauschale counts as received and German banks withhold its tax."},
+    {"when": "12-15", "what": "Last day to ask your bank for a loss certificate for this year."},
+    {"when": "07-31", "what": "Usual deadline for a required return for the year before (moves to the next working day at a weekend; 2 August in 2027)."}
+  ],
+  "official": [
+    {"title": "BZSt: church tax on capital income", "url": "https://www.bzst.de/DE/Privatpersonen/Kapitalertraege/KirchensteuerAbgeltungssteuer/kirchensteuerabgeltungssteuer_node.html"},
+    {"title": "BMF: investment fund tax", "url": "https://www.bundesfinanzministerium.de/Web/DE/Themen/Steuern/Steuerarten/Investmentsteuer/investmentsteuer.html"},
+    {"title": "Income Tax Act § 20: capital income", "url": "https://www.gesetze-im-internet.de/estg/__20.html"},
+    {"title": "Income Tax Act § 32d: flat tax rate", "url": "https://www.gesetze-im-internet.de/estg/__32d.html"},
+    {"title": "BMF: crypto tax guidance (2025)", "url": "https://www.bundesfinanzministerium.de/Content/DE/Downloads/BMF_Schreiben/Steuerarten/Einkommensteuer/2025-03-06-einzelfragen-kryptowerte.html"},
+    {"title": "BMF: new private pension (from 2027)", "url": "https://www.bundesfinanzministerium.de/neue-altersvorsorge/private-altersvorsorge/start.html"}
+  ],
+  "upcoming": [
+    "From 1 January 2027, new state-subsidised pension contracts can be taken out, including a pension investment account (Altersvorsorgedepot) that can hold ETFs; the reform was passed by the Bundestag on 27 March 2026 and replaces Riester for new savers.",
+    "In these contracts, contributions up to €1,800 a year get a state grant, payments up to €6,840 a year are possible, returns are tax-free until payout, and payouts are taxed later as income.",
+    "From 1 January 2027 the state is to pay €10 a month into a pension investment account for each child aged 6 to 18, starting with children born in 2020 (Frühstartrente).",
+    "Crypto platforms must collect data on their users' 2026 transactions and report it to the BZSt for the first time by 31 July 2027 (EU rules known as DAC8)."
+  ],
+  "not_covered": [
+    "Shares and funds bought before 2009, which may fall under older rules.",
+    "Holdings of 1% or more in one company, and shares held in a business.",
+    "Riester, Rürup and company pensions.",
+    "Real estate and rental income.",
+    "Moving into or out of Germany, and non-residents.",
+    "Options, futures and other derivatives in detail."
+  ],
+  "news": [
+    {"name": "tagesschau Wirtschaft", "url": "https://www.tagesschau.de/wirtschaft/index~rss2.xml", "language": "de"},
+    {"name": "tagesschau Börse und Finanzen", "url": "https://www.tagesschau.de/wirtschaft/finanzen/index~rss2.xml", "language": "de"},
+    {"name": "Handelsblatt Finanzen", "url": "https://feeds.cms.handelsblatt.com/finanzen", "language": "de"},
+    {"name": "FAZ Finanzen", "url": "https://www.faz.net/rss/aktuell/finanzen/", "language": "de"}
+  ]
+}
