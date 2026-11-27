@@ -77,7 +77,7 @@ def start(phone: str = Form(""), pin: str = Form(""), institution: str = Form("t
     if renew:
         conn = connections.get(renew)
         if conn is None or conn.get("connector") != "traderepublic":
-            raise HTTPException(404, "Connection not found.")
+            raise HTTPException(404, "That account is no longer connected (it may have been removed in another window). Reload the page.")
     _prune()
     with _lock:
         if len(_pending) >= MAX_PENDING:

@@ -29,7 +29,7 @@
   const ok = (el, text) => { el.textContent = text; el.className = "msg ok"; };
   const bad = (el, text) => { el.textContent = "✗ " + text; el.className = "msg err"; };
   const info = (el, text) => { el.textContent = text; el.className = "msg"; };
-  const detail = async r => { const e = await r.json().catch(() => ({})); return typeof e.detail === "string" ? e.detail : "Something went wrong."; };
+  const detail = async r => { const e = await r.json().catch(() => ({})); return typeof e.detail === "string" ? e.detail : "Something went wrong. Try again in a minute; if it keeps happening, see the check-up below."; };
   const syncNote = () => (window.SYNC_ON ? " Saved permanently (cloud-synced)." : "");
   const afterChange = () => {
     try { loadCash(); } catch (e) {}
@@ -367,7 +367,7 @@
     if ($("eb-forget")) $("eb-forget").addEventListener("click", async () => {
       if (!confirm("Remove the Enable Banking key from this app? Linked banks stop updating until you add it again.")) return;
       const r = await fetch("/api/enablebanking/app", {method: "DELETE"}).catch(() => null);
-      if (!r || !r.ok) return bad($("eb-msg"), r ? await detail(r) : "Could not reach the server.");
+      if (!r || !r.ok) return bad($("eb-msg"), r ? await detail(r) : "Could not reach the server. Check that the app is still running, then try again.");
       ebEdit = false; bankLink(inst, m);
     });
     $("eb-save").addEventListener("click", () => ebSave(inst, m));
@@ -387,7 +387,7 @@
       if (!r.ok) return bad(msg, await detail(r));
       ebEdit = false;
       await bankLink(inst, m);
-    } catch (e) { bad(msg, "Could not reach the server."); }
+    } catch (e) { bad(msg, "Could not reach the server. Check that the app is still running, then try again."); }
     finally { if (document.body.contains(btn)) btn.disabled = false; }
   }
 
@@ -422,7 +422,7 @@
       const r = await fetch(`/api/enablebanking/banks?institution=${encodeURIComponent(inst.id)}&country=${encodeURIComponent(country)}`);
       if (!r.ok) { sel.innerHTML = ""; return bad(msg, await detail(r)); }
       d = await r.json();
-    } catch (e) { sel.innerHTML = ""; return bad(msg, "Could not reach the server."); }
+    } catch (e) { sel.innerHTML = ""; return bad(msg, "Could not reach the server. Check that the app is still running, then try again."); }
     $("eb-country").innerHTML = (d.countries || []).map(c =>
       `<option ${c === d.country ? "selected" : ""}>${esc(c)}</option>`).join("");
     sel.innerHTML = (d.banks || []).length
@@ -457,7 +457,7 @@
       const out = await r.json();
       markLinking();
       location.href = out.url;
-    } catch (e) { if (msg) bad(msg, "Could not reach the server."); else alert("Could not reach the server."); }
+    } catch (e) { if (msg) bad(msg, "Could not reach the server. Check that the app is still running, then try again."); else alert("Could not reach the server. Check that the app is still running, then try again."); }
   }
 
   // Back from the bank (the PWA was only in the background): show the new link.
@@ -513,7 +513,7 @@
       const r = await fetch("/api/traderepublic/login", {method: "POST", body: fd});
       if (!r.ok) return bad(msg, await detail(r));
       trShow(await r.json());
-    } catch (e) { bad(msg, "Could not reach the server."); }
+    } catch (e) { bad(msg, "Could not reach the server. Check that the app is still running, then try again."); }
     finally { if (document.body.contains(btn)) btn.disabled = false; }
   }
 
@@ -571,7 +571,7 @@
     } catch (e) {
       if (trState === st && st.step === "app") return setTimeout(trPoll, 3000);   // a network blip: keep waiting
       if (btn && document.body.contains(btn)) btn.disabled = false;
-      return bad(msg, "Could not reach the server.");
+      return bad(msg, "Could not reach the server. Check that the app is still running, then try again.");
     }
     if (trState !== st) return;                        // cancelled meanwhile
     if (btn && document.body.contains(btn)) btn.disabled = false;
@@ -589,7 +589,7 @@
   async function trResend() {
     const st = trState; if (!st) return;
     const r = await fetch(`/api/traderepublic/login/${encodeURIComponent(st.id)}/resend`, {method: "POST"}).catch(() => null);
-    if (!r) return bad($("tr-msg"), "Could not reach the server.");
+    if (!r) return bad($("tr-msg"), "Could not reach the server. Check that the app is still running, then try again.");
     if (!r.ok) return bad($("tr-msg"), await detail(r));
     info($("tr-msg"), "Trade Republic is sending the code by SMS.");
   }
@@ -646,7 +646,7 @@
       if (out.pending) { msg.textContent = `✓ Saved as “${c.label}”. ${c.error || "The data will appear shortly."}`; msg.className = "msg"; }
       else ok(msg, `✓ Connected “${c.label}”${c.summary ? " — " + c.summary : ""}.` + syncNote());
       afterChange();
-    } catch (e) { bad(msg, "Could not reach the server."); }
+    } catch (e) { bad(msg, "Could not reach the server. Check that the app is still running, then try again."); }
     finally { btn.disabled = false; }
   }
 

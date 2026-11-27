@@ -66,9 +66,9 @@ def _json_form(text: str, what: str) -> dict:
     try:
         value = json.loads(text)
     except ValueError:
-        raise HTTPException(400, f"Could not read the {what}.")
+        raise HTTPException(400, f"Could not read the {what}. Reload the page and try again.")
     if not isinstance(value, dict):
-        raise HTTPException(400, f"Could not read the {what}.")
+        raise HTTPException(400, f"Could not read the {what}. Reload the page and try again.")
     return value
 
 
@@ -77,9 +77,9 @@ def _read_upload(file: UploadFile | None) -> tuple[bytes, str]:
         raise HTTPException(400, "Choose a file first.")
     content = file.file.read(MAX_CSV + 1)
     if len(content) > MAX_CSV:
-        raise HTTPException(413, "That file is too large (5 MB max).")
+        raise HTTPException(413, "That file is too large (5 MB at most). Check it is the positions file, or export fewer columns.")
     if not content.strip():
-        raise HTTPException(400, "The file is empty.")
+        raise HTTPException(400, "The file is empty. Export it again from your broker and upload the new file.")
     return content, os.path.basename(file.filename or "")[:120]
 
 
@@ -204,10 +204,10 @@ def create(institution: str = Form(...), method: str = Form(...), label: str = F
            currency: str = Form("GBP"), file: UploadFile | None = File(None)) -> dict:
     inst = catalog.find(institution)
     if inst is None:
-        raise HTTPException(404, "Unknown bank or broker.")
+        raise HTTPException(404, "That bank or broker is not in the list. Reload the page and pick it again.")
     m = catalog.method(inst, method)
     if m is None:
-        raise HTTPException(400, "Unknown way of adding this account.")
+        raise HTTPException(400, "Unknown way of adding this account. Reload the page and choose again.")
     label = connections.unique_label(label.strip()[:60] or inst["name"], _taken_labels())
     wrapper = "ISA" if wrapper.upper() == "ISA" and inst.get("wrappers") else ""
 
@@ -223,7 +223,7 @@ def create(institution: str = Form(...), method: str = Form(...), label: str = F
                 "report": report}
 
     if m["support"] != "live":
-        raise HTTPException(400, "This option can't be connected in the app.")
+        raise HTTPException(400, "This option can't be connected in the app. Choose another way to add the account.")
 
     cid = m["connector"]
     if registry.connector(cid).extra.get("flow") == "bank_link":
@@ -242,7 +242,7 @@ def create(institution: str = Form(...), method: str = Form(...), label: str = F
     if cid == "trading212":
         from .connectors import trading212
         if any(a.key == creds["api_key"] for a in trading212.accounts()):
-            raise HTTPException(400, "This Trading 212 key is already connected.")
+            raise HTTPException(400, "This Trading 212 key is already connected: it is listed under Connected accounts.")
 
     conn = connections.new(inst, m["type"], cid, label, wrapper, creds)
     try:
@@ -265,7 +265,7 @@ def replace_csv(conn_id: str, file: UploadFile = File(...), mapping: str = Form(
                 currency: str = Form("")) -> dict:
     conn = connections.get(conn_id)
     if conn is None or conn.get("connector") != registry.GENERIC_CSV:
-        raise HTTPException(404, "Connection not found.")
+        raise HTTPException(404, "That account is no longer connected (it may have been removed in another window). Reload the page.")
     content, fname = _read_upload(file)
     old = connections.csv_entry(conn_id)
     ccy = (currency or old.get("currency") or "GBP").upper()[:3]
@@ -296,7 +296,7 @@ def refresh(conn_id: str, request: Request) -> dict:
         psu = psu_from_request(request.headers, request.client.host if request.client else "")
     conn = connections.refresh(conn_id, psu=psu)
     if conn is None:
-        raise HTTPException(404, "Connection not found.")
+        raise HTTPException(404, "That account is no longer connected (it may have been removed in another window). Reload the page.")
     return {"connection": connections.public(conn)}
 
 
@@ -304,7 +304,7 @@ def refresh(conn_id: str, request: Request) -> dict:
 def delete(conn_id: str) -> dict:
     gone = connections.remove(conn_id)
     if gone is None:
-        raise HTTPException(404, "Connection not found.")
+        raise HTTPException(404, "That account is no longer connected (it may have been removed in another window). Reload the page.")
     if gone.get("connector") == "trading212":
         connections._clear_t212(gone)
     if gone.get("connector") == "enablebanking":

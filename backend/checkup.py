@@ -452,8 +452,8 @@ def _check_saving(ctx: Context) -> list[dict]:
                                 "This host wipes its disk on every restart or deploy, so what you add here "
                                 "disappears at the next restart.",
                                 "Create a private GitHub repository and a token that can write to it, and add "
-                                "GITHUB_TOKEN and GITHUB_REPO in your host's settings (SETUP.md, step “Keep your "
-                                "data”). Meanwhile, download a backup after every change.",
+                                "GITHUB_TOKEN and GITHUB_REPO in your host's settings (SETUP.md, “Anywhere, "
+                                "always on”, steps 2 and 3). Meanwhile, download a backup after every change.",
                                 version.docs_url("SETUP.md"), "SETUP.md"))
         elif last.get("ok") is False:
             out.append(_finding("cloud_backup_failing", "problem", "Cloud backup is not saving",

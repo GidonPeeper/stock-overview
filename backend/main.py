@@ -203,7 +203,8 @@ def _refused(request: Request) -> str | None:
         except ValueError:
             theirs = ""
         if not theirs or theirs not in ours:
-            return "This request came from another website and was refused."
+            return ("This request came from another website and was refused. If you used this app, "
+                    "reload its page and try again.")
     if not _DASH_PASS:
         name = _hostname(host)
         allowed = {h.strip().lower() for h in os.getenv("ALLOWED_HOSTS", "").split(",") if h.strip()}
@@ -789,7 +790,7 @@ def cash_upsert(name: str = Form(...), institution: str = Form(""),
                 balance: float = Form(...), currency: str = Form("EUR"),
                 type: str = Form("cash"), rate: float = Form(0)) -> dict:
     if not name.strip():
-        raise HTTPException(400, "Account name is required")
+        raise HTTPException(400, "Fill in the account name.")
     out = cash.upsert(name, institution, balance, currency, type, rate)
     github_sync.push_vault_async()
     return out
@@ -859,7 +860,8 @@ async def upload_statement(kind: str, file: UploadFile = File(...)) -> dict:
             if is_pdf:
                 trades, income_, report = traderepublic_pdf.convert(content)
                 if not trades["trades"] and not income_["income"]:
-                    raise HTTPException(400, "No trades or payouts found — is this the Trade Republic account statement?")
+                    raise HTTPException(400, "No trades or payouts found in that PDF. Upload the account statement from "
+                                             "the Trade Republic app: Profile → Account statements.")
                 datafiles.save_file("trades_trade_republic.json", _json.dumps(trades, indent=1).encode())
                 datafiles.save_file("income_trade_republic.json", _json.dumps(income_, indent=1).encode())
             elif traderepublic_csv.looks_like(text):
@@ -869,17 +871,22 @@ async def upload_statement(kind: str, file: UploadFile = File(...)) -> dict:
             else:
                 payload = _loads_or_400(text)
                 if "trades" not in payload:
-                    raise HTTPException(400, 'Expected the Trade Republic transaction-export CSV, or a JSON with a "trades" list.')
+                    raise HTTPException(400, "That is not a Trade Republic file the app reads. Upload the account "
+                                             "statement PDF or the transaction export CSV (Trade Republic app: "
+                                             "Profile → Account statements).")
                 datafiles.save_upload("trade_republic", content)
         elif kind == "tr_income":
             if "income" not in _loads_or_400(text):
-                raise HTTPException(400, 'JSON must contain an "income" list — see the .sample file.')
+                raise HTTPException(400, 'That file has no "income" list. Upload the Trade Republic statement above '
+                                     'instead (it fills dividends and interest), or follow '
+                                     'data/income_trade_republic.sample.json.')
             datafiles.save_upload("tr_income", content)
         elif kind == "t212_statement" and (is_pdf or trading212_csv.looks_like(text)):
             if is_pdf:
                 st, report = trading212_pdf.convert(content)
                 if not st["trades"] and not st["positions"]:
-                    raise HTTPException(400, "No trades or positions found — is this the Trading 212 activity statement (Invest account)?")
+                    raise HTTPException(400, "No trades or positions found in that PDF. Upload the Trading 212 activity "
+                                             "statement of the Invest account: Menu → History → Export / Activity statement.")
             else:
                 st, report = trading212_csv.convert(text)
             # joined to the statement already uploaded, never silently replacing it
@@ -889,10 +896,11 @@ async def upload_statement(kind: str, file: UploadFile = File(...)) -> dict:
                                   _json.dumps(st, indent=1, ensure_ascii=False).encode())
         elif kind == "t212_statement":
             if not {"positions", "trades"} & set(_loads_or_400(text)):
-                raise HTTPException(400, 'Expected the Trading 212 activity-statement PDF, its History CSV export, or the converted JSON.')
+                raise HTTPException(400, "That is not a Trading 212 file the app reads. Upload the activity "
+                                     "statement PDF or the History CSV export (Menu → History → Export).")
             datafiles.save_upload("t212_statement", content)
         else:
-            raise HTTPException(404, "Unknown upload kind")
+            raise HTTPException(404, "Unknown kind of statement. Reload the page and upload it again.")
     except HTTPException:
         raise
     except ValueError as e:
@@ -918,7 +926,8 @@ def _loads_or_400(text: str) -> dict:
     try:
         payload = _json.loads(text)
     except ValueError:
-        raise HTTPException(400, "Not valid JSON — see the .sample file for the format.")
+        raise HTTPException(400, "That file is not one the app reads (not valid JSON). Upload the broker's "
+                                 "own statement (PDF or CSV) instead.")
     return payload if isinstance(payload, dict) else {}
 
 
@@ -1130,9 +1139,9 @@ def finances_upsert(kind: str, name: str = Form(...), balance: float = Form(0),
                     category: str = Form("other"), paid: float = Form(0),
                     bought: str = Form("")) -> dict:
     if kind not in finances.KINDS:
-        raise HTTPException(404, "Unknown kind")
+        raise HTTPException(404, "Unknown kind of entry. Reload the page and try again.")
     if not name.strip():
-        raise HTTPException(400, "Name is required")
+        raise HTTPException(400, "Fill in a name.")
     ccy = currency.upper()
     if kind == "loans":
         fields = {"balance": balance, "rate": rate, "monthly_payment": monthly_payment,
@@ -1159,7 +1168,7 @@ def finances_upsert(kind: str, name: str = Form(...), balance: float = Form(0),
 @_one_save_at_a_time
 def finances_delete(kind: str, name: str) -> dict:
     if kind not in finances.KINDS:
-        raise HTTPException(404, "Unknown kind")
+        raise HTTPException(404, "Unknown kind of entry. Reload the page and try again.")
     out = finances.delete(kind, name)
     github_sync.push_vault_async()
     return out

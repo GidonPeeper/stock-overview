@@ -660,7 +660,7 @@
       });
       const accts=s._t212_accounts||[];
       document.getElementById("t212-accounts").innerHTML=accts.map(a=>`<div class="row"><span>${esc(a.label)}
-          <span class="r-sub">${a.ok?`${esc(a.currency)} account · ${a.positions} positions`:esc(a.error||"error")}${a.isa?" · ISA (tax-free)":""}</span></span>
+          <span class="r-sub">${a.ok?`${esc(a.currency)} account · ${a.positions} positions`:esc(a.error||"could not be read: see the check-up")}${a.isa?" · ISA (tax-free)":""}</span></span>
           <span class="pill ${a.ok?'live':'bad'}">${a.ok?'Live · key':'Error'}</span></div>`).join("");
       const seen=s._files_seen||{};
       document.getElementById("files").innerHTML=Object.keys(seen).length
@@ -766,9 +766,9 @@
     async function postCash(fd, okMsg, url){
       const msg=document.getElementById("m-cash");
       const r=await fetch(url||"/api/cash",{method:"POST",body:fd}).catch(()=>null);
-      if(!r){ msg.textContent="✗ Could not reach the server."; msg.className="msg err"; return; }
+      if(!r){ msg.textContent="✗ Could not reach the server. Check that the app is still running, then try again."; msg.className="msg err"; return; }
       if(r.ok){ msg.textContent=okMsg; msg.className="msg ok"; renderCash(await r.json()); }
-      else{ const e=await r.json().catch(()=>({detail:"Failed"})); msg.textContent="✗ "+e.detail; msg.className="msg err"; }
+      else{ const e=await r.json().catch(()=>({detail:"Could not save. Try again in a minute."})); msg.textContent="✗ "+e.detail; msg.className="msg err"; }
     }
     function saveAccount(name, inst, cur, type, rate){
       const v=document.getElementById("bal-"+btoa(unescape(encodeURIComponent(name))).replace(/[=+/]/g,'')).value;
@@ -791,7 +791,7 @@
       const msg=document.getElementById("m-cash");
       const r=await fetch("/api/cash/"+encodeURIComponent(name),{method:"DELETE"}).catch(()=>null);
       if(r&&r.ok) return renderCash(await r.json());
-      const e=r?await r.json().catch(()=>({})):{}; msg.textContent="✗ "+(e.detail||"Could not reach the server."); msg.className="msg err";
+      const e=r?await r.json().catch(()=>({})):{}; msg.textContent="✗ "+(e.detail||"Could not reach the server. Check that the app is still running, then try again."); msg.className="msg err";
     }
     loadCash();
 
@@ -866,9 +866,10 @@
     }
     async function postAsset(fd){
       const msg=document.getElementById("m-assets");
-      const r=await fetch("/api/finances/assets",{method:"POST",body:fd});
+      const r=await fetch("/api/finances/assets",{method:"POST",body:fd}).catch(()=>null);
+      if(!r){ msg.textContent="✗ Could not reach the server. Check that the app is still running, then try again."; msg.className="msg err"; return; }
       if(r.ok){ msg.textContent=savedMsg(); msg.className="msg ok"; renderFin(await r.json()); }
-      else{ const e=await r.json().catch(()=>({detail:"Failed"})); msg.textContent="✗ "+e.detail; msg.className="msg err"; }
+      else{ const e=await r.json().catch(()=>({detail:"Could not save. Try again in a minute."})); msg.textContent="✗ "+e.detail; msg.className="msg err"; }
     }
     function addAsset(){
       const n=document.getElementById("a-name").value, v=document.getElementById("a-val").value;
@@ -883,9 +884,10 @@
     function loadFin(){ fxReady.then(()=>getJSON("/api/finances")).then(renderFin).catch(e=>loadFailed(["fin-loans","fin-income","fin-expenses"],"Your loans, income and payments",e,"loadFin()")); }
     async function postFin(kind, fd, ok){
       const msg=document.getElementById("m-fin");
-      const r=await fetch("/api/finances/"+kind,{method:"POST",body:fd});
+      const r=await fetch("/api/finances/"+kind,{method:"POST",body:fd}).catch(()=>null);
+      if(!r){ msg.textContent="✗ Could not reach the server. Check that the app is still running, then try again."; msg.className="msg err"; return; }
       if(r.ok){ msg.textContent=ok; msg.className="msg ok"; renderFin(await r.json()); }
-      else{ const e=await r.json().catch(()=>({detail:"Failed"})); msg.textContent="✗ "+e.detail; msg.className="msg err"; }
+      else{ const e=await r.json().catch(()=>({detail:"Could not save. Try again in a minute."})); msg.textContent="✗ "+e.detail; msg.className="msg err"; }
     }
     function addFin(kind){
       const fd=new FormData();
@@ -922,7 +924,7 @@
       const msg=document.getElementById("m-fin");
       const r=await fetch("/api/finances/"+kind+"/"+encodeURIComponent(name),{method:"DELETE"}).catch(()=>null);
       if(r&&r.ok) return renderFin(await r.json());
-      const e=r?await r.json().catch(()=>({})):{}; if(msg){ msg.textContent="✗ "+(e.detail||"Could not reach the server."); msg.className="msg err"; }
+      const e=r?await r.json().catch(()=>({})):{}; if(msg){ msg.textContent="✗ "+(e.detail||"Could not reach the server. Check that the app is still running, then try again."); msg.className="msg err"; }
     }
     loadFin();
 
@@ -932,7 +934,8 @@
       if(!inp.files.length){ msg.textContent="Choose a file first."; msg.className="msg err"; return; }
       msg.textContent="Uploading… a long statement can take a minute or two on a free server. Keep this page open."; msg.className="msg";
       const fd=new FormData(); fd.append("file", inp.files[0]);
-      const r=await fetch("/api/upload/"+kind,{method:"POST",body:fd});
+      const r=await fetch("/api/upload/"+kind,{method:"POST",body:fd}).catch(()=>null);
+      if(!r){ msg.textContent="✗ Could not reach the server. Check that the app is still running, then try again."; msg.className="msg err"; return; }
       if(r.ok){
         const st=await r.json(), rep=st._report||{};
         let extra="";
@@ -944,7 +947,7 @@
         if(rep.warnings&&rep.warnings.length) extra+=` · ⚠ ${rep.warnings.join(" ")}`;
         msg.textContent=savedMsg().replace("Saved","Uploaded — live now.")+extra; msg.className="msg ok"; renderStatus(st);
       }
-      else { const e=await r.json().catch(()=>({detail:"Upload failed"})); msg.textContent="✗ "+(e.detail||"Upload failed"); msg.className="msg err"; }
+      else { const e=await r.json().catch(()=>({detail:""})); msg.textContent="✗ "+(e.detail||"The upload failed. Try again; if it keeps failing, see “A statement is refused” under Help (Version and updates)."); msg.className="msg err"; }
     }
   </script>
   <script>
@@ -1113,9 +1116,9 @@
         const ch = changes(), msg = $("m-ctry");
         if (!Object.keys(ch).length) { msg.textContent = "Nothing changed."; msg.className = "msg"; return; }
         const r = await fetch("/api/prefs", {method: "POST", headers: {"Content-Type": "application/json"}, body: JSON.stringify(ch)}).catch(() => null);
-        if (!r) { msg.textContent = "✗ Could not reach the server."; msg.className = "msg err"; return; }
+        if (!r) { msg.textContent = "✗ Could not reach the server. Check that the app is still running, then try again."; msg.className = "msg err"; return; }
         const b = await r.json().catch(() => ({}));
-        if (!r.ok) { msg.textContent = "✗ " + (typeof b.detail === "string" ? b.detail : "Could not save."); msg.className = "msg err"; return; }
+        if (!r.ok) { msg.textContent = "✗ " + (typeof b.detail === "string" ? b.detail : "Could not save. Try again in a minute."); msg.className = "msg err"; return; }
         P = b; touched = false;
         if (ch.currency) {                // the dashboard opens in it; totals on this page follow
           try { localStorage.setItem("ccy", ch.currency); localStorage.removeItem("ccy.unsaved"); } catch (e) {}
@@ -1213,7 +1216,7 @@
           body: JSON.stringify({color_base: choice.base || null, color_secondary: choice.secondary || null})}).catch(() => null);
         if (!r) { msg.textContent = "✗ Could not reach the server. Your colours are not saved."; msg.className = "msg err"; return; }
         const b = await r.json().catch(() => ({}));
-        if (!r.ok) { msg.textContent = "✗ " + (typeof b.detail === "string" ? b.detail : "Could not save."); msg.className = "msg err"; return; }
+        if (!r.ok) { msg.textContent = "✗ " + (typeof b.detail === "string" ? b.detail : "Could not save. Try again in a minute."); msg.className = "msg err"; return; }
         saved = {base: b.color_base || "", secondary: b.color_secondary || ""}; pick = {...saved};
         C.apply(saved.base, saved.secondary);                         // kept on this device for the next first paint
         msg.textContent = okText || savedMsg(); msg.className = "msg ok";

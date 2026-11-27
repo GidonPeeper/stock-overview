@@ -64,9 +64,13 @@ Details: [MCP.md](MCP.md).
 
 ## Good to know
 
-- **Your data** is the `data` folder. Back it up by copying that folder. Never
-  share it: it holds your statements and keys.
-- **Updates:** run `git pull` in the folder, then start the app again.
+- **Your data** is the `data` folder. Back it up with **Settings → App and
+  data → Download a backup**. Never share that file: it holds your statements
+  and keys. To move to a new computer, restore it there.
+- **Updates:** run `./run.sh update` (Windows: `run.bat update`), then start
+  the app again.
+- **Something wrong?** **Settings → App and data → Check-up** says what needs
+  attention and what to do. More help: [TROUBLESHOOTING.md](TROUBLESHOOTING.md).
 - **Prices** come from Yahoo Finance. A share Yahoo does not know shows no
   gain or loss (valued at what you paid).
 - **Tax figures** are rules of thumb, not tax advice.

@@ -20,6 +20,11 @@ from backend import (appstate, checkup, clock, connections, datafiles, fx, githu
 from backend.datafiles import DataFileError
 
 TODAY = date(2026, 11, 27)
+# The day before and the day a later UK tax year starts than the one the
+# figures are for: these tests keep working after a roll-over (MAINTAINING.md).
+_Y = int(rules.UK_TAX_YEAR[:4])
+LAST_DAY, NEW_YEAR = date(_Y + 1, 4, 5), date(_Y + 1, 4, 6)
+RULES, NEXT = rules.UK_TAX_YEAR, f"{_Y + 1}/{str(_Y + 2)[2:]}"
 
 
 def ctx(**inputs):
@@ -312,20 +317,24 @@ class SafetyTest(unittest.TestCase):
 
 class RulesTest(unittest.TestCase):
     def test_uk_notice_turns_on_on_6_april(self):
-        with mock.patch.object(clock, "today", return_value=date(2027, 4, 5)):
+        with mock.patch.object(clock, "today", return_value=LAST_DAY):
             self.assertIsNone(rules.uk_notice())
-        with mock.patch.object(clock, "today", return_value=date(2027, 4, 6)):
+        with mock.patch.object(clock, "today", return_value=NEW_YEAR):
             n = rules.uk_notice()
-        self.assertEqual((n["rules_year"], n["current_year"]), ("2026/27", "2027/28"))
-        self.assertEqual(n["text"], "These figures use the 2026/27 rules. The 2027/28 tax year has started: "
+        self.assertEqual((n["rules_year"], n["current_year"]), (RULES, NEXT))
+        self.assertEqual(n["text"], f"These figures use the {RULES} rules. The {NEXT} tax year has started: "
                                     "update the app, and check gov.uk for changes.")
+        with mock.patch.object(rules, "UK_TAX_YEAR", "2026/27"):     # the wording the owner asked for
+            self.assertEqual(rules.uk_notice(date(2027, 4, 6))["text"],
+                             "These figures use the 2026/27 rules. The 2027/28 tax year has started: "
+                             "update the app, and check gov.uk for changes.")
 
     def test_one_constant_for_the_uk_tax_year(self):
         from backend import advisors, paye
         self.assertEqual(advisors.TAX_YEAR, rules.UK_TAX_YEAR)
         self.assertIn(rules.UK_TAX_YEAR, paye.RULES_NOTE)
-        with mock.patch.object(rules, "UK_TAX_YEAR", "2027/28"):
-            self.assertIsNone(rules.uk_notice(date(2027, 4, 6)))       # updated: no notice
+        with mock.patch.object(rules, "UK_TAX_YEAR", NEXT):
+            self.assertIsNone(rules.uk_notice(NEW_YEAR))                # updated: no notice
 
     def test_country_page(self):
         page = {"code": "NL", "checked_on": "2026-11-26",
@@ -353,11 +362,18 @@ class RulesTest(unittest.TestCase):
             return ids(checkup._check_rules(ctx(today=today)))
 
     def test_check_up_lists_only_your_own_country(self):
-        self.assertEqual(self._rules("GB", date(2026, 11, 27)), set())
-        self.assertEqual(self._rules("GB", date(2027, 4, 6)), {"uk_rules_old", "country_page_old:GB"})
-        self.assertEqual(self._rules("NL", date(2027, 1, 2)), {"country_page_old:NL"})
-        self.assertEqual(self._rules("", date(2027, 1, 2)), set())
-        self.assertIn("broker_steps_old", self._rules("", date(2028, 6, 1)))
+        from backend import catalog, countries
+        gb, nl = countries.get("GB"), countries.get("NL")
+        gb_end, nl_end = rules.tax_year_end(gb["tax_year"]), rules.tax_year_end(nl["tax_year"])
+        steps_ok = rules.parse_day(catalog.raw()["researched_on"])
+        with mock.patch.object(rules, "UK_TAX_YEAR", rules.uk_tax_year(gb_end)):   # figures and page agree
+            self.assertEqual(self._rules("GB", gb_end), set())
+            self.assertEqual(self._rules("GB", gb_end + timedelta(days=1)), {"uk_rules_old", "country_page_old:GB"})
+        self.assertEqual(self._rules("NL", nl_end + timedelta(days=1)), {"country_page_old:NL"})
+        self.assertEqual(self._rules("NL", nl_end), set())
+        self.assertEqual(self._rules("", nl_end + timedelta(days=1)), set())
+        self.assertNotIn("broker_steps_old", self._rules("", steps_ok + timedelta(days=30)))
+        self.assertIn("broker_steps_old", self._rules("", steps_ok + timedelta(days=600)))
 
     def test_update_available(self):
         base = {"newer": True, "latest_date": "2027-01-10", "date": "2026-11-27", "how_to_update": "Run it.",
@@ -383,55 +399,57 @@ class TaxCardNoticeTest(unittest.TestCase):
                 mock.patch("backend.connectors.trading212.get_transactions", return_value=[]), \
                 mock.patch.object(connections, "get_dividends", return_value=[]), \
                 mock.patch.object(connections, "get_interest", return_value=[]):
-            before = uktax.summary.uncached(date(2027, 4, 5))
-            after = uktax.summary.uncached(date(2027, 4, 6))
+            before = uktax.summary.uncached(LAST_DAY)
+            after = uktax.summary.uncached(NEW_YEAR)
         self.assertIsNone(before["outdated"])
-        self.assertEqual(after["tax_year"], "2027/28")
-        self.assertEqual(after["outdated"]["rules_year"], "2026/27")
+        self.assertEqual(after["tax_year"], NEXT)
+        self.assertEqual(after["outdated"]["rules_year"], RULES)
         self.assertEqual(after["annual_exempt_gbp"], before["annual_exempt_gbp"])    # numbers unchanged
 
     def test_ways_to_save(self):
         from backend import advisors
-        before = advisors.build(advisors.Inputs(rows=[], today=date(2027, 4, 5)))
-        after = advisors.build(advisors.Inputs(rows=[], today=date(2027, 4, 6)))
+        before = advisors.build(advisors.Inputs(rows=[], today=LAST_DAY))
+        after = advisors.build(advisors.Inputs(rows=[], today=NEW_YEAR))
         self.assertIsNone(before["outdated"])
-        self.assertEqual(after["outdated"]["current_year"], "2027/28")
-        self.assertEqual(after["rules_year"], "2026/27")
-        other = advisors.build(advisors.Inputs(rows=[], today=date(2027, 4, 6), residence="NL"))
+        self.assertEqual(after["outdated"]["current_year"], NEXT)
+        self.assertEqual(after["rules_year"], RULES)
+        other = advisors.build(advisors.Inputs(rows=[], today=NEW_YEAR, residence="NL"))
         self.assertIsNone(other["outdated"])                      # no UK figures in use
 
     def test_tax_loss_harvesting(self):
         from backend import harvest
-        uk = {"net_gain_gbp": 0, "gains_gbp": 0, "to": "2028-04-05", "tax_year": "2027/28", "isa": None}
-        out = harvest.suggest([], today=date(2027, 4, 6), res="UK", uk=uk, corr=False, sector_map={})
-        self.assertEqual(out["outdated"]["rules_year"], "2026/27")
-        out = harvest.suggest([], today=date(2027, 4, 5), res="UK", uk=uk, corr=False, sector_map={})
+        uk = {"net_gain_gbp": 0, "gains_gbp": 0, "to": f"{_Y + 2}-04-05", "tax_year": NEXT, "isa": None}
+        out = harvest.suggest([], today=NEW_YEAR, res="UK", uk=uk, corr=False, sector_map={})
+        self.assertEqual(out["outdated"]["rules_year"], RULES)
+        out = harvest.suggest([], today=LAST_DAY, res="UK", uk=uk, corr=False, sector_map={})
         self.assertIsNone(out["outdated"])
 
     def test_take_home_pay(self):
         from backend import finances
         rows = [{"name": "Salary", "amount": 3000, "currency": "GBP", "monthly_eur": 3500, "tax": "before"}]
         with mock.patch.object(finances, "_residence", return_value="UK"):
-            with mock.patch.object(clock, "today", return_value=date(2027, 4, 6)):
+            with mock.patch.object(clock, "today", return_value=NEW_YEAR):
                 after = finances._apply_tax([dict(r) for r in rows], sample=False)
-            with mock.patch.object(clock, "today", return_value=date(2027, 4, 5)):
+            with mock.patch.object(clock, "today", return_value=LAST_DAY):
                 before = finances._apply_tax([dict(r) for r in rows], sample=False)
-        self.assertEqual(after["outdated"]["current_year"], "2027/28")
+        self.assertEqual(after["outdated"]["current_year"], NEXT)
         self.assertIsNone(before["outdated"])
         self.assertEqual(after["yearly_eur"], before["yearly_eur"])
 
     def test_country_page_card(self):
         from backend import countries
-        with mock.patch.object(clock, "today", return_value=date(2027, 4, 6)):
+        end = rules.tax_year_end(countries.get("GB")["tax_year"])
+        with mock.patch.object(clock, "today", return_value=end + timedelta(days=1)):
             self.assertIsNotNone(countries.overview("GB")["outdated"])
-        with mock.patch.object(clock, "today", return_value=date(2026, 12, 1)):
+        with mock.patch.object(clock, "today", return_value=end):
             self.assertIsNone(countries.overview("GB")["outdated"])
 
     def test_broker_steps_in_the_catalog(self):
         from backend import catalog
-        with mock.patch.object(clock, "today", return_value=date(2026, 12, 1)):
+        checked = rules.parse_day(catalog.raw()["researched_on"])
+        with mock.patch.object(clock, "today", return_value=checked + timedelta(days=30)):
             self.assertIsNone(catalog.view()["steps_outdated"])
-        with mock.patch.object(clock, "today", return_value=date(2030, 1, 1)):
+        with mock.patch.object(clock, "today", return_value=checked + timedelta(days=600)):
             self.assertIsNotNone(catalog.view()["steps_outdated"])
 
 
@@ -466,9 +484,9 @@ class EndpointTest(unittest.TestCase):
     def test_uk_tax_card_after_6_april(self):
         from backend import cache
         cache.clear()
-        with mock.patch.object(clock, "today", return_value=date(2030, 5, 1)):
+        with mock.patch.object(clock, "today", return_value=NEW_YEAR):
             body = self.client.get("/api/uk_tax").json()
-        self.assertIn("These figures use the 2026/27 rules", body["outdated"]["text"])
+        self.assertIn(f"These figures use the {RULES} rules", body["outdated"]["text"])
         cache.clear()
 
 
