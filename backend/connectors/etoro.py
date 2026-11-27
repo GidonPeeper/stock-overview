@@ -33,7 +33,7 @@ from .live import ConnectorError, Snapshot, get_json, num
 
 NAME = "eToro"
 BASE_URL = os.getenv("ETORO_BASE_URL", "https://public-api.etoro.com")
-_HINTS = {401: "Check you copied both the public API key and the user key.",
+_HINTS = {401: "Check you copied both the public API key and the user key",
           403: "Use a key for the Real environment with Read permission."}
 
 _META: dict[int, dict] = {}  # instrumentID -> display data (static, cached)

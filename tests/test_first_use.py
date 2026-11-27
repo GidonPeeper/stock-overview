@@ -70,6 +70,36 @@ class WrongFileUploadTest(unittest.TestCase):
         self.assertEqual(r.status_code, 200, r.text)
 
 
+class PlainMessagesTest(unittest.TestCase):
+    def test_a_wrong_trading_212_key_says_it_once(self):
+        # Before: "... (HTTP 401). Check you copied all of it, or make a new
+        # one. Check you copied the key and the secret (the secret is shown once)."
+        from backend.connectors.live import http_message
+        msg = http_message("Trading 212", 401, {401: "Check you copied both the key and the secret"})
+        self.assertEqual(msg.count("Check you copied"), 1, msg)
+        self.assertIn("or make a new one", msg)
+        self.assertIn("did not accept the key", http_message("Wise", 401))
+
+    def test_the_password_page_helps_someone_on_their_own_computer(self):
+        # Opened from a phone on the same Wi-Fi without a password set. Before,
+        # it only said "In your host's settings (on Render: ...)".
+        from backend import main
+        self.assertIn(".env", main._SETUP_PAGE)
+        self.assertIn("Render", main._SETUP_PAGE)
+
+    def test_saved_keys_are_described_as_they_are_stored(self):
+        # Locally the key sits in data/connections.json; it is only encrypted in
+        # the cloud backup. Before: "kept on your own server (encrypted in the
+        # backup vault)", also on a laptop with no backup at all.
+        for f in ("frontend/accounts.js", "backend/broker_catalog.json"):
+            self.assertNotIn("backup vault", (ROOT / f).read_text(), f)
+
+    def test_removing_a_positions_file_does_not_talk_about_a_key(self):
+        js = (ROOT / "frontend" / "accounts.js").read_text()
+        self.assertIn("data-csv", js)
+        self.assertIn("Its positions are removed from this app", js)
+
+
 class DataFolderIsIgnoredTest(unittest.TestCase):
     """README: "Everything you add is saved in the data folder, which git
     ignores." Before, data/settings.json (country, currency, time zone,

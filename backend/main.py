@@ -143,13 +143,15 @@ _SETUP_PAGE = """<!doctype html><meta charset="utf-8">
 <title>Set a password</title>
 <body style="font:16px/1.5 system-ui,sans-serif;max-width:560px;margin:48px auto;padding:0 16px">
 <h1 style="font-size:22px">Set a password first</h1>
-<p>This dashboard can be reached from the internet but has no password yet, so it
-shows nothing. In your host's settings (on Render: the service's
-<b>Environment</b> page) add:</p>
+<p>This dashboard can be reached from other devices but has no password yet, so it
+shows nothing. Add these three settings:</p>
 <ul><li><code>DASHBOARD_USER</code>: a username</li>
 <li><code>DASHBOARD_PASSWORD</code>: a long password</li>
 <li><code>DASHBOARD_SECRET</code>: a long random text (it also encrypts your saved data)</li></ul>
-<p>Save, wait for the restart, and reload this page. See SETUP.md in the repo.</p>
+<p><b>On your own computer:</b> put them in the file <code>.env</code> in the app's folder
+(copy <code>.env.sample</code> to <code>.env</code> first), then stop the app and start it again.<br>
+<b>On a host such as Render:</b> add them on the service's <b>Environment</b> page and wait for the restart.</p>
+<p>Then reload this page. Step by step: SETUP.md in the app's folder.</p>
 </body>"""
 
 

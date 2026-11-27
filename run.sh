@@ -67,6 +67,15 @@ if .venv/bin/python -c "import socket,sys; s=socket.socket(); s.settimeout(1); s
   exit 1
 fi
 echo "Stock Overview: $URL   (stop with Ctrl+C)"
+if [ "$HOST" != "127.0.0.1" ] && [ "$HOST" != "localhost" ]; then
+  # The address other devices use: this computer's address on the local network.
+  # (Connecting a UDP socket sends nothing; it only picks the network card.)
+  LAN="$(.venv/bin/python -c "import socket; s=socket.socket(socket.AF_INET, socket.SOCK_DGRAM); s.connect(('192.0.2.1', 9)); print(s.getsockname()[0])" 2>/dev/null || true)"
+  [ -n "$LAN" ] && echo "On your phone or another computer on the same Wi-Fi: http://$LAN:$PORT"
+  if ! .venv/bin/python -c "import os,sys; from dotenv import dotenv_values; sys.exit(not (os.getenv('DASHBOARD_PASSWORD') or dotenv_values('.env').get('DASHBOARD_PASSWORD')))" 2>/dev/null; then
+    echo "No password set, so other devices see nothing. Set one in .env first: see SETUP.md."
+  fi
+fi
 if [ -z "$NO_BROWSER" ]; then
   ( sleep 3
     if command -v open >/dev/null 2>&1; then open "$URL"

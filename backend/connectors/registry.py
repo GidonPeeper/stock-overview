@@ -87,7 +87,7 @@ def _t212_fetch(creds: dict, conn: dict) -> Snapshot:
         positions = len(trading212.account_holdings(acct))
     except requests.HTTPError as e:
         status = getattr(e.response, "status_code", 0) or 0
-        hint = {401: "Check you copied the key and the secret (the secret is shown once).",
+        hint = {401: "Check you copied both the key and the secret (the secret is shown only once)",
                 403: "Make a new key with the read permissions ticked (account data, portfolio, history)."}
         from .live import http_message
         raise ConnectorError(http_message("Trading 212", status, hint), status=status) from None

@@ -239,7 +239,7 @@
             "dividends",
             "interest"
           ],
-          "notes": "Unofficial: Trade Republic has no public API. This uses the same sign-in as Trade Republic's web app (app.traderepublic.com), like the open-source tool pytr, and does not log your phone out. Your PIN is sent to Trade Republic once and never stored; the app keeps only the sign-in session, on your own computer (encrypted in the backup vault). Read-only: the app has no code to trade, move money or change settings. It may stop working when Trade Republic changes its app, and using it may be against Trade Republic's terms: you decide. When Trade Republic ends the session, you sign in again; the dashboard keeps the last data meanwhile.",
+          "notes": "Unofficial: Trade Republic has no public API. This uses the same sign-in as Trade Republic's web app (app.traderepublic.com), like the open-source tool pytr, and does not log your phone out. Your PIN is sent to Trade Republic once and never stored; the app keeps only the sign-in session, in its data folder (encrypted in the cloud backup, if you use one). Read-only: the app has no code to trade, move money or change settings. It may stop working when Trade Republic changes its app, and using it may be against Trade Republic's terms: you decide. When Trade Republic ends the session, you sign in again; the dashboard keeps the last data meanwhile.",
           "docs_url": "https://github.com/pytr-org/pytr",
           "verified": false
         },
@@ -1287,7 +1287,7 @@
             "Select 'API (Beta)' and accept the risk warning.",
             "Tap 'Generate API key' and review the permissions.",
             "Give the key a name and tick only the read permissions (account data, history, portfolio). Leave orders off.",
-            "Choose 'Restrict access to trusted IPs' and enter your server's IP, or choose Unrestricted.",
+            "Under IP access, choose Unrestricted (simplest: the key can only read). Or choose 'Restrict access to trusted IPs' and enter the internet address of the computer that runs this app, if that address never changes.",
             "Copy the API key and the API secret. The secret is shown only once."
           ],
           "covers": [
@@ -1296,7 +1296,7 @@
             "transactions",
             "dividends"
           ],
-          "notes": "Beta API (v0), HTTP Basic auth with key:secret, base URL https://live.trading212.com/api/v0. Practice accounts use a separate address (demo.trading212.com) and keys work in one environment only, so make the key in your real-money account. Only Invest and Stocks ISA accounts (not SIPP, not CFD); one key per account, so add the ISA separately. No stated expiry. Rate limits are per account: account summary 1 per 5 s, positions 1 per 1 s, order/dividend/transaction history 20 per minute. Trading 212 does not publish the exact permission names; its help centre gives account data, history, orders and portfolio as examples. The 'API (Beta)' menu may be hidden until the account is funded (third-party report).",
+          "notes": "Make the key in your real-money account: a key made in Practice does not work here. Works for Invest and Stocks ISA accounts (not SIPP, not CFD). Each account needs its own key, so add the ISA separately. Trading 212 gives no expiry date for keys. It does not publish the exact permission names; its help centre gives account data, history, orders and portfolio as examples. The 'API (Beta)' menu may be hidden until the account has money in it (reported by other users).",
           "docs_url": "https://helpcentre.trading212.com/hc/en-us/articles/14584770928157-Trading-212-API-key",
           "verified": true
         },
