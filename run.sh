@@ -10,7 +10,7 @@ set -e
 cd "$(dirname "$0")"
 HOST="${HOST:-127.0.0.1}"
 PORT="${PORT:-8000}"
-REPO_PAGE="https://github.com/GidonPeeper/stock-overview"
+REPO_PAGE="https://github.com/GidonPeeper/Where-is-my-money"
 
 if [ "$1" = "update" ]; then
   # git only changes the app's own files; data/ and .env are yours and stay as they are.

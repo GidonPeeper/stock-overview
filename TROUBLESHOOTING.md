@@ -260,7 +260,7 @@ When `./run.sh update` cannot update, it says why:
 
 ## Reporting a bug
 
-Open an issue at https://github.com/GidonPeeper/stock-overview/issues. Include:
+Open an issue at https://github.com/GidonPeeper/Where-is-my-money/issues. Include:
 
 - what you did, and the exact message you saw;
 - your version (Settings → Version and updates) and your system (Mac, Windows,

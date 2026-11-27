@@ -28,8 +28,8 @@ All screenshots show the example data the app starts with.
 You need [Python 3.10+](https://www.python.org/downloads/) and Git.
 
 ```bash
-git clone https://github.com/GidonPeeper/stock-overview.git
-cd stock-overview
+git clone https://github.com/GidonPeeper/Where-is-my-money.git
+cd Where-is-my-money
 ./run.sh            # Windows: double-click run.bat
 ```
 

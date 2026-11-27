@@ -57,14 +57,14 @@ exit /b 0
 :nogit
 echo Cannot update: the git program is not installed on this computer.
 echo Install it from https://git-scm.com/downloads and run "run.bat update" again,
-echo or download the newest version from https://github.com/GidonPeeper/stock-overview
+echo or download the newest version from https://github.com/GidonPeeper/Where-is-my-money
 echo and copy your data folder, and .env if you have one, into the new folder.
 pause
 exit /b 1
 
 :norepo
 echo Cannot update: this folder was not downloaded with git, it has no .git folder.
-echo Download the newest version from https://github.com/GidonPeeper/stock-overview
+echo Download the newest version from https://github.com/GidonPeeper/Where-is-my-money
 echo and copy your data folder, and .env if you have one, into the new folder.
 pause
 exit /b 1

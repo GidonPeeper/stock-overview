@@ -34,7 +34,7 @@ from pathlib import Path
 from . import appstate
 
 ROOT = Path(__file__).resolve().parents[1]
-DEFAULT_REPO = "GidonPeeper/stock-overview"
+DEFAULT_REPO = "GidonPeeper/Where-is-my-money"
 DEFAULT_BRANCH = "main"
 CHECK_EVERY = 24 * 3600        # at most one request a day
 TIMEOUT = 10

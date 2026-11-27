@@ -12,8 +12,8 @@ You need [Python 3.10 or newer](https://www.python.org/downloads/) and
 **Mac or Linux**, in Terminal:
 
 ```bash
-git clone https://github.com/GidonPeeper/stock-overview.git
-cd stock-overview
+git clone https://github.com/GidonPeeper/Where-is-my-money.git
+cd Where-is-my-money
 ./run.sh
 ```
 
