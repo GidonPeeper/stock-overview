@@ -678,7 +678,10 @@ def trade_sources() -> dict:
 
 
 def cash_entries() -> list[dict]:
-    """Bank balances and broker cash as read-only ("auto") cash accounts."""
+    """Bank balances and broker cash as read-only ("auto") cash accounts.
+    For backend/interest.py each row also carries `connector`, the account's
+    `ref` at the provider (a Snapshot.cash row's "ref") and any "interest"
+    the connector read with the balances; cash.py drops them after use."""
     conns = _feeding("cash")
     snaps = _snapshots(conns)
     out = []
@@ -693,7 +696,8 @@ def cash_entries() -> list[dict]:
             out.append({"name": name, "institution": c.get("institution_name") or c["institution"],
                         "balance": round(float(r["balance"]), 2), "currency": r["currency"],
                         "type": r.get("type") or "cash", "rate": 0.0, "auto": True,
-                        "connection": c["id"]})
+                        "connection": c["id"], "connector": c.get("connector"),
+                        "ref": r.get("ref"), "interest": r.get("interest")})
     return out
 
 

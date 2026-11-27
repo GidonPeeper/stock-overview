@@ -17,6 +17,11 @@ Docs: https://api-portal.etoro.com/api-reference/trading--real/get-portfolio-bre
       https://api-portal.etoro.com/api-reference/market-data/get-instrument-display-data
       https://api-portal.etoro.com/core/getting-started/authentication
 
+Interest: the API reference (api-portal.etoro.com, openapi.json v1.427, Nov
+2026) has no interest rate and no interest transaction type (cash
+transactions are card, internalTransfer, bankTransfer, balanceAdjustment), so
+the rate is typed in.
+
 Only plain long positions (no leverage, not short) are counted as holdings:
 for CFDs the units times price is exposure, not money you own. Values are in
 USD as eToro reports them; prices come from eToro itself, so no ticker
@@ -33,6 +38,8 @@ from .live import ConnectorError, Snapshot, get_json, num
 
 NAME = "eToro"
 BASE_URL = os.getenv("ETORO_BASE_URL", "https://public-api.etoro.com")
+INTEREST_NOTE = ("eToro's API gives no interest rate and does not mark interest payments, so the "
+                 "rate cannot be read automatically. Enter it yourself (0 if this cash earns none).")
 _HINTS = {401: "Check you copied both the public API key and the user key.",
           403: "Use a key for the Real environment with Read permission."}
 

@@ -181,8 +181,9 @@ class StarlingTest(TempStore):
     def test_balances(self):
         fake = self.http(STARLING_ROUTES)
         snap = starling.fetch({"token": "tok"})
-        self.assertEqual(snap.cash, [{"name": "Personal", "currency": "GBP", "balance": 1234.56},
-                                     {"name": "Euro", "currency": "EUR", "balance": 50.0}])
+        # "ref": the account's uid, to match the interest found for it (backend/interest.py)
+        self.assertEqual(snap.cash, [{"name": "Personal", "currency": "GBP", "balance": 1234.56, "ref": "a1"},
+                                     {"name": "Euro", "currency": "EUR", "balance": 50.0, "ref": "a2"}])
         self.assertEqual(fake.calls[0]["headers"]["Authorization"], "Bearer tok")
 
     def test_403_hint(self):

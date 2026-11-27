@@ -673,6 +673,72 @@ def get_cash() -> list[dict]:
     return out
 
 
+# ------------------------------------------------------- interest on cash
+# Trading 212 states no rate in its API (account summary: cash, investments,
+# totals; docs.trading212.com/api). Interest on uninvested cash is a history
+# transaction of type INTEREST_ON_FREE_CASH ("Interest is paid daily", for the
+# day before: worked out at 22:00 GMT, paid 01:00-02:00 GMT; help centre
+# article 40012428081949). The rate is implied from those payments and the
+# cash balance rebuilt from the same history: deposits, withdrawals, fees and
+# transfers (transactions), filled orders and dividends. All three lists are
+# the cached ones the dashboard already reads (history endpoints allow 20
+# calls a minute), so this adds no calls of its own. Trading 212 does not say
+# whether tax is taken off, so the figure is "as paid out". Amounts are read
+# as positive, withdrawals and fees as money out (the docs give no sign);
+# a transfer keeps its sign. Share-lending income (LENDING_INTEREST) is not
+# interest on cash: it counts as money in.
+_OUT = {"WITHDRAW", "FEE"}
+
+
+def cash_interest(acct: Account, today=None) -> dict:
+    """The interest rate of one account's cash (backend/interest.py)."""
+    from .. import interest as rates
+
+    summary = account_summary(acct)
+    if not summary:
+        raise RuntimeError("no account summary")
+    ccy = summary["currency"]
+    try:
+        txs = account_transactions(acct)
+        trades = account_trades(acct)
+        divs = account_dividends(acct)
+    except requests.HTTPError as e:
+        if getattr(e.response, "status_code", None) == 403:
+            return {"status": "permission",
+                    "text": "To read the interest automatically, the Trading 212 key needs the "
+                            "history permissions (orders, dividends, transactions) as well.",
+                    "steps": ["In Trading 212, open Settings → API (Beta) and generate a new key.",
+                              "Tick the read permissions for account data, portfolio and history. "
+                              "Leave orders off.",
+                              "Here in Settings, under Connected accounts, remove this Trading 212 "
+                              "account (✕) and add it again with the new key and secret."]}
+        raise
+
+    def own(amount: float, currency: str | None) -> float:
+        currency = currency or ccy
+        return amount if currency == ccy else to_eur(amount, currency) / to_eur(1.0, ccy)
+
+    credits, flows = [], []
+    for t in txs:
+        if len(str(t.get("date") or "")) != 10:
+            continue
+        amount, kind = abs(float(t.get("amount") or 0)), t.get("type") or ""
+        if kind == "INTEREST_ON_FREE_CASH":
+            credits.append((t["date"], own(amount, t.get("currency"))))
+        elif kind == "TRANSFER":
+            flows.append((t["date"], own(float(t.get("amount") or 0), t.get("currency"))))
+        else:
+            flows.append((t["date"], own(-amount if kind in _OUT else amount, t.get("currency"))))
+    for tr in trades:
+        if len(tr.when) >= 10:
+            flows.append((tr.when[:10], own(-tr.amount if tr.side == "BUY" else tr.amount, tr.currency)))
+    for d in divs:
+        if len(str(d.get("date") or "")) == 10:
+            flows.append((d["date"], own(float(d.get("amount") or 0), d.get("currency"))))
+    today = today or time.strftime("%Y-%m-%d", time.gmtime())
+    return rates.implied(credits, flows, summary["cash"], today, currency=ccy, basis="paid")
+
+
 def status() -> list[dict]:
     """Per-account health for the Settings page (no secrets)."""
     out = []

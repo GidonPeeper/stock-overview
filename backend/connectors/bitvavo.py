@@ -15,6 +15,10 @@ only "View" access. Private calls are signed:
 Docs: https://docs.bitvavo.com/docs/rest-api/introduction/ and the OpenAPI spec
 https://docs.bitvavo.com/api-specs/exchange-rest-api.yaml
 
+Interest: the spec (exchange-rest-api.yaml v2.10) has no interest rate and no
+interest on euros (only staking rewards and margin-loan interest charged), so
+the rate is typed in.
+
 EUR is shown as cash; every coin as a holding valued at Bitvavo's last EUR
 price. The balance call has no purchase cost (trade history needs the Trade
 permission, which a read-only key must not have), so cost is set to today's
@@ -33,6 +37,8 @@ from .live import ConnectorError, Snapshot, get_json, num
 
 NAME = "Bitvavo"
 BASE_URL = os.getenv("BITVAVO_BASE_URL", "https://api.bitvavo.com")
+INTEREST_NOTE = ("Bitvavo's API reports no interest on euros, so the rate cannot be read "
+                 "automatically. Enter it yourself (0 if this cash earns none).")
 _HINTS = {403: "Make a key with View access only, and check its IP whitelist includes this server."}
 
 

@@ -15,6 +15,16 @@ balance *statements* for UK/EU profiles) do not apply to it.
 
 Docs: https://docs.wise.com/api-reference/balance/balancelist and
 https://docs.wise.com/guides/developer/auth-and-security/personal-api-token
+
+Interest: a balance has no rate or interest field (id, currency, type, name,
+investmentState, amount, cashAmount, totalWorth, ...). Interest payments show
+only in balance statements (details.type BALANCE_INTEREST), which personal
+tokens cannot read for UK and EEA profiles ("retrieving balance statements via
+API [is] not supported except for accounts based in the US, Canada,
+Australia, New Zealand, Singapore, and Malaysia"), and in the activity list,
+whose amounts are display text that "should not be treated as a numeric
+value" (docs.wise.com/api-reference/activity/activitylist). So the rate is
+typed in.
 """
 
 from __future__ import annotations
@@ -26,6 +36,9 @@ from .live import ConnectorError, Snapshot, get_json, num
 NAME = "Wise"
 BASE_URL = os.getenv("WISE_BASE_URL", "https://api.wise.com")
 VERSION = os.getenv("WISE_API_VERSION", "2026Q4")
+INTEREST_NOTE = ("Wise's API gives no interest rate, and Wise does not let a personal token read "
+                 "the interest paid in the UK and EEA, so the rate cannot be read automatically. "
+                 "Enter it yourself.")
 _HINTS = {403: "Wise limits some data for personal tokens. If this keeps happening, "
                "enter the balance by hand instead."}
 

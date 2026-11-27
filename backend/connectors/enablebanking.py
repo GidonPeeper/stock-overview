@@ -59,6 +59,14 @@ Sources (checked 2026-11-14):
 Not documented, handled defensively: `error` / `error_description` on the
 redirect when the user cancels (as in OAuth 2).
 
+Interest: no field in the data model holds an interest rate (AccountResource,
+BalanceResource, Transaction; the only "interest" in the reference is a
+payment-initiation purpose code), and a transaction's bank_transaction_code
+is the bank's own code (the reference's example: {"description":
+"Utlandsbetalning", "code": "12", "sub_code": "32"}), so interest payments
+cannot be told apart reliably, and each extra read counts against the bank's
+few background reads a day. The rate is typed in.
+
 Errors are ConnectorErrors in plain words; the key, the JWT and the session ID
 never appear in a message or a log line.
 """
@@ -102,6 +110,10 @@ _TYPE_NAMES = {"SVGS": "Savings", "CARD": "Card", "LOAN": "Loan", "CACC": "Curre
 _PSU_FROM = (("user-agent", "Psu-User-Agent"), ("accept", "Psu-Accept"),
              ("accept-language", "Psu-Accept-Language"),
              ("accept-encoding", "Psu-Accept-Encoding"))
+
+INTEREST_NOTE = ("Banks linked through Enable Banking report no interest rate, and their "
+                 "transactions do not mark interest payments in a standard way, so the rate cannot "
+                 "be read automatically. Enter it yourself: your bank shows it in its app.")
 
 _lock = threading.Lock()
 _jwts: dict[str, tuple[str, float]] = {}        # app fingerprint -> (jwt, exp)

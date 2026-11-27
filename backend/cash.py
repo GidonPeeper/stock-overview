@@ -37,7 +37,9 @@ def load() -> dict:
     accounts = [a for a in data.get("accounts", []) if not a.get("auto")]
     for a in accounts:
         a["rate_known"] = True              # typed in with the account (0 = pays nothing)
+        a["rate_source"] = "typed"
     auto = _broker_cash() + _connection_cash()
+    _find_rates(auto)
     _apply_auto_settings(auto, data.get("auto"))
     accounts += auto
     total = interest = banked = no_rate = 0.0
@@ -59,17 +61,28 @@ def load() -> dict:
     # pension pot's growth is not interest on cash, and its balance would pull
     # the average rate down. An account whose rate nobody has entered is left
     # out of both and reported as `rate_unknown_eur`: unknown is not 0%.
+    # `rate_checking`: some rate is still being looked up (ask again shortly).
     return {"accounts": accounts, "total_eur": round(total, 2), "by_type": by_type,
             "interest_eur_yr": round(interest, 2),
             "blended_rate_pct": round(interest / banked * 100, 2) if banked else 0,
             "rate_unknown_eur": round(no_rate, 2),
+            "rate_checking": any((a.get("rate_auto") or {}).get("status") == "checking"
+                                 for a in auto if not a.get("rate_known")),
             "sample": sample, "updated": data.get("updated")}
 
 
 # Accounts that update themselves (Trading 212 cash, Starling, a linked bank)
-# come without an interest rate: the bank's API does not give one. The rate
-# and the kind of account are typed in once in Settings and kept here, by
-# account name, under "auto" in the same file.
+# arrive without an interest rate. Their rate is found from the account itself
+# where the provider allows it (backend/interest.py: a rate it states, or the
+# one implied by the interest it paid); a rate typed in Settings wins, and is
+# kept here with the kind of account, by account name, under "auto" in the
+# same file. Each auto account gets:
+#   rate, rate_known      the rate used (unknown = left out of the totals, not 0%)
+#   rate_source           "typed" | "provider" | "paid" | None
+#   rate_note             where it came from, in a few words
+#   rate_auto             what was found automatically (also when a typed rate
+#                         wins): {status: ok, pct, source, note, ...}, or
+#                         {status, text, steps} saying why there is none
 _SAVINGS_WORDS = ("saver", "saving", "spaar", "sparen", "epargne", "épargne", "tagesgeld", "deposit")
 
 
@@ -86,16 +99,34 @@ def _apply_auto_settings(accounts: list[dict], settings) -> None:
             a["type"] = mine["type"]
         elif any(w in _auto_key(a.get("name", "")) for w in _SAVINGS_WORDS):
             a["type"] = "savings"
+        found = a.get("rate_auto") if isinstance(a.get("rate_auto"), dict) else None
+        a["rate_auto"] = found
         try:
             a["rate"] = float(mine["rate"])
-            a["rate_known"] = True
+            a["rate_known"], a["rate_source"], a["rate_note"] = True, "typed", "entered by you"
         except (KeyError, TypeError, ValueError):
-            a["rate"], a["rate_known"] = 0.0, False
+            if found and found.get("status") == "ok":
+                a["rate"], a["rate_known"] = float(found["pct"]), True
+                a["rate_source"], a["rate_note"] = found.get("source") or "paid", found.get("note") or ""
+            else:
+                a["rate"], a["rate_known"], a["rate_source"], a["rate_note"] = 0.0, False, None, ""
+
+
+def _find_rates(accounts: list[dict]) -> None:
+    """`rate_auto` for each account that updates itself (never waits, never raises)."""
+    try:
+        from . import interest
+
+        interest.attach(accounts)
+    except Exception:
+        for a in accounts:
+            a.setdefault("rate_auto", None)
 
 
 def set_auto(name: str, rate: float | None, type_: str | None = None) -> dict:
-    """Remember the interest rate (None = not known) and the kind of an
-    account that updates itself."""
+    """Remember the interest rate and the kind of an account that updates
+    itself. rate None: no rate of your own (the one found automatically is
+    used, if any)."""
     path = _store_path()
     data = read_json(path, {}, lists=("accounts",)) if path.exists() else {}
     auto = data.get("auto") if isinstance(data.get("auto"), dict) else {}
@@ -120,7 +151,7 @@ def _write(accounts: list[dict]) -> None:
     path, real = resolve(_FILE)
     kept = read_json(path, {}, lists=("accounts",)).get("auto") if real else None
     for a in accounts:
-        for k in ("balance_eur", "interest_eur_yr", "rate_known"):
+        for k in ("balance_eur", "interest_eur_yr", "rate_known", "rate_source"):
             a.pop(k, None)
     out = {"accounts": accounts, "updated": time.strftime("%Y-%m-%d %H:%M")}
     if isinstance(kept, dict) and kept:
@@ -140,7 +171,8 @@ def _broker_cash() -> list[dict]:
         return []
     return [{"name": f"{r['account']} cash", "institution": "Trading 212",
              "balance": r["balance"], "currency": r["currency"], "type": "cash",
-             "rate": 0.0, "auto": True} for r in rows if r["balance"]]
+             "rate": 0.0, "auto": True, "feed": "trading212", "ref": r["account"]}
+            for r in rows if r["balance"]]
 
 
 def _connection_cash() -> list[dict]:
