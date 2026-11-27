@@ -425,9 +425,23 @@ def get_income(currency: Currency = None) -> dict:
     return envelope(out, ccy)
 
 
+def _rate_source(a: dict) -> str:
+    """Where a cash account's interest rate comes from (backend/interest.py):
+    typed in, stated by the provider, worked out from the interest paid, or
+    why it is not known (then interest_rate_pct is null, not 0)."""
+    if a.get("rate_known", True):
+        if a.get("rate_source") in ("paid", "provider") and a.get("rate_note"):
+            return a["rate_note"]
+        return "entered by you"
+    why = (a.get("rate_auto") or {}).get("text")
+    return "not known" + (f": {why}" if why else "")
+
+
 def get_net_worth(currency: Currency = None) -> dict:
     """Investments, cash accounts, things owned and loans, the net worth they
-    add up to, and the monthly budget entered in Settings."""
+    add up to, and the monthly budget entered in Settings. A cash account's
+    interest_rate_pct is null when its rate is not known; interest_rate_source
+    says where a rate comes from."""
     ccy = _ccy(currency)
     main = _app()
     invest = main.portfolio()["totals"]["value"]
@@ -446,7 +460,8 @@ def get_net_worth(currency: Currency = None) -> dict:
         "cash_accounts": [{"name": a["name"], "institution": a.get("institution") or None,
                            "type": a.get("type"), "balance": _m(a["balance_eur"], ccy),
                            "account_currency": a.get("currency"),
-                           "interest_rate_pct": a.get("rate") or 0.0} for a in cash.get("accounts", [])],
+                           "interest_rate_pct": (a.get("rate") or 0.0) if a.get("rate_known", True) else None,
+                           "interest_rate_source": _rate_source(a)} for a in cash.get("accounts", [])],
         "loans": [{"name": l["name"], "balance": _m(l["balance_eur"], ccy),
                    "interest_rate_pct": l.get("rate"), "monthly_payment": _m(l["monthly_payment_eur"], ccy),
                    "paid_off_by": l.get("payoff")} for l in fin.get("loans", [])],
