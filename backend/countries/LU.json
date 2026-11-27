@@ -1,0 +1,181 @@
+{
+  "code": "LU",
+  "name": "Luxembourg",
+  "currency": "EUR",
+  "currency_note": "",
+  "timezone": "Europe/Luxembourg",
+  "languages": ["lb", "fr", "de"],
+  "checked_on": "2026-11-27",
+  "tax_year": {
+    "label": "2026",
+    "starts": "01-01",
+    "ends": "12-31",
+    "return_due": "The return for 2026 must be filed by 31 December 2027.",
+    "source": "https://impotsdirects.public.lu/fr/az/d/delais/depot.html"
+  },
+  "summary": "Gains on shares, funds and crypto held privately for more than 6 months are tax-free, unless you own more than 10% of a company. Dividends and interest are taxed at your normal progressive rates, with the first €1,500 a year tax-free and half of most company dividends exempt. Most interest paid by a Luxembourg bank instead has a final 20% tax withheld.",
+  "topics": [
+    {
+      "id": "gains",
+      "title": "Profit when you sell",
+      "points": [
+        "If you hold 10% or less of a company, a gain on shares or securities sold more than 6 months after buying is tax-free.",
+        "A gain on something sold within 6 months of buying is a speculative gain, taxed at your normal progressive rates. Speculative gains are tax-free if your total for the year is less than €500.",
+        "Different rules apply if you held more than 10% of a company at any time in the last 5 years.",
+        "Taxable gains go in the return as miscellaneous income (revenus nets divers), with details of each sale."
+      ],
+      "figures": [
+        {"label": "Holding period for a tax-free gain", "value": "more than 6 months"},
+        {"label": "Speculative gains tax-free if the year's total is under", "value": "€500"}
+      ],
+      "sources": [
+        "https://guichet.public.lu/fr/citoyens/fiscalite/declaration-impot-decompte/capitaux-mobiliers/banque-dividende-interets/achat-vente-actions.html",
+        "https://impotsdirects.public.lu/fr/az/r/revenus-nets-divers.html"
+      ]
+    },
+    {
+      "id": "dividends",
+      "title": "Dividends",
+      "points": [
+        "Dividends are added to your income and taxed at your normal progressive rates, plus the 1.4% dependency insurance contribution.",
+        "Half of a dividend is tax-free if it comes from a fully taxable capital company (such as an SA or SARL) in Luxembourg, another EU country or a country with a tax treaty with Luxembourg.",
+        "Luxembourg companies withhold 15% tax on dividends. In principle it is credited against your income tax in the return."
+      ],
+      "figures": [
+        {"label": "Luxembourg withholding on dividends", "value": "15%"},
+        {"label": "Exempt part of qualifying dividends", "value": "50%"}
+      ],
+      "sources": [
+        "https://guichet.public.lu/fr/citoyens/fiscalite/declaration-impot-decompte/capitaux-mobiliers/banque-dividende-interets/identifier-declarer-dividendes.html",
+        "https://impotsdirects.public.lu/fr/az/r/reten_impot.html",
+        "https://impotsdirects.public.lu/dam-assets/fr/formulaires/pers_physiques/2025/100f-2025.pdf"
+      ]
+    },
+    {
+      "id": "interest",
+      "title": "Interest on savings",
+      "points": [
+        "Most interest paid by a Luxembourg bank has a final 20% tax withheld (retenue à la source libératoire, RELIBI). You do not declare that interest, and the tax cannot be refunded or credited.",
+        "This applies, for example, to savings and term deposits when the interest is more than €250 a year per person and per bank, and to current accounts paying more than 0.75% a year.",
+        "Interest from a bank abroad is taxed at your progressive rates. If the bank is in the EU or EEA, you can instead choose the final 20% tax on all such interest by filing form 931 by 31 December of the following year."
+      ],
+      "figures": [
+        {"label": "Final tax on Luxembourg bank interest", "value": "20%"}
+      ],
+      "sources": [
+        "https://guichet.public.lu/fr/citoyens/fiscalite/declaration-impot-decompte/capitaux-mobiliers/banque-dividende-interets/banque-luxembourgeoise.html",
+        "https://impotsdirects.public.lu/fr/az/r/reten_impot.html"
+      ]
+    },
+    {
+      "id": "wealth",
+      "title": "Tax on what you own",
+      "points": [
+        "Luxembourg abolished wealth tax for private individuals, in the same law that introduced the 20% final tax on interest."
+      ],
+      "sources": [
+        "https://guichet.public.lu/fr/citoyens/fiscalite/declaration-impot-decompte/capitaux-mobiliers/banque-dividende-interets/banque-luxembourgeoise.html"
+      ]
+    },
+    {
+      "id": "allowances",
+      "title": "Tax-free amounts",
+      "points": [
+        "The first €1,500 a year of taxable interest and dividends is tax-free, or €3,000 for spouses or partners taxed together.",
+        "You can deduct a flat €25 a year in costs (€50 for couples taxed together), or your real costs if higher.",
+        "Speculative gains of less than €500 in total for the year are tax-free."
+      ],
+      "figures": [
+        {"label": "Tax-free interest and dividends, single", "value": "€1,500"},
+        {"label": "Tax-free interest and dividends, couple", "value": "€3,000"}
+      ],
+      "sources": [
+        "https://guichet.public.lu/fr/citoyens/fiscalite/declaration-impot-decompte/capitaux-mobiliers/banque-dividende-interets/identifier-declarer-dividendes.html",
+        "https://impotsdirects.public.lu/dam-assets/fr/formulaires/pers_physiques/2025/100f-2025.pdf",
+        "https://impotsdirects.public.lu/fr/az/r/revenus-nets-divers.html"
+      ]
+    },
+    {
+      "id": "accounts",
+      "title": "Tax-free and tax-deferred accounts",
+      "points": [
+        "Payments into a pension saving contract (prévoyance-vieillesse) can be deducted from taxable income, up to €4,500 a year from the 2026 tax year (it was €3,200 up to 2025). Spouses with their own contracts each have this limit."
+      ],
+      "figures": [
+        {"label": "Pension saving deduction from 2026", "value": "€4,500"}
+      ],
+      "sources": [
+        "https://impotsdirects.public.lu/fr/az/p/prevoyance_vieillesse.html"
+      ]
+    },
+    {
+      "id": "losses",
+      "title": "Losses",
+      "points": [
+        "Losses on sales can be set against gains, but not against other kinds of income, and they cannot be carried to later years."
+      ],
+      "sources": [
+        "https://guichet.public.lu/fr/citoyens/fiscalite/declaration-impot-decompte/capitaux-mobiliers/banque-dividende-interets/achat-vente-actions.html"
+      ]
+    },
+    {
+      "id": "foreign",
+      "title": "Foreign shares",
+      "points": [
+        "Tax withheld abroad on dividends is in principle credited against Luxembourg income tax. If it cannot all be credited, the rest can be deducted as a cost.",
+        "Foreign withholding tax on interest can be credited where a tax treaty allows it.",
+        "Dividends from foreign companies in treaty countries are reported on annex 180 of the return."
+      ],
+      "sources": [
+        "https://guichet.public.lu/fr/citoyens/fiscalite/declaration-impot-decompte/capitaux-mobiliers/banque-dividende-interets/identifier-declarer-dividendes.html",
+        "https://guichet.public.lu/fr/citoyens/fiscalite/declaration-impot-decompte/capitaux-mobiliers/banque-dividende-interets/banque-luxembourgeoise.html"
+      ]
+    },
+    {
+      "id": "reporting",
+      "title": "What your broker does and what you do",
+      "points": [
+        "A Luxembourg bank withholds the final 20% on interest, and Luxembourg companies withhold 15% on their dividends. You still declare dividends in your return, using the certificate from your bank.",
+        "A foreign bank or broker does not apply the final 20% tax on interest. You declare dividends, interest and any taxable gains from it in your return."
+      ],
+      "sources": [
+        "https://guichet.public.lu/fr/citoyens/fiscalite/declaration-impot-decompte/capitaux-mobiliers/banque-dividende-interets/identifier-declarer-dividendes.html",
+        "https://guichet.public.lu/fr/citoyens/fiscalite/declaration-impot-decompte/capitaux-mobiliers/banque-dividende-interets/banque-luxembourgeoise.html"
+      ]
+    },
+    {
+      "id": "crypto",
+      "title": "Crypto",
+      "points": [
+        "Exchanging crypto, including for another crypto, counts as selling it. A gain or loss within 6 months of buying is speculative and taxed at your progressive rates.",
+        "Speculative gains are tax-free if your total for the year is less than €500."
+      ],
+      "sources": [
+        "https://impotsdirects.public.lu/dam-assets/fr/legislation/legi18/circulaireLIR14-5-99-3-99bis-3du26072018.pdf"
+      ]
+    }
+  ],
+  "dates": [
+    {"when": "12-31", "what": "Deadline for the return for the year before, and for choosing the final 20% tax on foreign interest (form 931)."}
+  ],
+  "official": [
+    {"title": "Guichet.lu: dividends", "url": "https://guichet.public.lu/fr/citoyens/fiscalite/declaration-impot-decompte/capitaux-mobiliers/banque-dividende-interets/identifier-declarer-dividendes.html"},
+    {"title": "Guichet.lu: interest", "url": "https://guichet.public.lu/fr/citoyens/fiscalite/declaration-impot-decompte/capitaux-mobiliers/banque-dividende-interets/banque-luxembourgeoise.html"},
+    {"title": "Guichet.lu: selling shares", "url": "https://guichet.public.lu/fr/citoyens/fiscalite/declaration-impot-decompte/capitaux-mobiliers/banque-dividende-interets/achat-vente-actions.html"},
+    {"title": "ACD: withholding tax rates", "url": "https://impotsdirects.public.lu/fr/az/r/reten_impot.html"},
+    {"title": "ACD: pension saving", "url": "https://impotsdirects.public.lu/fr/az/p/prevoyance_vieillesse.html"}
+  ],
+  "upcoming": [],
+  "not_covered": [
+    "Investment funds in detail, including whether fund distributions get the 50% dividend exemption.",
+    "Holdings of more than 10% in one company.",
+    "Life insurance and occupational pensions.",
+    "Real estate.",
+    "Non-residents and cross-border workers, including the option to be taxed as a resident."
+  ],
+  "news": [
+    {"name": "L'essentiel Économie", "url": "https://partner-feeds.lessentiel.lu/rss/lessentiel-fr/economie", "language": "fr"},
+    {"name": "RTL Today Business", "url": "https://today.rtl.lu/news/business-and-tech.rss", "language": "en"},
+    {"name": "Luxembourg Times", "url": "https://www.luxtimes.lu/rss/", "language": "en"}
+  ]
+}
