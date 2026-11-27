@@ -1,4 +1,4 @@
-"""Stock Overview API.
+"""Where is my money API.
 
 Combines holdings across brokers and serves:
   * /api/portfolio — open holdings, unrealized P/L, realized P/L, all-time total
@@ -113,7 +113,7 @@ async def _lifespan(_app):
         yield
 
 
-app = FastAPI(title="Stock Overview", lifespan=_lifespan)
+app = FastAPI(title="Where is my money", lifespan=_lifespan)
 
 # Login gate with a session cookie + a login page (works nicely as a phone web
 # app: iOS saves the password to Keychain and unlocks it with Face ID). Disabled

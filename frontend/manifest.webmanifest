@@ -1,6 +1,6 @@
 {
-  "name": "Stock Overview",
-  "short_name": "Stocks",
+  "name": "Where is my money",
+  "short_name": "Wimm",
   "description": "All your investments, savings and net worth in one place, with live prices",
   "start_url": "/",
   "scope": "/",

@@ -46,7 +46,7 @@ on this repo. See [SECURITY.md](SECURITY.md).
 
 ## Licence of your contribution
 
-Stock Overview is licensed under [AGPL-3.0](LICENSE). By opening a pull
+Wimm is licensed under [AGPL-3.0](LICENSE). By opening a pull
 request you confirm that:
 
 - the contribution is your own work, or you have the right to submit it;

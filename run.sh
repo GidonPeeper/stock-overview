@@ -1,5 +1,5 @@
 #!/bin/sh
-# Start Stock Overview on this computer and open it in your browser.
+# Start Wimm on this computer and open it in your browser.
 #   ./run.sh                 http://127.0.0.1:8000, reachable from this computer only
 #   PORT=9000 ./run.sh       another port
 #   HOST=0.0.0.0 ./run.sh    also reachable from your phone on the same Wi-Fi
@@ -88,14 +88,14 @@ if [ "$WANT" != "$(cat .venv/.requirements 2>/dev/null)" ]; then
 fi
 
 if [ "$1" = "update" ]; then
-  echo "Done. If Stock Overview is running, stop it (Ctrl+C in its window) and start it again: ./run.sh"
+  echo "Done. If Wimm is running, stop it (Ctrl+C in its window) and start it again: ./run.sh"
   exit 0
 fi
 
 if [ "$1" = "claude" ]; then
   DIR="$(pwd)"
   cat <<TEXT
-Connect Claude to Stock Overview (read-only; details in MCP.md).
+Connect Claude to Wimm (read-only; details in MCP.md).
 
 Claude Code: run this once.
 
@@ -117,14 +117,14 @@ TEXT
 fi
 
 URL="http://127.0.0.1:$PORT"
-# Something already answers on this port (often Stock Overview itself, started
+# Something already answers on this port (often Wimm itself, started
 # earlier): say so plainly instead of failing with a Python error.
 if .venv/bin/python -c "import socket,sys; s=socket.socket(); s.settimeout(1); sys.exit(s.connect_ex(('127.0.0.1', int(sys.argv[1]))) != 0)" "$PORT" 2>/dev/null; then
-  echo "Port $PORT is already in use. Stock Overview may already be running: open $URL"
+  echo "Port $PORT is already in use. Wimm may already be running: open $URL"
   echo "Or start this copy on another port:  PORT=$((PORT + 1)) ./run.sh"
   exit 1
 fi
-echo "Stock Overview: $URL   (stop with Ctrl+C)"
+echo "Wimm: $URL   (stop with Ctrl+C)"
 if [ "$HOST" != "127.0.0.1" ] && [ "$HOST" != "localhost" ]; then
   # The address other devices use: this computer's address on the local network.
   # (Connecting a UDP socket sends nothing; it only picks the network card.)

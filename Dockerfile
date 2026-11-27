@@ -1,4 +1,4 @@
-# Stock Overview in a container. Your data lives in /app/data: mount a folder
+# Wimm in a container. Your data lives in /app/data: mount a folder
 # there (docker-compose.yml does), or it is lost when the container is removed.
 FROM python:3.12-slim
 WORKDIR /app

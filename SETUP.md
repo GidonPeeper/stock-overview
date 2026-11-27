@@ -1,6 +1,6 @@
-# Set up Stock Overview
+# Set up Wimm
 
-Stock Overview runs on your own computer. Your data stays in one folder on
+Wimm runs on your own computer. Your data stays in one folder on
 that computer and is sent nowhere. The app only reads your accounts: it can
 never trade or move money.
 

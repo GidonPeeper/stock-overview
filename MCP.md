@@ -1,6 +1,6 @@
 # Ask Claude about your portfolio
 
-Stock Overview is an **MCP server** (Model Context Protocol). Connect it to
+Wimm is an **MCP server** (Model Context Protocol). Connect it to
 Claude and ask questions about your money in plain language. Claude looks up
 the answer in your own dashboard data.
 

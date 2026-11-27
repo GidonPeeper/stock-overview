@@ -1,5 +1,5 @@
 @echo off
-rem Start Stock Overview on this computer and open it in your browser.
+rem Start Wimm on this computer and open it in your browser.
 rem Reachable from this computer only: http://127.0.0.1:8000
 rem   run.bat           start it
 rem   run.bat update    get the newest version (your data folder is never touched)
@@ -20,7 +20,7 @@ if not exist .venv\Scripts\python.exe (
 .venv\Scripts\python -m pip install -q --disable-pip-version-check -r requirements.txt
 if errorlevel 1 goto pipfailed
 if /i "%~1"=="update" goto updated
-echo Stock Overview: http://127.0.0.1:8000   (stop with Ctrl+C)
+echo Wimm: http://127.0.0.1:8000   (stop with Ctrl+C)
 start "" http://127.0.0.1:8000
 .venv\Scripts\python -m uvicorn backend.main:app --host 127.0.0.1 --port 8000 --log-level warning
 goto :eof
@@ -51,7 +51,7 @@ if not "%BEFORE%"=="%AFTER%" echo Updated from version %BEFORE% to %AFTER%.
 goto setup
 
 :updated
-echo Done. If Stock Overview is running, close its window and start run.bat again.
+echo Done. If Wimm is running, close its window and start run.bat again.
 exit /b 0
 
 :nogit

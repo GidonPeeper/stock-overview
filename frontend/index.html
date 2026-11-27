@@ -3,11 +3,11 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-  <title>Stock Overview</title>
+  <title>Where is my money</title>
   <link rel="manifest" href="/manifest.webmanifest" />
   <meta name="apple-mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
-  <meta name="apple-mobile-web-app-title" content="Stocks" />
+  <meta name="apple-mobile-web-app-title" content="Wimm" />
   <meta name="theme-color" content="#0a0d10" />
   <link rel="apple-touch-icon" href="/icon-180.png" />
   <!-- Neither blocks the first paint: Chart.js is deferred, the font swaps in.
@@ -542,7 +542,7 @@
 <body>
   <div class="wrap">
     <header>
-      <div class="brand"><h1>Stock Overview <span id="demo-pill" class="pill amber" hidden>Example data</span></h1><div id="live" class="live"></div></div>
+      <div class="brand"><h1>Where is my money <span id="demo-pill" class="pill amber" hidden>Example data</span></h1><div id="live" class="live"></div></div>
       <!-- ---- lookup ---- the price of any share: search (a combobox; on phones it opens full width) -->
       <div class="lk-search" id="lk-search">
         <div class="lk-scrim" onclick="lkCloseSearch(true)"></div>
@@ -611,7 +611,7 @@
     <section id="page-overview" class="page active" aria-label="Overview">
       <div class="card welcome" id="welcome" hidden>
         <span class="pill amber">Example data</span>
-        <h2>Welcome to Stock Overview</h2>
+        <h2>Welcome to Where is my money</h2>
         <p class="big">All your investments in one place, with live prices: what you have, how it is doing and what it pays you.</p>
         <p>The numbers below are examples, so you can look around first.</p>
         <ol class="w-steps">
@@ -968,7 +968,7 @@
         </div>
       </div>
     </section>
-    <footer class="app-foot" aria-label="About this app"><span id="app-ver">Stock Overview</span>
+    <footer class="app-foot" aria-label="About this app"><span id="app-ver">Where is my money</span>
       <a href="/settings#checkup">Check-up</a>
       <a class="help-link" href="https://github.com/GidonPeeper/Where-is-my-money/blob/main/TROUBLESHOOTING.md" target="_blank" rel="noopener">Help ↗</a></footer>
   </div>
@@ -2456,7 +2456,7 @@
         if(n) $("m-settings").setAttribute("aria-label",`Settings: ${say}`); else $("m-settings").removeAttribute("aria-label");
         $("hdr-more").setAttribute("aria-label","More: currency, theme, settings, refresh"+(n?`. ${say}`:""));
         if(c.help) document.querySelectorAll(".help-link").forEach(a=>{ a.href=c.help; });
-        const v=c.version; if(v&&v.short) $("app-ver").textContent=`Stock Overview · version ${v.short}${v.date?" of "+dateGB(v.date):""}`;
+        const v=c.version; if(v&&v.short) $("app-ver").textContent=`Where is my money · version ${v.short}${v.date?" of "+dateGB(v.date):""}`;
       }).catch(()=>{});
     }
     async function refreshLive(){

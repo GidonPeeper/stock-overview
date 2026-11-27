@@ -269,7 +269,7 @@ def _page(title: str, text: str, *, ok: bool, status: int = 200,
     items = "".join(f"<li>{e(d)}</li>" for d in details)
     body = (f'<!DOCTYPE html><html lang="en"><head><meta charset="utf-8" />'
             f'<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />'
-            f'<meta name="robots" content="noindex" /><title>{e(title)} — Stock Overview</title>'
+            f'<meta name="robots" content="noindex" /><title>{e(title)} — Where is my money</title>'
             f'<style>{_STYLE}</style></head><body><main>'
             f'<div class="mark {"ok" if ok else "bad"}">{"✓" if ok else "!"}</div>'
             f'<h1>{e(title)}</h1><p>{e(text)}</p>{f"<ul>{items}</ul>" if items else ""}'

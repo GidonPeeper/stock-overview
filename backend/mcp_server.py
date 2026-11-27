@@ -43,7 +43,7 @@ PATH = "/mcp"
 MIN_TOKEN_LENGTH = 32
 
 INSTRUCTIONS = """\
-Read-only access to the user's Stock Overview dashboard: investments across their brokers, \
+Read-only access to the user's Where is my money (Wimm) dashboard: investments across their brokers, \
 cash, loans, income and the tax figures the app computes. These tools cannot trade, move \
 money or change anything.
 - If a result says "sample_data": true, the user has not added their own accounts yet. The \
@@ -153,7 +153,7 @@ async def _preload(_server):
 
 
 server = MCPServer(
-    "stock-overview", title="Stock Overview", version="1.0.0",
+    "stock-overview", title="Where is my money", version="1.0.0",
     instructions=INSTRUCTIONS, log_level="WARNING", lifespan=_preload,
     subscriptions=False,   # the tool list never changes: no long-lived listen streams
 )

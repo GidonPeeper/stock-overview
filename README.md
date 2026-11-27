@@ -1,4 +1,4 @@
-# 📈 Stock Overview
+# 📈 Where is my money (Wimm)
 
 ![Python](https://img.shields.io/badge/Python-3.10+-3776AB?logo=python&logoColor=white)
 ![License](https://img.shields.io/badge/License-AGPL--3.0-blue)
@@ -100,7 +100,7 @@ export file is the official route and stays the default.
 
 ## Ask Claude
 
-Stock Overview is an MCP server, so Claude can answer questions from your own
+Wimm is an MCP server, so Claude can answer questions from your own
 numbers: performance, holdings, dividends, net worth, risk and tax figures.
 Claude gets twelve read-only tools and nothing else, among them the price of
 any share and the tax overview for your country.

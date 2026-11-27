@@ -1,4 +1,4 @@
-# Maintaining Stock Overview
+# Maintaining Wimm
 
 The jobs someone with code knowledge has to do so the app stays right, each
 with the files to change and how to check the result. Users do not need this

@@ -152,7 +152,7 @@ _ISIN_ANY = re.compile(r"(?<![A-Z0-9])([A-Z]{2}[A-Z0-9]{9}[0-9])(?![A-Z0-9])")
 SIGN_IN_MESSAGE = ("Trade Republic has signed this app out. Press “Sign in again” to keep it "
                    "updating; until then the dashboard shows the last data it read.")
 _VERSION_MESSAGE = ("Trade Republic did not accept this app's sign-in ({code}). Trade Republic has "
-                    "probably changed its web app. Try again later or update Stock Overview "
+                    "probably changed its web app. Try again later or update Wimm "
                     "(TR_APP_VERSION can override the version, see the README).")
 _LOGIN_ERRORS = {
     "TOO_MANY_REQUESTS": "Too many sign-in attempts. Trade Republic asks you to wait before trying "

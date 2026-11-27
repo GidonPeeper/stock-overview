@@ -17,7 +17,7 @@ what to do.
 - **You see:** "This site can't be reached" at http://127.0.0.1:8000.
 - **Why:** the app is not running, or not yet. The first start takes about a minute.
 - **Do:** look at the window where you started it. If it says
-  `Stock Overview: http://127.0.0.1:8000`, wait a moment and reload. If the
+  `Wimm: http://127.0.0.1:8000`, wait a moment and reload. If the
   window is closed, start it again with `./run.sh` (Windows: `run.bat`). If it
   shows an error, find it below.
 
@@ -28,7 +28,7 @@ used another address. Open http://127.0.0.1:8000 instead, or add that name to
 ### Port already in use
 
 - **You see:** `Port 8000 is already in use.`
-- **Why:** something else uses that port, often Stock Overview itself, started
+- **Why:** something else uses that port, often Wimm itself, started
   earlier in another window.
 - **Do:** open http://127.0.0.1:8000: it may already be running. Or start this
   copy on another port: `PORT=8001 ./run.sh`.
@@ -54,7 +54,7 @@ used another address. Open http://127.0.0.1:8000 instead, or add that name to
 - Windows may ask whether Python may use the network: **Allow** for private
   networks.
 - The app uses port 8000 on Windows. If that is taken, close the other program
-  or the other Stock Overview window.
+  or the other Wimm window.
 - Stop the app with Ctrl+C in its window, or close the window.
 
 ### "Installing what the app needs failed"
