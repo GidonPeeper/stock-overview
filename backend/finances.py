@@ -172,7 +172,8 @@ def _apply_tax(income: list[dict], sample: bool) -> dict:
         if slips and row is order[0]:
             row["payslips"] = [{**p, "net_eur": round(to_eur(p["net"], "GBP"), 2)} for p in slips]
     t = calc["total"]
-    return {"applied": True, "uk": True, "rules": paye.RULES_NOTE,
+    from . import rules
+    return {"applied": True, "uk": True, "rules": paye.RULES_NOTE, "outdated": rules.uk_notice(),
             "yearly_eur": {k: round(to_eur(v, "GBP"), 2) for k, v in t.items()}}
 
 

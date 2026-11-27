@@ -22,6 +22,7 @@
                        cost: "Cost", value: "Market value", price: "Price", currency: "Currency"};
 
   let INST = [], AGG = {}, country = "", active = -1, shown = [], picked = null, tab = null;
+  let STEPS_ON = null, STEPS_OLD = null;     // when the steps were checked at the brokers (broker_catalog.json)
   let csvFile = null, csvMapping = null, csvTimer = null;
 
   const curDefault = () => { try { return CUR || "GBP"; } catch (e) { return "GBP"; } };
@@ -41,6 +42,7 @@
     try {
       const cat = await (await fetch("/api/institutions")).json();
       INST = cat.institutions || [];
+      STEPS_ON = cat.researched_on || null; STEPS_OLD = cat.steps_outdated || null;
       AGG = Object.fromEntries((cat.aggregators || []).map(a => [norm(a.id), a]));
     } catch (e) {
       $("acct-panel").innerHTML = '<div class="is-error" style="margin-top:12px"><span>Could not load the list of brokers and banks. <button class="linkbtn" type="button" onclick="location.reload()">Try again</button></span></div>';
@@ -189,7 +191,10 @@
   }
   function stepsHtml(m) {
     const steps = (m.steps || []).filter(Boolean);
-    return steps.length ? `<ol class="steps">${steps.map(s => `<li>${esc(s)}</li>`).join("")}</ol>` : "";
+    if (!steps.length) return "";
+    const day = STEPS_ON ? new Date(STEPS_ON + "T12:00:00").toLocaleDateString("en-GB", {day: "numeric", month: "short", year: "numeric"}) : "";
+    return `<ol class="steps">${steps.map(s => `<li>${esc(s)}</li>`).join("")}</ol>` +
+      (STEPS_OLD ? `<div class="note warn">${esc(STEPS_OLD.text)}</div>` : day ? `<div class="fine">Steps checked on ${esc(day)}.</div>` : "");
   }
   function unverified(m, inst) {
     if (m.verified !== false) return "";

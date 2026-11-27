@@ -144,7 +144,9 @@ def view() -> dict:
              if isinstance(i, dict) and i.get("id")]
     insts.sort(key=lambda i: (i.get("name") or i["id"]).lower())
     insts += [institution(i, aggregators) for i in OTHER]
+    from . import rules
     return {"version": data.get("version", 1), "researched_on": data.get("researched_on"),
+            "steps_outdated": rules.broker_steps_notice(data.get("researched_on")),
             "aggregators": list(aggregators.values()), "institutions": insts}
 
 

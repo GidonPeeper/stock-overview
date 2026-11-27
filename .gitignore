@@ -27,6 +27,7 @@ data/bank_link_states.json
 *.pem
 
 # generated at runtime (rebuilt automatically)
+data/app_state.json
 data/history.db
 data/t212_instruments.json
 data/sectors.json

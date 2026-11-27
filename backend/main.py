@@ -710,6 +710,15 @@ def datastatus() -> dict:
     return out
 
 
+@app.get("/api/checkup")
+def checkup_endpoint() -> dict:
+    """Check-up: what needs attention and exactly what to do (checkup.py).
+    Reads only what the app already knows; never waits long for a source."""
+    from . import checkup, version
+    version.check_if_due()          # the optional daily check for a newer version
+    return checkup.run(checkup.Context(_open_holdings_rows, _VAULT_STATE))
+
+
 @app.get("/settings", include_in_schema=False)
 def settings_page():
     return FileResponse(FRONTEND_DIR / "settings.html")

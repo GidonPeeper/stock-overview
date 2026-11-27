@@ -34,6 +34,7 @@ from datetime import date
 from pathlib import Path
 
 from . import paye as _paye
+from . import rules
 from .fx import from_eur, to_eur
 from .instruments import is_valid_isin
 
@@ -51,9 +52,11 @@ from .instruments import is_valid_isin
 #      (https://www.gov.uk/government/publications/budget-2026-document/budget-2026-html).
 #  The same figures for the ISA, CGT and dividend allowances live in uktax.py;
 #  tests/test_advisors.py fails if the two drift apart.
+#  Which tax year these figures are for is set once, in rules.py
+#  (UK_TAX_YEAR): the cards say so when a newer tax year has started.
 # ===========================================================================
-TAX_YEAR = "2026/27"
-RATES_CHECKED = "2026-11-26"
+TAX_YEAR = rules.UK_TAX_YEAR
+RATES_CHECKED = rules.UK_RULES_CHECKED
 
 # https://www.gov.uk/individual-savings-accounts/how-isas-work
 ISA_ALLOWANCE = 20_000
@@ -888,6 +891,9 @@ def build(inp: Inputs) -> dict:
         "residence": inp.residence,
         "tax_year": (inp.tax or {}).get("tax_year") or TAX_YEAR,
         "rates_checked": RATES_CHECKED,
+        # the year the UK figures are for, and a notice once a later tax year has started
+        "rules_year": TAX_YEAR,
+        "outdated": rules.uk_notice(inp.today) if c.uk else None,
         "tips": c.tips,
         "total_per_year_eur": round(per_year, 2),
         "total_once_eur": round(once, 2),

@@ -24,6 +24,8 @@ from __future__ import annotations
 
 from datetime import date
 
+from .rules import UK_TAX_YEAR
+
 # All checked on 2026-11-26 against
 #   https://www.gov.uk/guidance/rates-and-thresholds-for-employers-2026-to-2027
 #   https://www.gov.uk/income-tax-rates
@@ -41,7 +43,7 @@ NI_MAIN, NI_ABOVE = 0.08, 0.02
 NI_MONTHLY = (1_048, 4_189)    # HMRC's monthly PT and UEL, as payroll uses
 
 PENSION_TYPES = ("sacrifice", "net_pay", "relief_at_source")
-RULES_NOTE = ("UK income tax and National Insurance, 2026/27 rates (England, Wales and "
+RULES_NOTE = (f"UK income tax and National Insurance, {UK_TAX_YEAR} rates (England, Wales and "
               "Northern Ireland), tax code 1257L.")
 
 

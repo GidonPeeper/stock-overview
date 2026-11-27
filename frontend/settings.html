@@ -262,6 +262,26 @@
     .ctry-save{ display:flex; gap:10px; align-items:center; flex-wrap:wrap; margin-top:10px; }
     #ctry-list .tag + .tag{ margin-left:4px; }
     @media(max-width:640px){ .ctry-grid{ grid-template-columns:1fr; } .ctry-save .btn{ flex:1 1 100%; } }
+    /* ---- check-up, backup, version ---- */
+    .cu-ok{ display:flex; gap:10px; align-items:flex-start; font-size:var(--fs-base); padding:10px 12px; border-radius:var(--r-md); background:var(--green-bg); }
+    .cu-ok::before{ content:"✓"; flex:0 0 22px; height:22px; border-radius:50%; background:var(--green); color:var(--bg); display:grid; place-items:center; font-size:var(--fs-sm); font-weight:800; }
+    .cu-item{ display:flex; gap:12px; padding:12px 0; border-bottom:1px solid var(--border); }
+    .cu-item:last-child{ border-bottom:none; }
+    .cu-mark{ flex:0 0 22px; height:22px; margin-top:1px; border-radius:50%; display:grid; place-items:center; font-size:var(--fs-sm); font-weight:800; color:var(--bg); }
+    .cu-problem .cu-mark{ background:var(--red); } .cu-attention .cu-mark{ background:var(--amber); } .cu-info .cu-mark{ background:var(--accent); color:var(--on-accent); }
+    .cu-body{ flex:1; min-width:0; }
+    .cu-t{ font-weight:650; font-size:var(--fs-base); }
+    .cu-lv{ font-size:var(--fs-2xs); font-weight:650; text-transform:uppercase; letter-spacing:.05em; margin-left:6px; white-space:nowrap; }
+    .cu-problem .cu-lv{ color:var(--red); } .cu-attention .cu-lv{ color:var(--amber); } .cu-info .cu-lv{ color:var(--muted); }
+    .cu-why{ font-size:var(--fs-md); color:var(--muted); margin-top:2px; overflow-wrap:anywhere; }
+    .cu-do{ font-size:var(--fs-md); margin-top:6px; overflow-wrap:anywhere; }
+    .cu-do a{ font-weight:600; white-space:nowrap; }
+    .cu-h{ font-size:var(--fs-xs); text-transform:uppercase; letter-spacing:.05em; color:var(--muted); margin:14px 0 0; font-weight:650; }
+    .private{ border-color:color-mix(in srgb, var(--amber) 45%, var(--border)); background:var(--amber-bg); color:var(--text); }
+    .bk-list{ margin:8px 0; padding-left:20px; font-size:var(--fs-md); }
+    .switch{ display:flex; gap:10px; align-items:flex-start; font-size:var(--fs-md); min-height:44px; padding:6px 0; cursor:pointer; }
+    .switch input{ width:20px; height:20px; margin:2px 0 0; flex:0 0 20px; accent-color:var(--accent-fill); }
+    @media(max-width:640px){ .cu-do a{ display:inline-flex; align-items:center; min-height:44px; } }
     @media(prefers-reduced-motion:reduce){
       *, *::before, *::after{ animation-duration:.01ms !important; animation-iteration-count:1 !important; transition-duration:.01ms !important; scroll-behavior:auto !important; }
     }
@@ -482,6 +502,14 @@
     <!-- 4. App and data -->
     <section class="sec" id="app">
       <h2 class="st"><span class="n">4</span>App and data</h2>
+      <div class="card" id="checkup">
+        <h2>Check-up</h2>
+        <div class="sub">Is everything all right? The app looks at your accounts, prices, backups and its own rules, and says what to do.</div>
+        <div id="cu-list" aria-live="polite"><div class="ph" style="--h:48px"><span class="sr">Checking…</span></div></div>
+        <div class="btn-row"><button class="btn ghost sm" id="cu-again" type="button">Check again</button>
+          <a class="doc" id="cu-help" href="https://github.com/GidonPeeper/stock-overview/blob/main/TROUBLESHOOTING.md" target="_blank" rel="noopener">Help when something goes wrong ↗</a></div>
+      </div>
+
       <div class="card" id="appearance">
         <h2>Colours and theme</h2>
         <div class="sub">The base colour is for buttons, links and the selected tab; the secondary colour for charts and highlights.
@@ -772,7 +800,8 @@
       const t=f.totals;
       document.getElementById("fin-totals").innerHTML=
         `Owed <b>${money0(t.debt_eur)}</b> · income after tax <b>${money0(t.monthly_income)} a month</b> · payments <b>${money0(t.monthly_payments)} a month</b> · left over <b style="color:${t.free_cashflow>=0?'var(--green)':'var(--red)'}">${money0(t.free_cashflow)} a month</b>`+
-        (f.tax&&f.tax.applied?`<br><span style="font-size:var(--fs-xs)">${esc(f.tax.rules)} Your payslip is the final word.</span>`:"");
+        (f.tax&&f.tax.applied?`<br><span style="font-size:var(--fs-xs)">${esc(f.tax.rules)} Your payslip is the final word.</span>`:"")+
+        (f.tax&&f.tax.applied&&f.tax.outdated?`<div class="note warn" role="note">⚠ ${esc(f.tax.outdated.text)}</div>`:"");
       renderAssets(f);
     }
     function editIncome(x){
@@ -1174,6 +1203,40 @@
       }).catch(() => render());
       render();
     });
+  </script>
+  <script>
+    /* ---- check-up (/api/checkup, backend/checkup.py): what needs attention, and what to do ---- */
+    (() => {
+      const $ = id => document.getElementById(id);
+      const LV = {problem: ["!", "Problem"], attention: ["!", "To do"], info: ["i", "Good to know"]};
+      // a place on this page scrolls there; a document opens on GitHub in a new tab
+      const link = f => {
+        if (!f.target) return "";
+        const here = f.target.startsWith("/settings#") ? f.target.slice(9) : null;
+        const href = here || f.target, ext = /^https:\/\//.test(href);
+        if (!here && !ext) return "";
+        return ` <a href="${esc(href)}"${ext ? ' target="_blank" rel="noopener"' : ""}>${esc(f.target_label || "Open")}${ext ? " ↗" : ""}</a>`;
+      };
+      const item = f => `<div class="cu-item cu-${f.level}">
+          <span class="cu-mark" aria-hidden="true">${LV[f.level][0]}</span>
+          <div class="cu-body"><div class="cu-t">${esc(f.title)}<span class="cu-lv">${LV[f.level][1]}</span></div>
+            <div class="cu-why">${esc(f.why)}</div>
+            <div class="cu-do"><b>What to do:</b> ${esc(f.action)}${link(f)}</div></div></div>`;
+      window.renderCheckup = c => {
+        if (c.help) $("cu-help").href = c.help;
+        const act = c.findings.filter(f => f.level !== "info"), info = c.findings.filter(f => f.level === "info");
+        let html = act.length ? `<p class="sr">${act.length} ${act.length === 1 ? "thing needs" : "things need"} attention.</p>` + act.map(item).join("")
+          : `<div class="cu-ok"><span><b>All is well.</b> Nothing needs your attention right now.</span></div>`;
+        if (info.length) html += (act.length ? `<div class="cu-h">Good to know</div>` : "") + info.map(item).join("");
+        $("cu-list").innerHTML = html;
+      };
+      window.loadCheckup = () => getJSON("/api/checkup").then(renderCheckup)
+        .catch(e => loadFailed(["cu-list"], "The check-up", e, "loadCheckup()"));
+      $("cu-again").addEventListener("click", () => {
+        $("cu-list").innerHTML = '<div class="ph" style="--h:48px"><span class="sr">Checking…</span></div>'; loadCheckup();
+      });
+      loadCheckup();
+    })();
   </script>
   <script>
     /* ---- the section bar at the top: marks the group you are in ---- */
