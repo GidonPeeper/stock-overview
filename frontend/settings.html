@@ -600,6 +600,20 @@
         <div class="sub" style="margin:8px 0 0">All steps, and what Claude can see:
           <a href="https://github.com/GidonPeeper/stock-overview/blob/main/MCP.md" target="_blank" rel="noopener">MCP.md</a>.</div>
       </div>
+
+      <div class="card" id="version">
+        <h2>Version and updates</h2>
+        <div id="ver-line" class="state" style="margin:6px 0 2px"><div class="ph" style="--h:24px;flex:1"><span class="sr">Loading…</span></div></div>
+        <label class="switch"><input type="checkbox" id="ver-check" />
+          <span><b>Check for a newer version once a day</b>
+            <span class="r-sub">The app then asks GitHub, once a day, for the newest version of its public code. Nothing about you or your data is sent.</span></span></label>
+        <div class="msg" id="m-ver" role="status"></div>
+        <div class="sub" id="ver-how" style="margin:6px 0 0"></div>
+        <div class="sub" style="margin:10px 0 0"><b>Help:</b>
+          <a class="help-doc" data-doc="TROUBLESHOOTING.md" href="https://github.com/GidonPeeper/stock-overview/blob/main/TROUBLESHOOTING.md" target="_blank" rel="noopener">when something goes wrong</a> ·
+          <a class="help-doc" data-doc="SETUP.md" href="https://github.com/GidonPeeper/stock-overview/blob/main/SETUP.md" target="_blank" rel="noopener">setting up</a> ·
+          <a class="help-doc" data-doc="MAINTAINING.md" href="https://github.com/GidonPeeper/stock-overview/blob/main/MAINTAINING.md" target="_blank" rel="noopener">keeping the app up to date (for maintainers)</a></div>
+      </div>
     </section>
   </div>
 
@@ -1319,6 +1333,38 @@
         if (t) { sessionStorage.removeItem("so.restored"); say($("m-bk"), t, "ok"); }
       } catch (e) {}
       loadInfo();
+    })();
+  </script>
+  <script>
+    /* ---- version and updates (/api/version, backend/version.py; the switch is prefs "update_check") ---- */
+    (() => {
+      const $ = id => document.getElementById(id);
+      const day = iso => new Date(String(iso).length === 10 ? iso + "T12:00:00" : iso).toLocaleDateString("en-GB", {day: "numeric", month: "short", year: "numeric"});
+      function render(v) {
+        const name = v.short ? `Version ${v.short}${v.date ? ` of ${day(v.date)}` : ""}` : "Version unknown";
+        const unknown = v.source === "unknown" ? " This copy was not downloaded with git, so it cannot tell which version it is." : "";
+        let dot = "var(--panel3)", state = "Checking for a newer version is off.";
+        if (v.check_on && v.newer === true) { dot = "var(--amber)"; state = `<b style="color:var(--amber)">A newer version is available</b> (of ${esc(day(v.latest_date))}).`; }
+        else if (v.check_on && v.newer === false) { dot = "var(--green)"; state = '<b class="ok">This is the newest version.</b>'; }
+        else if (v.check_on && v.error) { dot = "var(--amber)"; state = `The last check failed: ${esc(v.error)}. It is tried again tomorrow.`; }
+        else if (v.check_on && !v.checked_at) state = "Checking for a newer version…";
+        else if (v.check_on) state = "The newest version could not be compared with this one.";
+        const at = v.check_on && v.checked_at ? ` <span class="fine" style="margin:0">Last checked ${esc(new Date(v.checked_at * 1000).toLocaleString("en-GB", {day: "numeric", month: "short", hour: "2-digit", minute: "2-digit"}))}.</span>` : "";
+        $("ver-line").innerHTML = `<span class="d" style="background:${dot}"></span><span><b>${esc(name)}.</b>${esc(unknown)} ${state}${at}</span>`;
+        $("ver-check").checked = !!v.check_on;
+        $("ver-how").innerHTML = `<b>How to update:</b> ${esc(v.how_to_update)}`;
+        if (v.repo) document.querySelectorAll(".help-doc").forEach(a => { a.href = `https://github.com/${v.repo}/blob/${v.default_branch || "main"}/${a.dataset.doc}`; });
+      }
+      window.loadVersion = () => getJSON("/api/version").then(render).catch(e => loadFailed(["ver-line"], "The version", e, "loadVersion()"));
+      $("ver-check").addEventListener("change", async e => {
+        const on = e.target.checked, m = $("m-ver");
+        const r = await fetch("/api/prefs", {method: "POST", headers: {"Content-Type": "application/json"},
+          body: JSON.stringify({update_check: on})}).catch(() => null);
+        if (!r || !r.ok) { e.target.checked = !on; m.textContent = "✗ Could not save the switch. Check that the app is running and try again."; m.className = "msg err"; return; }
+        m.textContent = on ? "✓ On. The first check runs now." : "✓ Off. The app no longer asks GitHub."; m.className = "msg ok";
+        loadVersion(); if (on) setTimeout(() => { loadVersion(); if (window.loadCheckup) loadCheckup(); }, 4000);
+      });
+      loadVersion();
     })();
   </script>
   <script>

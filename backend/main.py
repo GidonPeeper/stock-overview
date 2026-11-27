@@ -719,6 +719,15 @@ def checkup_endpoint() -> dict:
     return checkup.run(checkup.Context(_open_holdings_rows, _VAULT_STATE))
 
 
+@app.get("/api/version")
+def version_endpoint() -> dict:
+    """This copy's version, how to update it, and (when switched on in
+    Settings) what the daily check for a newer version found (version.py)."""
+    from . import version
+    version.check_if_due()
+    return version.status()
+
+
 # Back up and restore (Settings; backend/backup.py): one zip file with your data files.
 @app.get("/api/backup")
 def backup_download():
