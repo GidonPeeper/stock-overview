@@ -336,15 +336,18 @@ def projection(start_value: float | None = None) -> dict:
     if not hist and not start_value:
         return {"scenarios": {}}
     start = start_value or hist[-1]["total_value"]
-    # median positive monthly contribution over the last 24 months
+    # What you usually add in a month: the middle one of the last 24 months'
+    # changes in money put in, months with nothing included. (The median of
+    # only the months with a purchase would assume someone who invested three
+    # times keeps investing that much every month.) Never below zero.
     by_month: dict[str, float] = {}
     for s in hist:
         by_month[s["day"][:7]] = s["total_cost"]
     months = sorted(by_month)[-25:]
     flows = [by_month[b] - by_month[a] for a, b in zip(months, months[1:])]
-    pos = sorted(f for f in flows if f > 0)
+    pos = sorted(flows)
     n = len(pos)   # median: the middle value, or the average of the two middle ones
-    contrib = round(pos[n // 2] if n % 2 else (pos[n // 2 - 1] + pos[n // 2]) / 2, 2) if pos else 0.0
+    contrib = round(max(0.0, pos[n // 2] if n % 2 else (pos[n // 2 - 1] + pos[n // 2]) / 2), 2) if pos else 0.0
 
     scenarios = {"cautious": 0.03, "expected": 0.06, "optimistic": 0.09}
     out = {}

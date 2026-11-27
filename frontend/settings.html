@@ -644,11 +644,21 @@
       if(k==="trading212") return v.live?["Live · key","live"]:["Statement","live"];
       return ["In use","live"];
     }
+    // Remove an uploaded statement, so that account no longer counts.
+    async function removeStatement(kind,label){
+      if(!confirm(`Remove the uploaded ${label}? That account then no longer counts in your numbers. Nothing changes at your broker, and you can upload the file again.`)) return;
+      const r=await fetch("/api/upload/"+kind,{method:"DELETE"}).catch(()=>null);
+      const b=r?await r.json().catch(()=>null):null;
+      if(!r||!r.ok){ alert((b&&typeof b.detail==="string"&&b.detail)||"Could not reach the server. Try again in a minute."); return; }
+      renderStatus(b);
+    }
     function renderStatus(s){
       document.getElementById("status").innerHTML=Object.entries(NAMES).map(([k,label])=>{
         const v=s[k], t=tagFor(s,k); if(!v) return "";
+        const kind=k==="trading212"?"t212_statement":k;
+        const rm=v.removable?`<button class="btn sm ghost" type="button" onclick="removeStatement('${kind}','${esc(label)}')" aria-label="Remove the uploaded ${esc(label)}">Remove</button>`:"";
         return `<div class="row"><span>${label}<span class="r-sub">${esc(v.expected)}</span></span>
-          <span class="pill ${t[1]}">${t[0]}</span></div>`;
+          <span style="display:flex;gap:8px;align-items:center"><span class="pill ${t[1]}">${t[0]}</span>${rm}</span></div>`;
       }).join("");
       [["degiro","degiro"],["trade_republic","trade_republic"],["t212","trading212"]].forEach(([id,k])=>{
         const el=document.getElementById("st-"+id), t=tagFor(s,k);

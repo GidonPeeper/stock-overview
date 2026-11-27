@@ -83,7 +83,7 @@ share either: they hold your statements and keys.
 | Restore | The same card: choose the backup file, check what it holds, confirm. Your current files are kept in a dated folder first |
 | Update | Stop the app, run `./run.sh update` (Windows: `run.bat update`), start it again. Your data is not touched |
 | Move to another computer | Download a backup here. Do step 1 on the new computer, then restore the backup there. Copy `.env` too if you set a login |
-| Remove one account | **Settings → Connected accounts → ✕**. A DEGIRO, Trade Republic or Trading 212 statement has no ✕: stop the app and delete its file from `data` (`degiro_account.csv`, `trades_trade_republic.json` and `income_trade_republic.json`, or `trading212_statement.json`) |
+| Remove one account | **Settings → Connected accounts → ✕** for an account with a key or a link. For an uploaded DEGIRO, Trade Republic or Trading 212 statement: **Settings → App and data → Data files in use → Remove** |
 | Start over with the examples | Stop the app, move everything out of `data` except the files with `.sample.` in their name, start it again |
 
 ## Good to know

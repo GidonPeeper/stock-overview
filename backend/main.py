@@ -940,6 +940,28 @@ async def upload_statement(kind: str, file: UploadFile = File(...)) -> dict:
     return out
 
 
+@app.delete("/api/upload/{kind}")
+@_one_save_at_a_time
+def remove_statement(kind: str) -> dict:
+    """Remove an uploaded statement (DEGIRO, Trade Republic, Trading 212), so
+    that account no longer counts. The broker's own records are not touched:
+    upload the file again to bring it back."""
+    try:
+        gone = datafiles.remove_upload(kind)
+    except ValueError:
+        raise HTTPException(404, "Unknown kind of statement. Reload the page and try again.")
+    except OSError as e:
+        raise HTTPException(500, f"The file could not be removed ({e.__class__.__name__}). Check that the "
+                                 "data folder can be written to, then try again.")
+    if not gone:
+        raise HTTPException(404, "There is no uploaded statement to remove here.")
+    cache.invalidate()
+    github_sync.push_vault_async()
+    out = datafiles.status()
+    out["_removed"] = gone
+    return out
+
+
 def _decode_text(content: bytes) -> str:
     """An uploaded text file as text: UTF-8 (with or without a byte-order
     mark), else Windows-1252, which spreadsheet programs often save CSVs in."""

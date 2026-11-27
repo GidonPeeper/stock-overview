@@ -105,7 +105,9 @@ def status() -> dict:
     out: dict = {}
     for key, fname in EXPECTED:
         path, real = resolve(fname)
-        out[key] = {"real": real, "path": str(path), "expected": fname}
+        # removable: the file was uploaded into data/ (not placed elsewhere by hand)
+        out[key] = {"real": real, "path": str(path), "expected": fname,
+                    "removable": (DATA_DIR / fname).is_file()}
     from .connectors.trading212 import accounts  # lazy: avoids an import cycle
 
     labels = [a.label for a in accounts()]
@@ -116,6 +118,7 @@ def status() -> dict:
         "live": live,
         "accounts": labels,
         "path": "API: " + ", ".join(labels) if live else out["t212_statement"]["path"],
+        "removable": out["t212_statement"]["removable"],     # the statement, not the keys
         "expected": "T212_API_KEY + T212_API_SECRET (or T212_<NAME>_API_KEY/SECRET per account), "
                     "or trading212_statement.json",
     }
@@ -149,6 +152,32 @@ def save_upload(kind: str, content: bytes) -> Path:
     if not fname:
         raise ValueError(f"unknown upload kind: {kind}")
     return save_file(fname, content)
+
+
+# What "remove this statement" deletes, per upload slot. A Trade Republic
+# upload fills two files (trades, and dividends and interest).
+_REMOVES = {"degiro": ("degiro_account.csv",),
+            "trade_republic": ("trades_trade_republic.json", "income_trade_republic.json"),
+            "tr_income": ("income_trade_republic.json",),
+            "t212_statement": ("trading212_statement.json",),
+            "trading212": ("trading212_statement.json",)}
+
+
+def remove_upload(kind: str) -> list[str]:
+    """Delete an uploaded statement from data/, so its account no longer
+    counts. Returns the names removed (none when there was nothing to
+    remove). Keys and accounts added in Settings are not touched."""
+    names = _REMOVES.get(kind)
+    if not names:
+        raise ValueError(f"unknown upload kind: {kind}")
+    gone = []
+    for name in names:
+        path = DATA_DIR / name
+        if path.is_file():
+            path.unlink()
+            gone.append(name)
+    refresh()
+    return gone
 
 
 def save_file(fname: str, content: bytes) -> Path:

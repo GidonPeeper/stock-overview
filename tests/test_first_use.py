@@ -138,10 +138,8 @@ class ProjectionContributionTest(unittest.TestCase):
     only the months in which money went in ((740 + 2,002) / 2). Its own method
     line says "your median monthly contribution (from the last 24 months)":
     by hand, the month-to-month changes are +2,002, +740, -601, -600.40 and
-    eighteen zeros, so the median is 0 (the average is about 70). Not fixed
-    here (no calculation changes in this pass): reported to the maintainer."""
+    eighteen zeros, so the median is 0 (the average is about 70)."""
 
-    @unittest.expectedFailure
     def test_someone_who_stopped_investing_is_not_assumed_to_invest_every_month(self):
         from backend import reports, trend
         cost = {"2025-01": 1202.0, "2025-02": 3204.0, "2025-03": 3944.0, "2025-04": 3944.0,
@@ -187,6 +185,32 @@ class DataFolderIsIgnoredTest(unittest.TestCase):
             self.assertTrue(self.ignored("data/" + name), name)
         for sample in sorted(p.name for p in (ROOT / "data").glob("*.sample.*")):
             self.assertFalse(self.ignored("data/" + sample), sample)
+
+
+
+
+class RemoveStatementTest(unittest.TestCase):
+    """Settings → Data files in use → Remove: an uploaded statement can be
+    taken out again without touching files by hand."""
+
+    def test_remove_deletes_the_uploaded_files_and_nothing_else(self):
+        import tempfile
+        from pathlib import Path
+        from backend import datafiles
+        with tempfile.TemporaryDirectory() as d:
+            data = Path(d)
+            for name in ("trades_trade_republic.json", "income_trade_republic.json", "degiro_account.csv",
+                         "connections.json", "trades_trade_republic.sample.json"):
+                (data / name).write_text("{}")
+            with mock.patch.object(datafiles, "DATA_DIR", data):
+                self.assertEqual(sorted(datafiles.remove_upload("trade_republic")),
+                                 ["income_trade_republic.json", "trades_trade_republic.json"])
+                self.assertEqual(datafiles.remove_upload("trade_republic"), [])      # nothing left to remove
+                self.assertEqual(datafiles.remove_upload("t212_statement"), [])      # was never uploaded
+                with self.assertRaises(ValueError):
+                    datafiles.remove_upload("connections")                            # not a statement slot
+            left = sorted(p.name for p in data.iterdir())
+        self.assertEqual(left, ["connections.json", "degiro_account.csv", "trades_trade_republic.sample.json"])
 
 
 if __name__ == "__main__":
