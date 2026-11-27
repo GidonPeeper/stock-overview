@@ -1,0 +1,104 @@
+{
+  "code": "AU",
+  "name": "Australia",
+  "currency": "USD",
+  "currency_note": "Australia uses Australian dollars; the app shows US dollars, not Australian. Amounts on this page are in Australian dollars.",
+  "timezone": "Australia/Sydney",
+  "languages": ["en"],
+  "checked_on": "2026-11-27",
+  "tax_year": {
+    "label": "2026-27",
+    "starts": "07-01",
+    "ends": "06-30",
+    "return_due": "If you lodge your own return, it is due by 31 October after the income year ends (31 October 2025 for 2024-25); people using a registered tax agent can have later dates.",
+    "source": "https://www.legislation.gov.au/F2025L00570/asmade/2025-05-09/text/original/pdf"
+  },
+  "summary": "Australia has no separate capital gains tax rate: your net capital gain is added to your income and taxed at your normal rates. Residents who held an asset at least 12 months get a 50% discount on the gain, which the law replaces with inflation indexing from 1 July 2027. Dividends usually come with franking credits for company tax already paid, which reduce your tax and can be refunded.",
+  "topics": [
+    {
+      "id": "gains",
+      "title": "Profit when you sell",
+      "points": [
+        "Your net capital gain for the income year is added to your assessable income and taxed at your normal income tax rates.",
+        "Capital losses are subtracted from capital gains first, then any unused net capital losses from earlier years. Only after that is the discount applied.",
+        "CGT discount: for an individual, a gain on an asset you held for at least 12 months is halved (50% discount), for sales before 1 July 2027. It does not apply where the rules for foreign or temporary residents apply.",
+        "Resident income tax rates for 2026-27: nothing up to the $18,200 tax-free threshold, 15% up to $45,000, 30% up to $135,000, 37% up to $190,000 and 45% above."
+      ],
+      "figures": [
+        {"label": "CGT discount (held 12 months or more)", "value": "50%"},
+        {"label": "Tax-free threshold", "value": "$18,200"},
+        {"label": "Income tax rates 2026-27", "value": "15% / 30% / 37% / 45%"}
+      ],
+      "sources": [
+        "https://www.legislation.gov.au/C2004A05138/2026-10-01/2026-10-01/text/original/epub/OEBPS/document_3/document_3.html",
+        "https://www.legislation.gov.au/C2004A03348/2026-07-01/2026-07-01/text/original/epub/OEBPS/document_1/document_1.html"
+      ]
+    },
+    {
+      "id": "dividends",
+      "title": "Dividends",
+      "points": [
+        "Dividends are part of your income. When an Australian company pays a franked dividend, the franking credit (company tax already paid) is added to your income as well, and you get a tax offset of the same amount.",
+        "For individuals this franking offset is refundable: if it is more than the tax you owe, the rest is paid back to you."
+      ],
+      "sources": [
+        "https://www.legislation.gov.au/C2004A05138/2026-10-01/2026-10-01/text/original/epub/OEBPS/document_5/document_5.html",
+        "https://www.legislation.gov.au/C2004A05138/2026-10-01/2026-10-01/text/original/epub/OEBPS/document_2/document_2.html"
+      ]
+    },
+    {
+      "id": "losses",
+      "title": "Losses",
+      "points": [
+        "Capital losses can only reduce capital gains, not your other income. If your losses for the year are larger than your gains, the difference is a net capital loss.",
+        "Net capital losses are carried forward and used against later capital gains, oldest first, before the 50% discount is applied."
+      ],
+      "sources": [
+        "https://www.legislation.gov.au/C2004A05138/2026-10-01/2026-10-01/text/original/epub/OEBPS/document_3/document_3.html"
+      ]
+    },
+    {
+      "id": "reporting",
+      "title": "What your broker does and what you do",
+      "points": [
+        "You work out your capital gains and losses yourself and include them in your tax return for the income year in which you sold.",
+        "The income year runs from 1 July to 30 June. If you lodge your own return, the deadline is 31 October after the year ends."
+      ],
+      "sources": [
+        "https://www.legislation.gov.au/C2004A05138/2026-10-01/2026-10-01/text/original/epub/OEBPS/document_3/document_3.html",
+        "https://www.legislation.gov.au/F2025L00570/asmade/2025-05-09/text/original/pdf"
+      ]
+    }
+  ],
+  "dates": [
+    {"when": "06-30", "what": "Last day of the income year."},
+    {"when": "07-01", "what": "New income year starts."},
+    {"when": "10-31", "what": "Tax return due for the year that ended on 30 June, if you lodge it yourself."}
+  ],
+  "official": [
+    {"title": "Federal Register of Legislation: Income Tax Assessment Act 1997", "url": "https://www.legislation.gov.au/C2004A05138/latest/text"},
+    {"title": "Federal Register of Legislation: Income Tax Rates Act 1986", "url": "https://www.legislation.gov.au/C2004A03348/latest"},
+    {"title": "ATO: CGT discount", "url": "https://www.ato.gov.au/individuals-and-families/investments-and-assets/capital-gains-tax/cgt-discount"},
+    {"title": "ATO: Capital gains tax reform", "url": "https://www.ato.gov.au/individuals-and-families/investments-and-assets/capital-gains-tax/capital-gains-tax-reform"}
+  ],
+  "upcoming": [
+    "From 1 July 2027 (already in the law) the 50% CGT discount for individuals ends: instead, the cost of an asset is indexed for inflation for the time you hold it from that date. Assets you hold on 30 June 2027 are treated as sold and bought back at market value (or an approved apportioning method), and the gain up to then is worked out only when you actually sell.",
+    "The same law adds a minimum tax for resident individuals: extra tax so that capital gains (after losses and concessions) are taxed at no less than 30% (Division 119). Parliament's bill digest describes the reform as applying to gains from 1 July 2027; the start date of this part was not confirmed in the law text read.",
+    "From 2027-28 the lowest income tax rate falls from 15% to 14%."
+  ],
+  "unverified": [
+    {"point": "Wash sales: the ATO's ruling TR 2008/1 says that selling an asset to realise a capital loss while keeping substantially the same economic exposure (for example buying the same shares back) can fall under the general anti-avoidance rule (Part IVA), so the loss can be cancelled. The ATO site refused automated reading, so this was seen only in search results.", "source": "https://www.ato.gov.au/law/view/document?docid=TXR/TR20081/NAT/ATO/00001"}
+  ],
+  "not_covered": [
+    "Interest, funds and ETFs (including attribution managed investment trusts), and foreign shares: the ATO's guidance could not be read.",
+    "Superannuation and its contribution caps.",
+    "Crypto: the ATO's guidance could not be read.",
+    "The Medicare levy and offsets.",
+    "Foreign and temporary residents, and your home and other property."
+  ],
+  "news": [
+    {"name": "ABC News: Business", "url": "https://www.abc.net.au/news/feed/51892/rss.xml", "language": "en"},
+    {"name": "The Sydney Morning Herald: Business", "url": "https://www.smh.com.au/rss/business.xml", "language": "en"},
+    {"name": "The Guardian Australia: Business", "url": "https://www.theguardian.com/au/business/rss", "language": "en"}
+  ]
+}
