@@ -1847,7 +1847,7 @@
         return;
       }
       if(!c.available){
-        el.innerHTML=`<div class="empty">${esc(c.message)} <a href="/settings#country">Change your country in Settings</a>.</div>`+calc;
+        el.innerHTML=`<div class="empty">${esc(c.message)} Your tax authority's website has the rules. Wrong country? <a href="/settings#country">Change it in Settings</a>.</div>`+calc;
         return;
       }
       const o=c.overview, ty=o.tax_year;

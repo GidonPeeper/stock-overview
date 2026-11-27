@@ -779,6 +779,8 @@ async def upload_statement(kind: str, file: UploadFile = File(...)) -> dict:
     if len(content) > 12_000_000:
         raise HTTPException(413, "That file is larger than 12 MB, which is more than a broker "
                                  "statement should be. Export a shorter period, or check it is the right file.")
+    if not content.strip():
+        raise HTTPException(400, "That file is empty. Download it again from your broker and upload the new file.")
     is_pdf = content[:5] == b"%PDF-"
     text = "" if is_pdf else _decode_text(content)
     if not is_pdf:
@@ -805,13 +807,15 @@ async def upload_statement(kind: str, file: UploadFile = File(...)) -> dict:
                 datafiles.save_file("trades_trade_republic.json", _json.dumps(trades, indent=1).encode())
                 datafiles.save_file("income_trade_republic.json", _json.dumps(income_, indent=1).encode())
             else:
-                payload = _loads_or_400(text)
-                if "trades" not in payload:
-                    raise HTTPException(400, 'Expected the Trade Republic transaction-export CSV, or a JSON with a "trades" list.')
+                if "trades" not in _loads_or_400(text, _NOT_TR):
+                    raise HTTPException(400, _NOT_TR)
                 datafiles.save_upload("trade_republic", content)
         elif kind == "tr_income":
-            if "income" not in _loads_or_400(text):
-                raise HTTPException(400, 'JSON must contain an "income" list — see the .sample file.')
+            wrong = ('That is not a Trade Republic dividends file: it must be JSON with an "income" '
+                     'list, as data/income_trade_republic.sample.json. Most people do not need this: '
+                     'the transaction export (CSV) already holds dividends and interest.')
+            if "income" not in _loads_or_400(text, wrong):
+                raise HTTPException(400, wrong)
             datafiles.save_upload("tr_income", content)
         elif kind == "t212_statement" and (is_pdf or trading212_csv.looks_like(text)):
             if is_pdf:
@@ -826,8 +830,8 @@ async def upload_statement(kind: str, file: UploadFile = File(...)) -> dict:
             datafiles.save_upload("t212_statement",
                                   _json.dumps(st, indent=1, ensure_ascii=False).encode())
         elif kind == "t212_statement":
-            if not {"positions", "trades"} & set(_loads_or_400(text)):
-                raise HTTPException(400, 'Expected the Trading 212 activity-statement PDF, its History CSV export, or the converted JSON.')
+            if not {"positions", "trades"} & set(_loads_or_400(text, _NOT_T212)):
+                raise HTTPException(400, _NOT_T212)
             datafiles.save_upload("t212_statement", content)
         else:
             raise HTTPException(404, "Unknown upload kind")
@@ -851,12 +855,22 @@ def _decode_text(content: bytes) -> str:
         return content.decode("cp1252", errors="replace")
 
 
-def _loads_or_400(text: str) -> dict:
+# What to say when an upload is not the file the broker's slot expects. Most
+# people upload a CSV or PDF, never JSON, so the message names those.
+_NOT_TR = ("That doesn't look like a Trade Republic file. Upload the transaction export (CSV) or the "
+           "account statement (PDF): in the Trade Republic app, Profile → Account statements.")
+_NOT_T212 = ("That doesn't look like a Trading 212 statement. Upload the activity statement (PDF) or a "
+             "History export (CSV): in Trading 212, Menu → History → Export.")
+
+
+def _loads_or_400(text: str, wrong_file: str) -> dict:
+    """The upload as JSON (the app's own format, for hand-made files), or a
+    400 with `wrong_file`: it is then most likely another broker's file."""
     import json as _json
     try:
         payload = _json.loads(text)
     except ValueError:
-        raise HTTPException(400, "Not valid JSON — see the .sample file for the format.")
+        raise HTTPException(400, wrong_file)
     return payload if isinstance(payload, dict) else {}
 
 
