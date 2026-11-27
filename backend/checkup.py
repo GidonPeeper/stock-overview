@@ -572,7 +572,10 @@ def _check_rules(ctx: Context) -> list[dict]:
     if page:
         out.append(_finding(f"country_page_old:{data['code']}", "attention",
                             f"The tax overview for {countries.in_name(data['code'])} may be out of date",
-                            page["text"],
+                            (f"The overview on the Money tab describes the rules for {page['tax_year']} and was "
+                             f"checked on {rules.day_text(page['checked_on'])}; "
+                             + ("a new tax year has started, so rates and allowances may have changed."
+                                if page["ended"] else "that is more than a year ago, so rules may have changed.")),
                             "Update the app (see Version below). The Money tab's tax overview links to the "
                             "official pages to check the current rules.", "/settings#version", "Version and updates"))
     try:

@@ -281,7 +281,8 @@
     .bk-list{ margin:8px 0; padding-left:20px; font-size:var(--fs-md); }
     .switch{ display:flex; gap:10px; align-items:flex-start; font-size:var(--fs-md); min-height:44px; padding:6px 0; cursor:pointer; }
     .switch input{ width:20px; height:20px; margin:2px 0 0; flex:0 0 20px; accent-color:var(--accent-fill); }
-    @media(max-width:640px){ .cu-do a{ display:inline-flex; align-items:center; min-height:44px; } }
+    /* phones: the link on a line of its own, a full 44px tall */
+    @media(max-width:640px), (pointer:coarse){ .cu-do a{ display:flex; align-items:center; width:max-content; max-width:100%; min-height:44px; } }
     @media(prefers-reduced-motion:reduce){
       *, *::before, *::after{ animation-duration:.01ms !important; animation-iteration-count:1 !important; transition-duration:.01ms !important; scroll-behavior:auto !important; }
     }
@@ -1253,7 +1254,7 @@
       };
       const item = f => `<div class="cu-item cu-${f.level}">
           <span class="cu-mark" aria-hidden="true">${LV[f.level][0]}</span>
-          <div class="cu-body"><div class="cu-t">${esc(f.title)}<span class="cu-lv">${LV[f.level][1]}</span></div>
+          <div class="cu-body"><div class="cu-t">${esc(f.title)}${f.level === "info" ? `<span class="sr"> (${LV.info[1]})</span>` : `<span class="cu-lv">${LV[f.level][1]}</span>`}</div>
             <div class="cu-why">${esc(f.why)}</div>
             <div class="cu-do"><b>What to do:</b> ${esc(f.action)}${link(f)}</div></div></div>`;
       window.renderCheckup = c => {

@@ -972,6 +972,7 @@ def collect(rows: list[dict], demo: bool = False, today: date | None = None) -> 
     """Gather the live inputs (all local or cached) and run the checks."""
     from . import cash, finances, uktax
 
+    asked = today
     today = today or date.today()
     res = residence()
     inp = Inputs(rows=rows, today=today, residence=res, demo=demo)
@@ -993,4 +994,7 @@ def collect(rows: list[dict], demo: bool = False, today: date | None = None) -> 
         if inp.resident_from:
             start, end = _tax_year(today)
             inp.foreign_gains_gbp = _foreign_gains_gbp(max(start, inp.resident_from), end)
-    return build(inp)
+    out = build(inp)
+    if asked is None and out["outdated"] is None and res == "UK":
+        out["outdated"] = rules.uk_notice()     # by the dashboard's calendar, like the other tax cards
+    return out
