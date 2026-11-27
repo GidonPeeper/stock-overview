@@ -1,0 +1,159 @@
+{
+  "code": "HU",
+  "name": "Hungary",
+  "currency": "EUR",
+  "currency_note": "Hungary uses forint (HUF); the app shows euros. Tax figures below are in forint.",
+  "timezone": "Europe/Budapest",
+  "languages": ["hu"],
+  "checked_on": "2026-11-27",
+  "tax_year": {
+    "label": "2026",
+    "starts": "01-01",
+    "ends": "12-31",
+    "return_due": "NAV prepares a draft personal income tax return; you correct or accept it, and pay, by 20 May of the next year, after which the draft counts as filed.",
+    "source": "https://nav.gov.hu/pfile/file?path=%2Fugyfeliranytu%2Fnezzen-utana%2Finf_fuz%2Frejtett%2FInformacios-fuzetek---Aktualis%2F24.-Bevallasi-adofizetesi-informaciok"
+  },
+  "summary": "Capital income is taxed at a 15% personal income tax (szja). Many kinds also carry a 13% social contribution tax (szocho): interest in full, and dividends and certain capital gains until your total income reaches a yearly cap. Exchange trades through a supervised broker are taxed at 15% on the year's net result, and a long-term investment account (TBSZ) can make gains tax-free after five years.",
+  "topics": [
+    {
+      "id": "gains",
+      "title": "Profit when you sell",
+      "points": [
+        "Trades in financial instruments made with or through a supervised investment firm in the EEA, the OECD or a tax-treaty country count as controlled capital-market transactions (ellenőrzött tőkepiaci ügylet), for example stock exchange sales. The year's gains and losses on these are netted and a net gain is taxed at 15%. NAV's list of income subject to the social contribution tax does not include this income.",
+        "Other sales of securities give a capital gain (árfolyamnyereség): the sale price minus the purchase price and related costs. It is taxed at 15%, plus the 13% social contribution tax until the yearly cap is reached.",
+        "A gain from selling investment fund units is treated as interest income (see Interest on savings)."
+      ],
+      "figures": [
+        {"label": "Personal income tax on gains", "value": "15%"},
+        {"label": "Social contribution tax on capital gains (until the cap)", "value": "13%"}
+      ],
+      "sources": [
+        "https://nav.gov.hu/pfile/file?path=%2Fnyomtatvanyok%2Fletoltesek%2Fnyomtatvanykitolto_programok%2Fnyomtatvanykitolto_programok_nav%2F25SZJA%2F25szja-kitoltesi-utmutato",
+        "https://nav.gov.hu/pfile/file?path=%2Fugyfeliranytu%2Fnezzen-utana%2Finf_fuz%2F2026%2F49.-A-szocialis-hozzajarulasi-ado-2026.-01.-16"
+      ]
+    },
+    {
+      "id": "dividends",
+      "title": "Dividends",
+      "points": [
+        "Dividends are taxed at 15% personal income tax as the main rule.",
+        "Dividends also carry the 13% social contribution tax, but only until your total income for the year (wages plus the capital income on NAV's list) reaches 24 times the minimum wage: HUF 7,747,200 in 2026."
+      ],
+      "figures": [
+        {"label": "Personal income tax on dividends", "value": "15%"},
+        {"label": "Social contribution tax (until the cap)", "value": "13%"},
+        {"label": "Social contribution tax cap 2026", "value": "HUF 7,747,200"}
+      ],
+      "sources": [
+        "https://nav.gov.hu/pfile/file?path=%2Fnyomtatvanyok%2Fletoltesek%2Fnyomtatvanykitolto_programok%2Fnyomtatvanykitolto_programok_nav%2F25SZJA%2F25szja-kitoltesi-utmutato",
+        "https://nav.gov.hu/pfile/file?path=%2Fugyfeliranytu%2Fnezzen-utana%2Finf_fuz%2F2026%2F49.-A-szocialis-hozzajarulasi-ado-2026.-01.-16"
+      ]
+    },
+    {
+      "id": "interest",
+      "title": "Interest on savings",
+      "points": [
+        "Interest is taxed at 15% personal income tax.",
+        "Since 1 July 2023 interest also carries the 13% social contribution tax, with no cap. It does not apply to deposits fixed or securities bought before that date, or to interest from real-estate fund units.",
+        "Interest on retail Hungarian government securities (lakossági állampapír) is not treated as taxable interest income."
+      ],
+      "figures": [
+        {"label": "Personal income tax on interest", "value": "15%"},
+        {"label": "Social contribution tax on interest", "value": "13%"}
+      ],
+      "sources": [
+        "https://nav.gov.hu/pfile/file?path=%2Fnyomtatvanyok%2Fletoltesek%2Fnyomtatvanykitolto_programok%2Fnyomtatvanykitolto_programok_nav%2F25SZJA%2F25szja-kitoltesi-utmutato",
+        "https://nav.gov.hu/pfile/file?path=%2Fugyfeliranytu%2Fnezzen-utana%2Finf_fuz%2F2026%2F49.-A-szocialis-hozzajarulasi-ado-2026.-01.-16"
+      ]
+    },
+    {
+      "id": "funds",
+      "title": "Funds and ETFs",
+      "points": [
+        "The gain from selling units of an investment fund (kollektív befektetési értékpapír) is treated as interest income: 15% personal income tax, plus the 13% social contribution tax under the interest rules."
+      ],
+      "sources": [
+        "https://nav.gov.hu/pfile/file?path=%2Fnyomtatvanyok%2Fletoltesek%2Fnyomtatvanykitolto_programok%2Fnyomtatvanykitolto_programok_nav%2F25SZJA%2F25szja-kitoltesi-utmutato",
+        "https://nav.gov.hu/pfile/file?path=%2Fugyfeliranytu%2Fnezzen-utana%2Finf_fuz%2F2026%2F49.-A-szocialis-hozzajarulasi-ado-2026.-01.-16"
+      ]
+    },
+    {
+      "id": "accounts",
+      "title": "Tax-free and tax-deferred accounts",
+      "points": [
+        "Long-term investment account (tartós befektetési számla, TBSZ): money is locked in for a three-year period, which can be extended by two years.",
+        "Personal income tax on the yield: 0% at the end of the five-year period; 10% if the lock-in is not extended after three years or is broken during the two extra years; 15% if it is broken within the first three years.",
+        "For contracts made or renewed after 31 December 2024, the social contribution tax on the yield is 0% after five years, 8% after three to five years and 13% for under three years. TBSZ income does not count towards the social contribution tax cap."
+      ],
+      "figures": [
+        {"label": "Personal income tax after 5 years", "value": "0%"},
+        {"label": "Personal income tax after 3 to 5 years", "value": "10%"},
+        {"label": "Personal income tax under 3 years", "value": "15%"},
+        {"label": "Social contribution tax after 3 to 5 years (contracts from 2025)", "value": "8%"}
+      ],
+      "sources": [
+        "https://nav.gov.hu/pfile/file?path=%2Fnyomtatvanyok%2Fletoltesek%2Fnyomtatvanykitolto_programok%2Fnyomtatvanykitolto_programok_nav%2F25SZJA%2F25szja-kitoltesi-utmutato",
+        "https://nav.gov.hu/pfile/file?path=%2Fugyfeliranytu%2Fnezzen-utana%2Finf_fuz%2F2026%2F49.-A-szocialis-hozzajarulasi-ado-2026.-01.-16"
+      ]
+    },
+    {
+      "id": "losses",
+      "title": "Losses",
+      "points": [
+        "A net loss on controlled capital-market transactions can be used through tax equalisation (adókiegyenlítés) against tax on such gains. Only losses from the tax year and the two years before count.",
+        "To use a loss in that year or the next two, show it in the return for the year it arose."
+      ],
+      "figures": [
+        {"label": "Look-back period for tax equalisation", "value": "2 years"}
+      ],
+      "sources": [
+        "https://nav.gov.hu/pfile/file?path=%2Fnyomtatvanyok%2Fletoltesek%2Fnyomtatvanykitolto_programok%2Fnyomtatvanykitolto_programok_nav%2F25SZJA%2F25szja-kitoltesi-utmutato"
+      ]
+    },
+    {
+      "id": "foreign",
+      "title": "Foreign shares",
+      "points": [
+        "Capital gains made in a country with a tax treaty are taxable in Hungary at 15%.",
+        "Tax paid abroad on dividends can be deducted from the 15% Hungarian tax, up to the amount the treaty allows. If it is 15% or more, nothing more is due. Without a treaty, at least 5% must still be paid in Hungary."
+      ],
+      "sources": [
+        "https://nav.gov.hu/pfile/file?path=%2Fnyomtatvanyok%2Fletoltesek%2Fnyomtatvanykitolto_programok%2Fnyomtatvanykitolto_programok_nav%2F25SZJA%2F25szja-kitoltesi-utmutato"
+      ]
+    },
+    {
+      "id": "reporting",
+      "title": "What your broker does and what you do",
+      "points": [
+        "NAV prepares a draft return (adóbevallási tervezet) from the data it receives. If you do nothing by 20 May, the draft becomes your return.",
+        "Foreign dividends and foreign capital gains are declared in the return, together with any foreign tax paid that you want deducted."
+      ],
+      "sources": [
+        "https://nav.gov.hu/pfile/file?path=%2Fugyfeliranytu%2Fnezzen-utana%2Finf_fuz%2Frejtett%2FInformacios-fuzetek---Aktualis%2F24.-Bevallasi-adofizetesi-informaciok",
+        "https://nav.gov.hu/pfile/file?path=%2Fnyomtatvanyok%2Fletoltesek%2Fnyomtatvanykitolto_programok%2Fnyomtatvanykitolto_programok_nav%2F25SZJA%2F25szja-kitoltesi-utmutato"
+      ]
+    }
+  ],
+  "dates": [
+    {"when": "05-20", "what": "Last day to file the personal income tax return for the year before and pay the tax."}
+  ],
+  "official": [
+    {"title": "NAV: Kitöltési útmutató a 25SZJA bevalláshoz", "url": "https://nav.gov.hu/pfile/file?path=%2Fnyomtatvanyok%2Fletoltesek%2Fnyomtatvanykitolto_programok%2Fnyomtatvanykitolto_programok_nav%2F25SZJA%2F25szja-kitoltesi-utmutato"},
+    {"title": "NAV: A szociális hozzájárulási adó (2026)", "url": "https://nav.gov.hu/pfile/file?path=%2Fugyfeliranytu%2Fnezzen-utana%2Finf_fuz%2F2026%2F49.-A-szocialis-hozzajarulasi-ado-2026.-01.-16"},
+    {"title": "NAV: Bevallási, adófizetési információk (2026)", "url": "https://nav.gov.hu/pfile/file?path=%2Fugyfeliranytu%2Fnezzen-utana%2Finf_fuz%2Frejtett%2FInformacios-fuzetek---Aktualis%2F24.-Bevallasi-adofizetesi-informaciok"},
+    {"title": "NAV (Nemzeti Adó- és Vámhivatal)", "url": "https://nav.gov.hu/"}
+  ],
+  "upcoming": [],
+  "not_covered": [
+    "Crypto (NAV's crypto page could not be read when this was checked).",
+    "Tax bills for 2027 that were before parliament in November 2026 were not reviewed for changes to capital income.",
+    "Pension savings accounts (NYESZ) and voluntary pension funds.",
+    "Securities lending, derivatives and business-owner dividends.",
+    "Real estate, and moving to or from Hungary."
+  ],
+  "news": [
+    {"name": "Portfolio.hu", "url": "https://www.portfolio.hu/rss/all.xml", "language": "hu"},
+    {"name": "HVG Gazdaság", "url": "https://hvg.hu/rss/gazdasag", "language": "hu"},
+    {"name": "Index Gazdaság", "url": "https://index.hu/gazdasag/rss/", "language": "hu"}
+  ]
+}
