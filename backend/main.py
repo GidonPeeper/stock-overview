@@ -729,7 +729,7 @@ def datastatus() -> dict:
     # disk_kept: on your own computer the data/ folder survives restarts, so
     # no cloud copy is needed; a free host (Render) wipes its disk.
     out["_sync"] = {**github_sync.last_result, "pending": github_sync.pending(),
-                    "token": bool(os.getenv("GITHUB_TOKEN")),
+                    "token": bool(os.getenv("GITHUB_TOKEN")), **github_sync.repo_setting(),
                     "disk_kept": not os.getenv("RENDER")}
     # Settings shows how to connect Claude (MCP.md): the start command with
     # this copy's own path on your computer, or the /mcp address on a host.

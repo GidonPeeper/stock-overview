@@ -81,6 +81,16 @@ def _repo() -> str:
     return (os.getenv("GITHUB_REPO") or "").strip() or _deploy_repo()
 
 
+def repo_setting() -> dict:
+    """Whether GITHUB_REPO reaches the app ("set", "empty" or "missing"), and
+    the names (never the values) of settings that look like it: a typo or a
+    stray space in the name on the host is otherwise hard to see."""
+    v = os.environ.get("GITHUB_REPO")
+    return {"github_repo": "missing" if v is None else ("set" if v.strip() else "empty"),
+            "similar_names": sorted(k for k in os.environ
+                                    if ("REPO" in k.upper() or "GITHUB" in k.upper()) and k != "GITHUB_TOKEN")}
+
+
 def _off_reason() -> str | None:
     if not _token():
         return "set GITHUB_TOKEN to persist edits across restarts"
