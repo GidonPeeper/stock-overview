@@ -15,6 +15,7 @@ from __future__ import annotations
 import errno
 import functools
 import ipaddress
+import logging
 import os
 import sys
 import threading
@@ -105,6 +106,9 @@ async def _lifespan(_app):
     else:
         _WARM_FIRST.set()
     _keep_awake()
+    if mcp_server is None:        # the optional `mcp` package is not installed
+        yield
+        return
     async with mcp_server.http_lifespan():   # the /mcp endpoint (MCP.md)
         yield
 
@@ -216,7 +220,7 @@ def _refused(request: Request) -> str | None:
 @app.middleware("http")
 async def _auth(request: Request, call_next):
     path = request.url.path
-    if path == mcp_server.PATH:  # MCP clients have no login cookie: /mcp checks MCP_TOKEN itself
+    if mcp_server is not None and path == mcp_server.PATH:  # MCP clients have no login cookie: /mcp checks MCP_TOKEN itself
         return await call_next(request)
     setup_first = not _DASH_PASS and _needs_password(request)   # gets the "set a password" page
     if path != "/healthz" and not setup_first:
@@ -229,7 +233,8 @@ async def _auth(request: Request, call_next):
                 return Response("Set DASHBOARD_PASSWORD first", status_code=503)
             return Response(_SETUP_PAGE, status_code=503, media_type="text/html")
         return await call_next(request)
-    if path in _PUBLIC or request.session.get("auth"):
+    # /vendor/: the chart library and the font, the same files for everyone
+    if path in _PUBLIC or path.startswith("/vendor/") or request.session.get("auth"):
         return await call_next(request)
     if path.startswith("/api"):
         return Response("Authentication required", status_code=401)
@@ -869,9 +874,15 @@ app.include_router(banklink_api.router)
 app.include_router(traderepublic_api.router)
 
 # Claude and other MCP clients: read-only tools at /mcp, behind MCP_TOKEN (MCP.md)
-from . import mcp_server  # noqa: E402
-
-mcp_server.mount(app)
+# The connector needs the `mcp` package. It is optional: the dashboard itself
+# never depends on Claude or any other AI service, and starts without it.
+try:
+    from . import mcp_server  # noqa: E402
+except ImportError as _e:      # `pip install -r requirements.txt` adds it
+    mcp_server = None
+    logging.getLogger("stock_overview").info("Claude connector off: %s", _e)
+else:
+    mcp_server.mount(app)
 
 
 def _connections_changed(trades_changed: bool) -> None:

@@ -10,13 +10,12 @@
   <meta name="apple-mobile-web-app-title" content="Stocks" />
   <meta name="theme-color" content="#0a0d10" />
   <link rel="apple-touch-icon" href="/icon-180.png" />
-  <!-- Neither blocks the first paint: Chart.js is deferred (exact version, so
-       browsers cache it for a year) and the font swaps in when it arrives. -->
-  <script defer src="https://cdn.jsdelivr.net/npm/chart.js@4.6.1/dist/chart.umd.min.js"></script>
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" media="print" onload="this.media='all'">
-  <noscript><link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet"></noscript>
+  <!-- Neither blocks the first paint: Chart.js is deferred, the font swaps in.
+       Both are served by the app itself (frontend/vendor): the page loads
+       nothing from other sites, and works without an internet connection. -->
+  <script defer src="/vendor/chart.umd.min.js"></script>
+  <link href="/vendor/inter.css" rel="stylesheet" media="print" onload="this.media='all'">
+  <noscript><link href="/vendor/inter.css" rel="stylesheet"></noscript>
   <style>
     /* ---------- tokens (dark first; light below). Text colours pass WCAG AA on their panels. ---------- */
     :root{

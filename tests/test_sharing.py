@@ -183,5 +183,27 @@ class TaxResidenceTest(unittest.TestCase):
             self.assertEqual(main.uk_tax(), {"applies": False})
 
 
+
+
+class WithoutTheConnectorPackageTest(unittest.TestCase):
+    """The dashboard does not depend on Claude: without the optional `mcp`
+    package it still starts, only the connector is off."""
+
+    def test_the_app_starts_without_mcp(self):
+        import subprocess
+        import sys
+        from pathlib import Path
+        code = ("import sys; sys.modules['mcp'] = None\n"
+                "from backend import main\n"
+                "assert main.mcp_server is None\n"
+                "assert not any(getattr(r, 'path', '') == '/mcp' for r in main.app.routes)\n"
+                "print('ok', len(main.app.routes))\n")
+        env = {**os.environ, "WARMUP": "0", "KEEPALIVE_SELF": "0", "TICKER_LOOKUP": "0"}
+        out = subprocess.run([sys.executable, "-c", code], cwd=Path(__file__).resolve().parents[1],
+                             env=env, capture_output=True, text=True, timeout=120)
+        self.assertEqual(out.returncode, 0, out.stderr[-1500:])
+        self.assertTrue(out.stdout.strip().startswith("ok"), out.stdout)
+
+
 if __name__ == "__main__":
     unittest.main()
