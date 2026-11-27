@@ -1,0 +1,239 @@
+{
+  "code": "US",
+  "name": "United States",
+  "currency": "USD",
+  "currency_note": "",
+  "timezone": "America/New_York",
+  "languages": ["en"],
+  "checked_on": "2026-11-26",
+  "tax_year": {
+    "label": "2026",
+    "starts": "01-01",
+    "ends": "12-31",
+    "return_due": "File and pay by 15 April of the next year (15 April 2027 for 2026); an automatic six-month extension to file is available, but not to pay.",
+    "source": "https://www.irs.gov/filing/individuals/when-to-file"
+  },
+  "summary": "This page covers federal tax only. Gains on investments held more than a year and qualified dividends are taxed at 0%, 15% or 20% depending on your income; short-term gains, interest and other dividends are taxed like wages. Many states, and some cities and counties, add their own income tax on top, with their own rules.",
+  "topics": [
+    {
+      "id": "gains",
+      "title": "Profit when you sell",
+      "points": [
+        "Your gain is the sale price minus your basis (usually what you paid). Gains and losses are long-term if you held the investment for more than one year, short-term if one year or less.",
+        "Short-term gains are taxed as ordinary income, at the same rates as wages (10% to 37% in 2026).",
+        "Net long-term gains are taxed at 0%, 15% or 20%, depending on your total taxable income. For 2026 the 0% rate applies up to $49,450 of taxable income for single filers ($98,900 married filing jointly), 15% up to $545,500 ($613,700 jointly), and 20% above that. For heads of household the limits are $66,200 and $579,600; for married filing separately $49,450 and $306,850.",
+        "Some gains have higher maximum rates: 28% on collectibles such as coins or art, and 25% on part of the gain on some real estate.",
+        "If you sell part of a holding and do not tell your broker which shares you are selling, the shares you bought first are treated as sold first.",
+        "The net investment income tax (see 'Tax-free amounts' and 'Dividends') can add 3.8% on top for higher incomes. States may tax gains as well."
+      ],
+      "figures": [
+        {"label": "Long-term (held more than 1 year)", "value": "0% / 15% / 20%"},
+        {"label": "0% up to (2026, single / jointly)", "value": "$49,450 / $98,900"},
+        {"label": "15% up to (2026, single / jointly)", "value": "$545,500 / $613,700"},
+        {"label": "Short-term", "value": "Ordinary rates, 10% to 37%"}
+      ],
+      "sources": [
+        "https://www.irs.gov/taxtopics/tc409",
+        "https://www.irs.gov/pub/irs-drop/rp-25-32.pdf",
+        "https://www.irs.gov/publications/p550"
+      ]
+    },
+    {
+      "id": "dividends",
+      "title": "Dividends",
+      "points": [
+        "Ordinary dividends are taxed as ordinary income. 'Qualified' dividends are taxed at the lower long-term gain rates of 0%, 15% or 20%.",
+        "A dividend is qualified only if it is paid by a US company or a qualified foreign company (for example one covered by a suitable tax treaty, or whose shares trade on a US exchange), and you held the shares for more than 60 days in the 121-day period that starts 60 days before the ex-dividend date. Dividends from a PFIC are never qualified.",
+        "Your broker or the payer shows on Form 1099-DIV which dividends are qualified. Capital gain distributions from mutual funds and ETFs are always long-term gains.",
+        "Net investment income tax: an extra 3.8% on interest, dividends and gains, charged on the smaller of your net investment income and the part of your modified adjusted gross income above $200,000 (single), $250,000 (married filing jointly) or $125,000 (married filing separately)."
+      ],
+      "figures": [
+        {"label": "Qualified dividends", "value": "0% / 15% / 20%"},
+        {"label": "Other dividends", "value": "Ordinary rates"},
+        {"label": "Net investment income tax", "value": "3.8% above $200,000 (single) / $250,000 (jointly)"}
+      ],
+      "sources": [
+        "https://www.irs.gov/publications/p550",
+        "https://www.irs.gov/taxtopics/tc404",
+        "https://www.irs.gov/taxtopics/tc559"
+      ]
+    },
+    {
+      "id": "interest",
+      "title": "Interest on savings",
+      "points": [
+        "Interest from bank accounts, money market accounts, CDs and corporate bonds is taxable as ordinary income in the year it becomes available to you.",
+        "Interest on US Treasury bills, notes and bonds is taxed federally but is exempt from all state and local income taxes.",
+        "Interest on most bonds issued by states and cities (municipal bonds) is not taxed federally, but you still report it.",
+        "Payers send Form 1099-INT for interest of $10 or more, but you must report all interest even without a form. Interest also counts for the 3.8% net investment income tax."
+      ],
+      "figures": [
+        {"label": "Tax rate", "value": "Ordinary rates, 10% to 37%"}
+      ],
+      "sources": [
+        "https://www.irs.gov/taxtopics/tc403",
+        "https://www.irs.gov/taxtopics/tc559"
+      ]
+    },
+    {
+      "id": "funds",
+      "title": "Funds and ETFs",
+      "points": [
+        "US mutual funds and ETFs pass their income on to you: ordinary and qualified dividends, and capital gain distributions, which are long-term gains however long you held the fund. Your broker reports them on Form 1099-DIV.",
+        "For mutual fund shares you may use an average cost per share instead of matching specific lots.",
+        "Non-US funds: a fund or ETF set up outside the US (for example a European UCITS ETF) is a passive foreign investment company (PFIC) if 75% or more of its income, or at least half of its assets, is passive, as a fund of shares and bonds is; PFIC gains and some payouts are taxed as ordinary income, often with an interest charge, and reported each year on Form 8621."
+      ],
+      "sources": [
+        "https://www.irs.gov/taxtopics/tc404",
+        "https://www.irs.gov/publications/p550",
+        "https://www.irs.gov/instructions/i8621",
+        "https://www.irs.gov/forms-pubs/about-form-8621"
+      ]
+    },
+    {
+      "id": "allowances",
+      "title": "Tax-free amounts",
+      "points": [
+        "There is no separate tax-free allowance for gains or dividends. The standard deduction reduces your taxable income first: $16,100 for single filers and $32,200 for married couples filing jointly in 2026.",
+        "Long-term gains and qualified dividends that fall within the 0% band (taxable income up to $49,450 single, $98,900 jointly in 2026) are not taxed federally.",
+        "The 3.8% net investment income tax applies only above $200,000 (single) or $250,000 (jointly) of modified adjusted gross income."
+      ],
+      "figures": [
+        {"label": "Standard deduction 2026 (single / jointly)", "value": "$16,100 / $32,200"},
+        {"label": "0% band for long-term gains (single / jointly)", "value": "$49,450 / $98,900"}
+      ],
+      "sources": [
+        "https://www.irs.gov/pub/irs-drop/rp-25-32.pdf",
+        "https://www.irs.gov/taxtopics/tc559"
+      ]
+    },
+    {
+      "id": "accounts",
+      "title": "Tax-free and tax-deferred accounts",
+      "points": [
+        "IRA: you can pay in up to $7,500 in 2026 ($1,100 more from age 50), if you have taxable pay. You can still pay in for 2026 until the filing deadline in April 2027.",
+        "Traditional IRA: contributions may be deductible (the deduction phases out at higher incomes if you or your spouse have a workplace plan); withdrawals of deductible contributions and earnings are taxed.",
+        "Roth IRA: no deduction, but qualified withdrawals are tax-free. In 2026 the right to contribute phases out between $153,000 and $168,000 of income for single filers and between $242,000 and $252,000 for married couples filing jointly.",
+        "401(k), 403(b), governmental 457 and the Thrift Savings Plan: employees can defer up to $24,500 in 2026, plus $8,000 from age 50, or $11,250 at ages 60 to 63.",
+        "Withdrawals before age 59 1/2 from IRAs may cost an extra 10% tax unless an exception applies.",
+        "Buying the same shares in your IRA within 30 days of selling them at a loss in a taxable account is a wash sale, and the loss is not added to the cost of the IRA shares."
+      ],
+      "figures": [
+        {"label": "IRA limit 2026", "value": "$7,500 (+$1,100 from age 50)"},
+        {"label": "401(k) employee limit 2026", "value": "$24,500 (+$8,000 from 50; +$11,250 at 60-63)"},
+        {"label": "Roth IRA phase-out 2026 (single)", "value": "$153,000 to $168,000"}
+      ],
+      "sources": [
+        "https://www.irs.gov/newsroom/401k-limit-increases-to-24500-for-2026-ira-limit-increases-to-7500",
+        "https://www.irs.gov/retirement-plans/traditional-and-roth-iras",
+        "https://www.irs.gov/publications/p550"
+      ]
+    },
+    {
+      "id": "losses",
+      "title": "Losses",
+      "points": [
+        "Losses first offset gains. If your losses are larger, up to $3,000 a year ($1,500 if married filing separately) can be deducted from other income; the rest carries forward to later years.",
+        "Wash-sale rule: a loss is not deductible if, within 30 days before or after the sale, you (or your spouse) buy substantially identical stock or securities, including buying them in an IRA or Roth IRA.",
+        "A disallowed wash-sale loss is not lost (except for IRA purchases): it is added to the cost of the new shares, and their holding period includes the time you held the old ones.",
+        "Losses on personal-use property, such as your home or car, are not deductible."
+      ],
+      "figures": [
+        {"label": "Loss deductible against other income", "value": "$3,000 a year ($1,500 married filing separately)"},
+        {"label": "Wash-sale window", "value": "30 days before or after the sale"}
+      ],
+      "sources": [
+        "https://www.irs.gov/taxtopics/tc409",
+        "https://www.irs.gov/publications/p550"
+      ]
+    },
+    {
+      "id": "foreign",
+      "title": "Foreign shares",
+      "points": [
+        "Foreign tax taken from dividends or interest can usually be claimed as a foreign tax credit, up to the US tax on that foreign income (Form 1116). Unused credit can be carried back one year and forward ten.",
+        "If your only foreign income is passive (such as dividends and interest), it is all reported on a 1099, and your foreign taxes are $300 or less ($600 on a joint return), you can claim the credit without Form 1116.",
+        "Dividends from foreign companies are qualified only if the company is a qualified foreign corporation, and never if it is a PFIC.",
+        "Foreign accounts: if your foreign accounts together exceeded $10,000 at any time in the year, you must file an FBAR (FinCEN Form 114) by 15 April, with an automatic extension to 15 October. Separately, Form 8938 goes with your return if your foreign financial assets exceed $50,000 at year end or $75,000 at any time (single, living in the US; $100,000 / $150,000 for joint filers)."
+      ],
+      "figures": [
+        {"label": "FBAR threshold", "value": "$10,000 combined, at any time"},
+        {"label": "Form 8938 (single, in the US)", "value": "$50,000 at year end or $75,000 at any time"},
+        {"label": "Foreign tax credit without Form 1116", "value": "Up to $300 ($600 jointly)"}
+      ],
+      "sources": [
+        "https://www.irs.gov/individuals/international-taxpayers/foreign-tax-credit-how-to-figure-the-credit",
+        "https://www.irs.gov/publications/p550",
+        "https://www.irs.gov/businesses/small-businesses-self-employed/report-of-foreign-bank-and-financial-accounts-fbar",
+        "https://www.irs.gov/businesses/corporations/do-i-need-to-file-form-8938-statement-of-specified-foreign-financial-assets"
+      ]
+    },
+    {
+      "id": "reporting",
+      "title": "What your broker does and what you do",
+      "points": [
+        "Interest, dividends and sale proceeds are normally paid without tax withheld. By mid-February your broker sends Form 1099-B (sale proceeds, and your cost for most shares bought after 2010), 1099-DIV (dividends, $10 or more) and 1099-INT (interest, $10 or more), often as one consolidated statement. The IRS gets a copy.",
+        "If you do not give your broker a correct taxpayer identification number (on Form W-9), it must withhold 24% (backup withholding).",
+        "You report sales on Form 8949 and Schedule D, and dividends on Schedule B when they are over $1,500. You must report all income even if no form arrives.",
+        "Tax on gains, dividends and interest is not withheld, so you may need to pay estimated tax during the year: 15 April, 15 June, 15 September and 15 January.",
+        "State returns are separate: check your state's tax agency."
+      ],
+      "sources": [
+        "https://www.irs.gov/publications/p550",
+        "https://www.irs.gov/taxtopics/tc404",
+        "https://www.irs.gov/taxtopics/tc307",
+        "https://www.irs.gov/faqs/estimated-tax",
+        "https://www.usa.gov/state-taxes"
+      ]
+    },
+    {
+      "id": "crypto",
+      "title": "Crypto",
+      "points": [
+        "Crypto and other digital assets are property, not currency. Selling, swapping or spending them gives a capital gain or loss, short-term or long-term by the same one-year rule as shares.",
+        "Crypto received as pay, or from staking or mining, is income at its dollar value when received.",
+        "Every Form 1040 asks a yes-or-no question about digital asset transactions, and all transactions must be reported even without a gain.",
+        "Brokers report crypto sales on Form 1099-DA: gross proceeds from 2025, and cost for certain sales from 1 January 2026."
+      ],
+      "sources": [
+        "https://www.irs.gov/filing/digital-assets"
+      ]
+    }
+  ],
+  "dates": [
+    {"when": "01-15", "what": "Fourth estimated tax payment for the year before."},
+    {"when": "04-15", "what": "Tax return and payment due for the year before; also the last day for IRA contributions for that year, the FBAR, and the first estimated tax payment for this year."},
+    {"when": "06-15", "what": "Second estimated tax payment."},
+    {"when": "09-15", "what": "Third estimated tax payment."},
+    {"when": "10-15", "what": "Return due if you took the automatic extension; extended FBAR deadline."},
+    {"when": "12-31", "what": "Last day of the tax year: sales up to this day count for this year."}
+  ],
+  "official": [
+    {"title": "IRS: Capital gains and losses (Topic 409)", "url": "https://www.irs.gov/taxtopics/tc409"},
+    {"title": "IRS: Investment Income and Expenses (Publication 550)", "url": "https://www.irs.gov/publications/p550"},
+    {"title": "IRS: Net investment income tax (Topic 559)", "url": "https://www.irs.gov/taxtopics/tc559"},
+    {"title": "IRS: 2026 retirement plan and IRA limits", "url": "https://www.irs.gov/newsroom/401k-limit-increases-to-24500-for-2026-ira-limit-increases-to-7500"},
+    {"title": "IRS: Form 8621 (PFIC)", "url": "https://www.irs.gov/forms-pubs/about-form-8621"},
+    {"title": "USA.gov: State and local taxes", "url": "https://www.usa.gov/state-taxes"}
+  ],
+  "upcoming": [
+    "For 2027 the IRS has published new inflation-adjusted thresholds: the 0% rate on long-term gains will reach $51,050 of taxable income for single filers ($102,100 jointly) and the 15% rate $563,200 ($633,600 jointly).",
+    "For 2027 the 401(k) employee limit rises to $25,500; the IRA limit stays at $7,500."
+  ],
+  "not_covered": [
+    "State and local income taxes, which differ by state and city.",
+    "Selling your home, real estate and rental income.",
+    "Health savings accounts, 529 plans and other special accounts.",
+    "Required minimum distributions and the details of IRA and 401(k) withdrawals.",
+    "Options, futures, short sales and trading as a business.",
+    "Estate and gift tax.",
+    "US citizens living abroad and non-resident aliens."
+  ],
+  "news": [
+    {"name": "NPR: Business", "url": "https://feeds.npr.org/1006/rss.xml", "language": "en"},
+    {"name": "PBS News: Economy", "url": "https://www.pbs.org/newshour/feeds/rss/economy", "language": "en"},
+    {"name": "MarketWatch: Top Stories", "url": "https://feeds.content.dowjones.io/public/rss/mw_topstories", "language": "en"},
+    {"name": "CNBC: Finance", "url": "https://www.cnbc.com/id/10000664/device/rss/rss.html", "language": "en"},
+    {"name": "Kiplinger", "url": "https://www.kiplinger.com/feeds.xml", "language": "en"}
+  ]
+}

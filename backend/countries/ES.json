@@ -1,0 +1,197 @@
+{
+  "code": "ES",
+  "name": "Spain",
+  "currency": "EUR",
+  "currency_note": "",
+  "timezone": "Europe/Madrid",
+  "languages": ["es", "ca", "gl", "eu"],
+  "checked_on": "2026-11-26",
+  "tax_year": {
+    "label": "2026",
+    "starts": "01-01",
+    "ends": "12-31",
+    "return_due": "The income tax return (Renta) is filed in spring of the next year; for 2025 the window was 8 April to 30 June 2026.",
+    "source": "https://sede.agenciatributaria.gob.es/Sede/ayuda/contenidos-lectura-facil/calendario-contribuyente-2026-simplificado-personas-fisicas/fechas-campana-renta-patrimonio.html"
+  },
+  "summary": "In Spain, dividends, interest and gains on shares and funds all go into the 'savings base' (base del ahorro), taxed on a sliding scale from 19% to 30%. Banks and brokers in Spain usually take 19% off in advance, and you settle the rest in the yearly Renta return. Residents with more than €50,000 abroad must also file the Modelo 720 information return.",
+  "topics": [
+    {
+      "id": "gains",
+      "title": "Profit when you sell",
+      "points": [
+        "A gain on selling shares, ETFs or funds is the sale value minus the purchase value. It goes into the savings base (base imponible del ahorro), together with dividends and interest, and is taxed on the savings scale.",
+        "The savings scale for the full amount is 19% up to €6,000, 21% from €6,000 to €50,000, 23% from €50,000 to €200,000, 27% from €200,000 to €300,000 and 30% above €300,000. Half is state tax and half regional tax, with the same rates in both halves.",
+        "When you sell part of a holding of the same shares, the ones you bought first count as sold first (first in, first out)."
+      ],
+      "figures": [
+        {"label": "Up to €6,000", "value": "19%"},
+        {"label": "€6,000 to €50,000", "value": "21%"},
+        {"label": "€50,000 to €200,000", "value": "23%"},
+        {"label": "€200,000 to €300,000", "value": "27%"},
+        {"label": "Above €300,000", "value": "30%"}
+      ],
+      "sources": [
+        "https://www.boe.es/buscar/act.php?id=BOE-A-2006-20764",
+        "https://sede.agenciatributaria.gob.es/Sede/ayuda/manuales-videos-folletos/manuales-practicos/irpf-2025/c15-calculo-impuesto-determinacion-cuotas-integras/gravamen-base-liquidable-ahorro/gravamen-estatal.html",
+        "https://sede.agenciatributaria.gob.es/Sede/ayuda/manuales-videos-folletos/manuales-practicos/irpf-2025/c15-calculo-impuesto-determinacion-cuotas-integras/gravamen-base-liquidable-ahorro/gravamen-autonomico.html"
+      ]
+    },
+    {
+      "id": "dividends",
+      "title": "Dividends",
+      "points": [
+        "Dividends are income from capital (rendimientos del capital mobiliario) and are taxed in the savings base, on the same 19% to 30% scale as gains.",
+        "A Spanish payer or bank withholds 19% in advance. This is a prepayment: in the Renta return the dividend is added to your other savings income and the 19% is deducted from the final tax."
+      ],
+      "figures": [
+        {"label": "Withholding in advance", "value": "19%"},
+        {"label": "Final rate", "value": "19% to 30% (savings scale)"}
+      ],
+      "sources": [
+        "https://www.boe.es/buscar/act.php?id=BOE-A-2006-20764"
+      ]
+    },
+    {
+      "id": "interest",
+      "title": "Interest on savings",
+      "points": [
+        "Interest on deposits and bonds is also income from capital in the savings base, taxed on the 19% to 30% scale.",
+        "Spanish banks withhold 19% in advance, which is credited in the Renta return."
+      ],
+      "figures": [
+        {"label": "Withholding in advance", "value": "19%"}
+      ],
+      "sources": [
+        "https://www.boe.es/buscar/act.php?id=BOE-A-2006-20764"
+      ]
+    },
+    {
+      "id": "funds",
+      "title": "Funds and ETFs",
+      "points": [
+        "Gains on fund units are taxed in the savings base when you sell or redeem them. Spanish distributors withhold 19% of the gain in advance.",
+        "Switching from one investment fund to another (traspaso) is not taxed: the new units keep the old cost and purchase date. This works only through distributors registered with the CNMV, and only if the money is not paid out to you in between.",
+        "The switch rule does not apply to exchange-traded funds (ETFs, fondos de inversión cotizados): selling an ETF is taxed like selling shares."
+      ],
+      "sources": [
+        "https://www.boe.es/buscar/act.php?id=BOE-A-2006-20764"
+      ]
+    },
+    {
+      "id": "wealth",
+      "title": "Tax on what you own",
+      "points": [
+        "Spain has a wealth tax (Impuesto sobre el Patrimonio) on net assets on 31 December. The regions can set their own tax-free amount, rates and reliefs; where a region has not set its own, €700,000 is tax-free.",
+        "Your main home is exempt up to €300,000.",
+        "You must file a wealth tax return if tax is due, or if your assets are worth more than €2,000,000 even when no tax is due. It is filed in the same period as the Renta return."
+      ],
+      "figures": [
+        {"label": "Tax-free amount (if the region has not set its own)", "value": "€700,000"},
+        {"label": "Main home exemption", "value": "Up to €300,000"},
+        {"label": "Return required if assets exceed", "value": "€2,000,000"}
+      ],
+      "sources": [
+        "https://www.boe.es/buscar/act.php?id=BOE-A-1991-14392",
+        "https://sede.agenciatributaria.gob.es/Sede/ayuda/contenidos-lectura-facil/calendario-contribuyente-2026-simplificado-personas-fisicas/fechas-campana-renta-patrimonio.html"
+      ]
+    },
+    {
+      "id": "accounts",
+      "title": "Tax-free and tax-deferred accounts",
+      "points": [
+        "Contributions to personal pension plans reduce your taxable general income, up to the lower of €1,500 a year and 30% of your net income from work and business. The limit rises by up to €8,500 for contributions through an employer plan."
+      ],
+      "figures": [
+        {"label": "Personal pension contributions", "value": "Up to €1,500 a year"}
+      ],
+      "sources": [
+        "https://www.boe.es/buscar/act.php?id=BOE-A-2006-20764"
+      ]
+    },
+    {
+      "id": "losses",
+      "title": "Losses",
+      "points": [
+        "Losses on sales are first set against gains of the same year. A remaining loss can be set against up to 25% of that year's dividends and interest (and the other way round). What is left carries forward for four years.",
+        "Two-month rule: a loss on listed shares or ETFs cannot be claimed yet if you bought the same securities in the two months before or after the sale. It is claimed later, when you sell those securities. For unlisted securities the period is one year."
+      ],
+      "figures": [
+        {"label": "Cross-offset against dividends and interest", "value": "Up to 25%"},
+        {"label": "Carry forward", "value": "4 years"},
+        {"label": "Repurchase window (listed)", "value": "2 months before or after"}
+      ],
+      "sources": [
+        "https://www.boe.es/buscar/act.php?id=BOE-A-2006-20764"
+      ]
+    },
+    {
+      "id": "foreign",
+      "title": "Foreign shares",
+      "points": [
+        "Foreign dividends, interest and gains are taxed in Spain in the savings base like Spanish ones.",
+        "Tax paid abroad can be deducted, up to the lower of the foreign tax actually paid and the Spanish average tax rate on that income.",
+        "Modelo 720: if you hold more than €50,000 abroad in any of three groups (bank accounts; securities, funds and insurance; real estate) on 31 December, you must file an information return between 1 January and 31 March. After that, you file again only when a group has grown by more than €20,000 since your last return.",
+        "Crypto held abroad is reported on a separate return (Modelo 721), with the same €50,000 threshold."
+      ],
+      "figures": [
+        {"label": "Modelo 720 threshold", "value": "€50,000 per group"},
+        {"label": "Modelo 720 deadline", "value": "31 March"}
+      ],
+      "sources": [
+        "https://www.boe.es/buscar/act.php?id=BOE-A-2006-20764",
+        "https://www.boe.es/buscar/act.php?id=BOE-A-2013-954",
+        "https://www.boe.es/buscar/act.php?id=BOE-A-2007-15984",
+        "https://sede.agenciatributaria.gob.es/Sede/procedimientoini/GI34.shtml"
+      ]
+    },
+    {
+      "id": "reporting",
+      "title": "What your broker does and what you do",
+      "points": [
+        "Spanish banks and brokers withhold 19% on dividends and interest, and Spanish fund distributors on fund gains. Income from foreign brokers and banks must be declared in the same way, with or without withholding.",
+        "Everything is settled in the yearly Renta return filed in spring; the withholdings are credited and any difference is paid or refunded.",
+        "Modelo 720 (foreign assets) and Modelo 721 (crypto abroad) are separate information returns, due by 31 March."
+      ],
+      "sources": [
+        "https://www.boe.es/buscar/act.php?id=BOE-A-2006-20764",
+        "https://www.boe.es/buscar/act.php?id=BOE-A-2013-954",
+        "https://sede.agenciatributaria.gob.es/Sede/ayuda/contenidos-lectura-facil/calendario-contribuyente-2026-simplificado-personas-fisicas/fechas-campana-renta-patrimonio.html"
+      ]
+    },
+    {
+      "id": "crypto",
+      "title": "Crypto",
+      "points": [
+        "Selling crypto for euros gives a gain or loss in the savings base. Swapping one crypto for another is also a taxable exchange (permuta).",
+        "For partial sales, the coins bought first count as sold first. Crypto sales go in a separate section of the Renta return."
+      ],
+      "sources": [
+        "https://sede.agenciatributaria.gob.es/Sede/ayuda/manuales-videos-folletos/manuales-practicos/irpf-2025/c11-ganancias-perdidas-patrimoniales/monedas-virtuales/compra-venta-monedas-virtuales-tributacion-inversor.html"
+      ]
+    }
+  ],
+  "dates": [
+    {"when": "03-31", "what": "Last day for Modelo 720 (assets abroad) and Modelo 721 (crypto abroad) for the year before."},
+    {"when": "06-30", "what": "End of the Renta and wealth tax filing period for the year before (in 2026; the start is announced each year)."}
+  ],
+  "official": [
+    {"title": "Agencia Tributaria: Manual práctico de Renta", "url": "https://sede.agenciatributaria.gob.es/Sede/ayuda/manuales-videos-folletos/manuales-practicos/irpf-2025/c15-calculo-impuesto-determinacion-cuotas-integras/gravamen-base-liquidable-ahorro/gravamen-estatal.html"},
+    {"title": "BOE: Income tax law (Ley 35/2006, consolidated)", "url": "https://www.boe.es/buscar/act.php?id=BOE-A-2006-20764"},
+    {"title": "Agencia Tributaria: Modelo 720", "url": "https://sede.agenciatributaria.gob.es/Sede/procedimientoini/GI34.shtml"},
+    {"title": "Agencia Tributaria: Renta and wealth tax dates", "url": "https://sede.agenciatributaria.gob.es/Sede/ayuda/contenidos-lectura-facil/calendario-contribuyente-2026-simplificado-personas-fisicas/fechas-campana-renta-patrimonio.html"}
+  ],
+  "upcoming": [],
+  "not_covered": [
+    "The Basque Country and Navarre, which have their own income tax systems.",
+    "Each region's own wealth tax rates and reliefs, and the temporary solidarity tax on large fortunes.",
+    "The exact dates of the Renta campaign for 2026, announced in spring 2027.",
+    "Unit-linked insurance, long-term savings plans (SIALP) and pension withdrawals.",
+    "Property, rental income and the special regime for people moving to Spain.",
+    "Gift and inheritance tax."
+  ],
+  "news": [
+    {"name": "Expansión: Mercados", "url": "https://e00-expansion.uecdn.es/rss/mercados.xml", "language": "es"},
+    {"name": "Cinco Días", "url": "https://feeds.elpais.com/mrss-s/pages/ep/site/cincodias.elpais.com/portada", "language": "es"},
+    {"name": "El País: Economía", "url": "https://feeds.elpais.com/mrss-s/pages/ep/site/elpais.com/section/economia/portada", "language": "es"}
+  ]
+}

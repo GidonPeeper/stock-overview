@@ -1,0 +1,191 @@
+{
+  "code": "IT",
+  "name": "Italy",
+  "currency": "EUR",
+  "currency_note": "",
+  "timezone": "Europe/Rome",
+  "languages": ["it"],
+  "checked_on": "2026-11-26",
+  "tax_year": {
+    "label": "2026",
+    "starts": "01-01",
+    "ends": "12-31",
+    "return_due": "The Redditi PF return is filed online from 15 April to 31 October of the next year (the 730 return has its own, earlier deadline).",
+    "source": "https://www.agenziaentrate.gov.it/portale/documents/d/guest/pf1_istruzioni_2026_agg-28-05-2026"
+  },
+  "summary": "Italy taxes most investment income and gains at a flat 26% substitute tax (imposta sostitutiva), separate from income tax; Italian and other 'white list' government bonds are taxed at an effective 12.5%. With an Italian broker you can let the broker calculate and pay the tax for you (regime amministrato). Residents also pay a yearly 0.2% charge on the value of their investments: stamp duty in Italy, IVAFE abroad.",
+  "topics": [
+    {
+      "id": "gains",
+      "title": "Profit when you sell",
+      "points": [
+        "Gains on shares, bonds and other financial instruments are taxed at a flat 26% substitute tax, separate from income tax and from your other income.",
+        "Gains on Italian government bonds and on bonds of states in the Italian 'white list' are counted at only 48.08% of their amount, so the effective rate is 12.5%.",
+        "The gain is the sale price minus the purchase cost, increased by related costs such as broker commissions.",
+        "How the tax is paid depends on your regime: in the declaration regime (regime dichiarativo, the default) you report gains in your return; in the administered regime (risparmio amministrato), chosen in writing with an Italian bank or SIM, the broker withholds and pays the tax on each sale and you do not declare those gains; in the managed regime (risparmio gestito) a portfolio manager is taxed on the yearly result."
+      ],
+      "figures": [
+        {"label": "Shares, funds, corporate bonds", "value": "26%"},
+        {"label": "Italian and 'white list' government bonds", "value": "12.5% (26% on 48.08%)"}
+      ],
+      "sources": [
+        "https://www.agenziaentrate.gov.it/portale/documents/d/guest/pf2_istruzioni_2026_agg-13-05-2026",
+        "https://www.dt.mef.gov.it/it/.content/faqdt/BTP-Valore/faq_0012.html",
+        "https://www.dt.mef.gov.it/export/sites/sitodt/modules/documenti_it/debito_pubblico/comunicazioni_emissioni/btp_valore_comunicazione_emissione/Information-Memorandum-BTP-Valore-10.03.2032-7.pdf"
+      ]
+    },
+    {
+      "id": "dividends",
+      "title": "Dividends",
+      "points": [
+        "Dividends are taxed at 26%. An Italian payer or broker withholds it as a final tax (ritenuta a titolo d'imposta).",
+        "Foreign dividends received without an Italian intermediary are declared in your return and taxed at the same 26% substitute rate (see 'Foreign shares')."
+      ],
+      "figures": [
+        {"label": "Tax on dividends", "value": "26%"}
+      ],
+      "sources": [
+        "https://www.agenziaentrate.gov.it/portale/documents/d/guest/pf2_istruzioni_2026_agg-13-05-2026",
+        "https://www.agenziaentrate.gov.it/portale/documents/20143/298850/Circolare+n19E+del+27+giugno+2014_Cir19e+del+27+06+14.pdf/429c76f6-6236-4071-79ae-65af4aadd134"
+      ]
+    },
+    {
+      "id": "interest",
+      "title": "Interest on savings",
+      "points": [
+        "Interest on bank deposits and corporate bonds is taxed at 26%; interest on Italian and 'white list' government bonds at 12.5%.",
+        "Italian government bonds are also not subject to inheritance tax."
+      ],
+      "figures": [
+        {"label": "Deposits and corporate bonds", "value": "26%"},
+        {"label": "Government bonds", "value": "12.5%"}
+      ],
+      "sources": [
+        "https://www.agenziaentrate.gov.it/portale/documents/20143/298850/Circolare+n19E+del+27+giugno+2014_Cir19e+del+27+06+14.pdf/429c76f6-6236-4071-79ae-65af4aadd134",
+        "https://www.dt.mef.gov.it/it/.content/faqdt/BTP-Valore/faq_0012.html",
+        "https://www.dt.mef.gov.it/export/sites/sitodt/modules/documenti_it/debito_pubblico/comunicazioni_emissioni/btp_valore_comunicazione_emissione/Information-Memorandum-BTP-Valore-10.03.2032-7.pdf"
+      ]
+    },
+    {
+      "id": "funds",
+      "title": "Funds and ETFs",
+      "points": [
+        "Income from funds (OICR) is taxed at 26%. For the part of a fund invested in Italian or 'white list' government bonds, the 26% applies to only 48.08% of that income, so it keeps the 12.5% treatment. This applies to Italian funds and to supervised EU/EEA funds from 'white list' countries."
+      ],
+      "figures": [
+        {"label": "Fund income", "value": "26% (12.5% on the government bond part)"}
+      ],
+      "sources": [
+        "https://www.dt.mef.gov.it/export/sites/sitodt/modules/documenti_it/debito_pubblico/comunicazioni_emissioni/btp_valore_comunicazione_emissione/Information-Memorandum-BTP-Valore-10.03.2032-7.pdf"
+      ]
+    },
+    {
+      "id": "wealth",
+      "title": "Tax on what you own",
+      "points": [
+        "Investments held with an Italian bank or broker pay a yearly stamp duty (imposta di bollo) of 0.2% of their value. Italian current account statements cost individuals €34.20 a year, unless the average balance is €5,000 or less.",
+        "Investments held abroad pay IVAFE instead: 0.2% of their market value each year (0.4% for assets in tax havens). Foreign current and savings accounts pay a fixed €34.20 each, unless the average balance with that bank is €5,000 or less.",
+        "A wealth tax paid in the country where the assets are held can be credited against IVAFE, up to the Italian amount."
+      ],
+      "figures": [
+        {"label": "Stamp duty on investments in Italy", "value": "0.2% a year"},
+        {"label": "IVAFE on investments abroad", "value": "0.2% a year"},
+        {"label": "Foreign bank account (IVAFE)", "value": "€34.20 a year"}
+      ],
+      "sources": [
+        "https://www.agenziaentrate.gov.it/portale/documents/20143/2707899/Risposta+n.+487_2020.pdf/1f07c23f-e916-65aa-3e3c-f6e16d1d6c3b",
+        "https://www.agenziaentrate.gov.it/portale/documents/20143/299337/Circolare+48+imposta+bollo_cir48e+del+21+12+12.pdf/82024aae-3b12-b5e2-6800-9fc7a939dd8b",
+        "https://www.agenziaentrate.gov.it/portale/schede/pagamenti/imposta-valore-att-estero-ivafe/base-imponibile-e-aliquote-scheda-ivafe"
+      ]
+    },
+    {
+      "id": "losses",
+      "title": "Losses",
+      "points": [
+        "Losses (minusvalenze) can be set against gains of the same kind in the same year. Unused losses carry forward for four years, but only if you show them in that year's tax return.",
+        "In the administered regime, losses stay with the broker where they arose: they can only be used against later gains on securities held with that same broker, also for up to four years.",
+        "Losses on government bonds count at 48.08% of their amount, like the gains."
+      ],
+      "figures": [
+        {"label": "Carry forward", "value": "4 years"}
+      ],
+      "sources": [
+        "https://www.agenziaentrate.gov.it/portale/documents/d/guest/pf2_istruzioni_2026_agg-13-05-2026",
+        "https://www.dt.mef.gov.it/export/sites/sitodt/modules/documenti_it/debito_pubblico/comunicazioni_emissioni/btp_valore_comunicazione_emissione/Information-Memorandum-BTP-Valore-10.03.2032-7.pdf"
+      ]
+    },
+    {
+      "id": "foreign",
+      "title": "Foreign shares",
+      "points": [
+        "Foreign investment income received without an Italian intermediary is declared in your return (quadro RM) and taxed at the same substitute rate as Italian income of that kind.",
+        "A credit for tax paid abroad is only available if the income is taxed under the ordinary income tax rules instead. Dividends from ordinary (non-qualified) shareholdings cannot be taxed that way, so foreign tax on them is not credited in Italy.",
+        "Monitoring (quadro RW): residents report investments and accounts held abroad in their return, including crypto. Foreign bank accounts whose combined maximum value in the year stayed at or below €15,000 are exempt from this reporting, but IVAFE may still be due."
+      ],
+      "figures": [
+        {"label": "RW exemption for foreign accounts", "value": "Up to €15,000"}
+      ],
+      "sources": [
+        "https://www.agenziaentrate.gov.it/portale/documents/d/guest/pf2_istruzioni_2026_agg-13-05-2026",
+        "https://infoprecompilata.agenziaentrate.gov.it/portale/quadro-w"
+      ]
+    },
+    {
+      "id": "reporting",
+      "title": "What your broker does and what you do",
+      "points": [
+        "An Italian bank or SIM withholds 26% on dividends and interest. In the administered regime it also pays the tax on your gains, so nothing goes in your return.",
+        "In the declaration regime, and always with a foreign broker, you report gains (quadro RT), foreign income (quadro RM) and foreign assets with IVAFE (quadro RW, or quadro W in the 730) yourself.",
+        "The Redditi PF return is filed online between 15 April and 31 October of the next year. Tax due is paid in June (or July with a 0.4% surcharge), with a second advance payment in November."
+      ],
+      "sources": [
+        "https://www.dt.mef.gov.it/export/sites/sitodt/modules/documenti_it/debito_pubblico/comunicazioni_emissioni/btp_valore_comunicazione_emissione/Information-Memorandum-BTP-Valore-10.03.2032-7.pdf",
+        "https://www.agenziaentrate.gov.it/portale/documents/d/guest/pf1_istruzioni_2026_agg-28-05-2026",
+        "https://www.agenziaentrate.gov.it/portale/schede/pagamenti/imposta-valore-att-estero-ivafe/cosa-ivafe-cittadini"
+      ]
+    },
+    {
+      "id": "crypto",
+      "title": "Crypto",
+      "points": [
+        "From 1 January 2026, gains on crypto-assets are taxed at 33%. Euro-denominated e-money tokens (euro stablecoins under the EU MiCA rules) stay at 26%.",
+        "The gain is the amount received, or the market value of the crypto received in a swap, minus the cost. Crypto held in wallets or accounts is also reported in the RW section of the return."
+      ],
+      "figures": [
+        {"label": "Crypto gains (from 2026)", "value": "33%"},
+        {"label": "Euro e-money tokens", "value": "26%"}
+      ],
+      "sources": [
+        "https://www.agenziaentrate.gov.it/portale/documents/d/guest/sp_istr_2026",
+        "https://www.agenziaentrate.gov.it/portale/documents/d/guest/pf2_istruzioni_2026_agg-13-05-2026"
+      ]
+    }
+  ],
+  "dates": [
+    {"when": "06-30", "what": "Main payment date for tax from the return (first advance instalment; 30 July with a 0.4% surcharge)."},
+    {"when": "10-31", "what": "Last day to file the Redditi PF return online for the year before (moved to the next working day if it falls on a weekend)."},
+    {"when": "11-30", "what": "Second advance payment of income tax for the current year."}
+  ],
+  "official": [
+    {"title": "Agenzia delle Entrate: Redditi PF 2026 instructions (fascicolo 2)", "url": "https://www.agenziaentrate.gov.it/portale/documents/d/guest/pf2_istruzioni_2026_agg-13-05-2026"},
+    {"title": "Agenzia delle Entrate: IVAFE rates", "url": "https://www.agenziaentrate.gov.it/portale/schede/pagamenti/imposta-valore-att-estero-ivafe/base-imponibile-e-aliquote-scheda-ivafe"},
+    {"title": "Agenzia delle Entrate: Quadro RT (capital gains)", "url": "https://infoprecompilata.agenziaentrate.gov.it/portale/quadro-rt"},
+    {"title": "MEF Treasury: taxation of government bonds", "url": "https://www.dt.mef.gov.it/it/.content/faqdt/BTP-Valore/faq_0012.html"}
+  ],
+  "upcoming": [
+    "From 1 January 2027 IVAFE moves into the new consolidated law on registration tax and other indirect taxes (Legislative Decree 123/2025, article 168); the Agenzia delle Entrate describes this as a change of legal basis."
+  ],
+  "not_covered": [
+    "Qualified shareholdings and their special rules.",
+    "PIR accounts and their tax exemption.",
+    "Pension funds and life insurance policies.",
+    "IVIE (tax on property abroad), property and rental income.",
+    "New residents' flat-tax regime and moving abroad.",
+    "Measures in the 2027 budget bill still before Parliament on 26 November 2026."
+  ],
+  "news": [
+    {"name": "ANSA: Economia", "url": "https://www.ansa.it/sito/notizie/economia/economia_rss.xml", "language": "it"},
+    {"name": "la Repubblica: Economia", "url": "https://www.repubblica.it/rss/economia/rss2.0.xml", "language": "it"},
+    {"name": "Il Sole 24 Ore: Finanza", "url": "https://www.ilsole24ore.com/rss/finanza.xml", "language": "it"}
+  ]
+}

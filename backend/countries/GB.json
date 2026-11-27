@@ -1,0 +1,254 @@
+{
+  "code": "GB",
+  "name": "United Kingdom",
+  "currency": "GBP",
+  "currency_note": "",
+  "timezone": "Europe/London",
+  "languages": ["en"],
+  "checked_on": "2026-11-26",
+  "tax_year": {
+    "label": "2026/27",
+    "starts": "04-06",
+    "ends": "04-05",
+    "return_due": "If you file a Self Assessment return, file online and pay by 31 January after the tax year ends (31 January 2028 for 2026/27); a paper return is due by 31 October.",
+    "source": "https://www.gov.uk/self-assessment-tax-returns/deadlines"
+  },
+  "summary": "UK residents pay Capital Gains Tax on profits from selling investments and Income Tax on dividends and interest, each with its own tax-free allowance. Anything held in an ISA is free of UK tax and does not go on your tax return. HMRC does not send a bill for gains: you work them out and report them yourself.",
+  "topics": [
+    {
+      "id": "gains",
+      "title": "Profit when you sell",
+      "points": [
+        "Capital Gains Tax (CGT) is due on the profit when you sell or give away shares, funds and other investments held outside an ISA. The gain is usually the sale price minus what you paid; dealing costs such as broker fees and the stamp duty you paid when buying can be deducted.",
+        "Only your total gains for the year above the tax-free amount (annual exempt amount) of £3,000 are taxed.",
+        "The rate depends on your income. Add your taxable gains to your taxable income: the part that falls within the basic rate band (£37,700 in 2026/27) is taxed at 18%, the part above it at 24%. Higher and additional rate taxpayers pay 24% on all their taxable gains.",
+        "Shares of the same class in the same company are pooled at their average cost (the 'section 104 holding'). Two matching rules come first: a sale is matched with shares bought on the same day, then with shares bought in the 30 days after the sale ('bed and breakfast' rule). Buying back within 30 days therefore usually reduces or cancels the gain or loss you meant to realise. The 30-day rule does not apply to shares bought while you were not UK resident.",
+        "For shares bought or sold in another currency, the cost is converted to pounds at the exchange rate on the day you bought and the proceeds at the rate on the day you sold, so currency moves are part of your gain or loss.",
+        "No CGT is due on UK government bonds (gilts), qualifying corporate bonds or investments in an ISA, and usually none on gifts to your husband, wife, civil partner or a charity.",
+        "Scotland: CGT is the same across the UK. Scottish taxpayers use the UK basic rate band, not the Scottish income tax bands, to see which CGT rate applies."
+      ],
+      "figures": [
+        {"label": "Tax-free amount (2026/27)", "value": "£3,000"},
+        {"label": "Rate within the basic rate band", "value": "18%"},
+        {"label": "Rate above the basic rate band", "value": "24%"},
+        {"label": "UK basic rate band (2026/27)", "value": "£37,700"}
+      ],
+      "sources": [
+        "https://www.gov.uk/capital-gains-tax/rates",
+        "https://www.gov.uk/guidance/capital-gains-tax-rates-and-allowances",
+        "https://www.gov.uk/tax-sell-shares",
+        "https://www.gov.uk/tax-sell-shares/same-company",
+        "https://www.gov.uk/hmrc-internal-manuals/capital-gains-manual/cg51560",
+        "https://www.gov.uk/hmrc-internal-manuals/capital-gains-manual/cg21204",
+        "https://www.gov.uk/hmrc-internal-manuals/capital-gains-manual/cg78310"
+      ]
+    },
+    {
+      "id": "dividends",
+      "title": "Dividends",
+      "points": [
+        "Dividends are not taxed if they fall within your unused Personal Allowance. On top of that, the first £500 of dividends each year is tax-free (dividend allowance).",
+        "Dividends above that are taxed at 10.75% (basic rate), 35.75% (higher rate) or 39.35% (additional rate). Your band is found by adding your dividends to your other income, so part of your dividends can fall in one band and part in the next.",
+        "Scotland: dividends are taxed at the same rates and with the same bands as in the rest of the UK.",
+        "Dividends on shares and funds held in an ISA are not taxed."
+      ],
+      "figures": [
+        {"label": "Dividend allowance", "value": "£500"},
+        {"label": "Basic rate", "value": "10.75%"},
+        {"label": "Higher rate", "value": "35.75%"},
+        {"label": "Additional rate", "value": "39.35%"}
+      ],
+      "sources": [
+        "https://www.gov.uk/tax-on-dividends",
+        "https://www.gov.uk/scottish-income-tax",
+        "https://www.gov.uk/government/publications/budget-2026-overview-of-tax-legislation-and-rates-ootlar/annex-a-rates-and-allowances"
+      ]
+    },
+    {
+      "id": "interest",
+      "title": "Interest on savings",
+      "points": [
+        "Interest is taxed as income at 20%, 40% or 45% in 2026/27, but three allowances can make some or all of it tax-free: your unused Personal Allowance, the starting rate for savings and the Personal Savings Allowance.",
+        "Starting rate for savings: if your other taxable income (not counting interest and dividends) is under £17,570, up to £5,000 of interest can be tax-free. Each £1 of other income above the Personal Allowance reduces this £5,000 by £1.",
+        "Personal Savings Allowance: up to £1,000 of interest is tax-free for basic rate taxpayers, £500 for higher rate taxpayers and nothing for additional rate taxpayers. Your band is found by adding your interest to your other income.",
+        "Scotland: interest is taxed at the UK savings rates, and the Personal Savings Allowance is set by the UK bands, as if you were not a Scottish taxpayer.",
+        "Gilts pay their interest without tax taken off (unless you ask for it), and that interest is taxable. Interest on cash in an ISA is not taxed."
+      ],
+      "figures": [
+        {"label": "Starting rate for savings", "value": "0% on up to £5,000"},
+        {"label": "Personal Savings Allowance", "value": "£1,000 basic / £500 higher / £0 additional"},
+        {"label": "Tax rates on interest (2026/27)", "value": "20% / 40% / 45%"}
+      ],
+      "sources": [
+        "https://www.gov.uk/apply-tax-free-interest-on-savings/how-much-is-tax-free",
+        "https://www.gov.uk/government/publications/budget-2026-overview-of-tax-legislation-and-rates-ootlar/annex-a-rates-and-allowances",
+        "https://www.legislation.gov.uk/ukpga/2007/3/section/12B",
+        "https://www.dmo.gov.uk/media/ecbmccsn/prosp080926b.pdf"
+      ]
+    },
+    {
+      "id": "funds",
+      "title": "Funds and ETFs",
+      "points": [
+        "A fund based outside the UK (for example an Irish ICAV or a Luxembourg SICAV, which many ETFs are) is usually an 'offshore fund'. How you are taxed depends on whether it has 'reporting fund' status with HMRC. HMRC publishes the list of reporting funds.",
+        "Reporting fund: each year you pay income tax on your share of the income the fund reports, even if it was not paid out to you ('excess reportable income'). It counts as received six months after the end of the fund's reporting period. When you sell, the profit is a capital gain, and the excess reportable income you were already taxed on is deducted from it.",
+        "Non-reporting fund: the profit when you sell is normally an 'offshore income gain', taxed as income at income tax rates instead of CGT.",
+        "Income from a company-type fund that holds more than 60% in interest-bearing assets (a 'bond fund') is taxed as interest, not as dividends.",
+        "Funds held in an ISA, reporting or not, do not need to be declared."
+      ],
+      "sources": [
+        "https://www.gov.uk/government/publications/offshore-funds-self-assessment-helpsheet-hs265/hs265-offshore-funds",
+        "https://www.gov.uk/government/publications/approved-offshore-reporting-funds"
+      ]
+    },
+    {
+      "id": "allowances",
+      "title": "Tax-free amounts",
+      "points": [
+        "Each person has their own allowances for each tax year (6 April to 5 April).",
+        "Personal Allowance: £12,570 of income is tax-free. It falls by £1 for every £2 of income above £100,000 and is zero from £125,140.",
+        "Separate yearly allowances apply to gains (£3,000), dividends (£500) and interest (Personal Savings Allowance and starting rate for savings, see above).",
+        "People who claim the Foreign Income and Gains (FIG) relief as new residents lose their Personal Allowance and their CGT tax-free amount for that year."
+      ],
+      "figures": [
+        {"label": "Personal Allowance", "value": "£12,570"},
+        {"label": "CGT tax-free amount", "value": "£3,000"},
+        {"label": "Dividend allowance", "value": "£500"},
+        {"label": "Personal Savings Allowance", "value": "£1,000 / £500 / £0"},
+        {"label": "ISA allowance", "value": "£20,000"}
+      ],
+      "sources": [
+        "https://www.gov.uk/income-tax-rates",
+        "https://www.gov.uk/guidance/capital-gains-tax-rates-and-allowances",
+        "https://www.gov.uk/government/publications/budget-2026-overview-of-tax-legislation-and-rates-ootlar/annex-a-rates-and-allowances"
+      ]
+    },
+    {
+      "id": "accounts",
+      "title": "Tax-free and tax-deferred accounts",
+      "points": [
+        "Individual Savings Account (ISA): you can pay in up to £20,000 in the 2026/27 tax year, in one account or split across cash, stocks and shares, innovative finance and Lifetime ISAs. Interest, dividends and gains inside an ISA are tax-free and do not go on your tax return.",
+        "You must be 18 or over and UK resident to open an ISA. Shares you already own cannot be moved into an ISA, except from an employee share scheme.",
+        "Lifetime ISA: open it before age 40 and pay in up to £4,000 a year until 50; the government adds a 25% bonus (up to £1,000 a year). It counts towards the £20,000.",
+        "Junior ISA: up to £9,000 a year for a child under 18.",
+        "Crypto exchange traded notes cannot be held in a stocks and shares ISA (unless held there before 6 April 2026); they can go in an innovative finance ISA.",
+        "Pensions: contributions to a private pension get tax relief, up to an annual allowance of £60,000 (lower for some high earners and for people who have started drawing money flexibly). See GOV.UK for the details."
+      ],
+      "figures": [
+        {"label": "ISA allowance (2026/27)", "value": "£20,000"},
+        {"label": "Lifetime ISA", "value": "£4,000 a year, 25% bonus"},
+        {"label": "Junior ISA", "value": "£9,000"},
+        {"label": "Pension annual allowance", "value": "£60,000"}
+      ],
+      "sources": [
+        "https://www.gov.uk/individual-savings-accounts",
+        "https://www.gov.uk/individual-savings-accounts/how-isas-work",
+        "https://www.gov.uk/lifetime-isa",
+        "https://www.gov.uk/government/publications/budget-2026-overview-of-tax-legislation-and-rates-ootlar/annex-a-rates-and-allowances",
+        "https://www.gov.uk/tax-on-your-private-pension/annual-allowance"
+      ]
+    },
+    {
+      "id": "losses",
+      "title": "Losses",
+      "points": [
+        "A loss on a sale is first deducted from your gains of the same tax year. Unused losses can be carried forward to later years; they are then used only to bring your gains down to the £3,000 tax-free amount, and the rest carries on.",
+        "You must claim a loss: on your tax return, or by letter to HMRC if you are not in Self Assessment. The deadline is 4 years after the end of the tax year in which you sold.",
+        "The same-day and 30-day matching rules also apply to losses: if you buy the same shares back within 30 days, the loss usually shrinks or disappears.",
+        "Shares that have become worthless can be claimed as a loss without selling them (a 'negligible value claim').",
+        "A loss on a sale or gift to a family member or other connected person can only be set against gains from that same person. Gilts give no allowable loss."
+      ],
+      "sources": [
+        "https://www.gov.uk/capital-gains-tax/losses",
+        "https://www.gov.uk/hmrc-internal-manuals/capital-gains-manual/cg51560",
+        "https://www.dmo.gov.uk/media/ecbmccsn/prosp080926b.pdf"
+      ]
+    },
+    {
+      "id": "foreign",
+      "title": "Foreign shares",
+      "points": [
+        "UK residents normally pay UK tax on foreign dividends and interest, and usually report them in a Self Assessment return.",
+        "If the other country took tax off, you can usually claim Foreign Tax Credit Relief in your tax return. You get less back if the tax treaty sets a lower rate than was taken, or if the UK tax on that income is lower. Tax taken above the treaty rate has to be reclaimed from the other country.",
+        "Gains on foreign shares are usually taxed only in the UK, as the country where you live.",
+        "New residents: if you arrive after at least 10 tax years of living abroad, you may be able to claim the Foreign Income and Gains (FIG) relief on foreign income and gains for your first 4 years of UK residence. Claiming it costs you the Personal Allowance and the CGT tax-free amount for that year."
+      ],
+      "sources": [
+        "https://www.gov.uk/tax-foreign-income",
+        "https://www.gov.uk/tax-foreign-income/taxed-twice",
+        "https://www.gov.uk/government/publications/foreign-income-and-gains-fig-regime-self-assessment-helpsheet-hs266/hs266-foreign-income-and-gains-fig-regime-2026"
+      ]
+    },
+    {
+      "id": "reporting",
+      "title": "What your broker does and what you do",
+      "points": [
+        "Gains: HMRC does not send a bill. If your gains are above £3,000, report them in your Self Assessment return or through HMRC's real-time Capital Gains Tax service (by 31 December after the tax year). If you are in Self Assessment, you must also report when your total sale proceeds were above £50,000, even if no tax is due.",
+        "Dividends: if you are not in Self Assessment, have dividends above your allowances and they total £10,000 or less, tell HMRC between 6 April and 5 October after the tax year, for example by asking for your tax code to be updated. Above £10,000 of dividends you must file a Self Assessment return.",
+        "Interest: banks and building societies tell HMRC how much interest they paid you after 5 April. HMRC sends a tax calculation (usually June to November) and normally collects the tax through your tax code. Above £10,000 of interest you must file a Self Assessment return.",
+        "Foreign dividends and interest, including income reported by offshore funds, go on the foreign pages (SA106) of the Self Assessment return.",
+        "Nothing held in an ISA is reported.",
+        "If you have never filed before, register for Self Assessment by 5 October after the end of the tax year."
+      ],
+      "sources": [
+        "https://www.gov.uk/capital-gains-tax/reporting-and-paying-capital-gains-tax",
+        "https://www.gov.uk/capital-gains-tax/work-out-need-to-pay",
+        "https://www.gov.uk/tax-on-dividends/how-to-report-tax-on-dividends",
+        "https://www.gov.uk/apply-tax-free-interest-on-savings/how-you-pay-tax-on-savings-interest",
+        "https://www.gov.uk/self-assessment-tax-returns/deadlines"
+      ]
+    },
+    {
+      "id": "crypto",
+      "title": "Crypto",
+      "points": [
+        "Selling crypto, swapping it for another token, paying with it or giving it away (except to a spouse, civil partner or charity) is a disposal for Capital Gains Tax, with the same £3,000 tax-free amount and the same rates as shares.",
+        "Costs are pooled per type of token at their average cost. Tokens bought on the same day as a sale, or within 30 days after it, are matched first, as with shares.",
+        "Crypto you received as income, for example from your job, is taxed as income first; CGT is then due only on any later rise in value.",
+        "The Self Assessment return has a separate cryptoasset section (from 2024/25). Exchange reports help, but you must keep your own records of each transaction in pounds."
+      ],
+      "sources": [
+        "https://www.gov.uk/guidance/check-if-you-need-to-pay-tax-when-you-sell-cryptoassets"
+      ]
+    }
+  ],
+  "dates": [
+    {"when": "04-05", "what": "Last day of the tax year: last day to use this year's ISA allowance and CGT tax-free amount."},
+    {"when": "04-06", "what": "New tax year starts and the yearly allowances start again."},
+    {"when": "07-31", "what": "Second payment on account for people who make them."},
+    {"when": "10-05", "what": "Register for Self Assessment if you need to file for the year that ended on 5 April; also the last day to tell HMRC about taxable dividends up to £10,000 if you do not file."},
+    {"when": "10-31", "what": "Paper Self Assessment return due for the year that ended on 5 April."},
+    {"when": "12-31", "what": "Last day to report gains for the previous tax year through the real-time Capital Gains Tax service."},
+    {"when": "01-31", "what": "Online Self Assessment return and tax due for the year that ended the previous 5 April."}
+  ],
+  "official": [
+    {"title": "GOV.UK: Capital Gains Tax rates", "url": "https://www.gov.uk/capital-gains-tax/rates"},
+    {"title": "GOV.UK: Tax on dividends", "url": "https://www.gov.uk/tax-on-dividends"},
+    {"title": "GOV.UK: Tax on savings interest", "url": "https://www.gov.uk/apply-tax-free-interest-on-savings"},
+    {"title": "GOV.UK: Individual Savings Accounts (ISAs)", "url": "https://www.gov.uk/individual-savings-accounts"},
+    {"title": "HMRC: Offshore funds (helpsheet HS265)", "url": "https://www.gov.uk/government/publications/offshore-funds-self-assessment-helpsheet-hs265/hs265-offshore-funds"},
+    {"title": "Budget 2026: rates and allowances", "url": "https://www.gov.uk/government/publications/budget-2026-overview-of-tax-legislation-and-rates-ootlar/annex-a-rates-and-allowances"}
+  ],
+  "upcoming": [
+    "From 6 April 2027 the tax rates on savings income are set to rise to 24% (basic), 44% (higher) and 49% (additional), across the whole UK. Budget 2026 raised the earlier plan of 22%, 42% and 47%; it still has to be passed in Finance Bill 2026-27.",
+    "The cash ISA limit will stay at £20,000 for all adults from April 2027. Budget 2026 dropped the earlier plan to cut it to £12,000 for under-65s; the change is to be made by regulations laid in November 2026.",
+    "A new First Time Buyer ISA is planned to replace the Lifetime ISA for new savers from April 2029; existing Lifetime ISAs can carry on under the current rules.",
+    "A new Securities Transfer Tax is planned to replace Stamp Duty and Stamp Duty Reserve Tax on shares from late 2027.",
+    "From 6 April 2027, moving crypto into and out of qualifying lending arrangements and liquidity pools is to be treated as 'no gain, no loss' until a real disposal."
+  ],
+  "not_covered": [
+    "Property and land, and the tax on selling your home.",
+    "Pensions beyond the annual allowance: tax relief, lump sums and drawdown.",
+    "Inheritance Tax and gifts other than to a spouse or civil partner.",
+    "Employee share schemes, EIS, SEIS and venture capital trusts.",
+    "Income from UK funds held as accumulation units.",
+    "Moving abroad, non-residents, temporary non-residence and trusts.",
+    "Trading as a business and National Insurance."
+  ],
+  "news": [
+    {"name": "BBC News: Business", "url": "https://feeds.bbci.co.uk/news/business/rss.xml", "language": "en"},
+    {"name": "The Guardian: Money", "url": "https://www.theguardian.com/uk/money/rss", "language": "en"},
+    {"name": "This is Money", "url": "https://www.thisismoney.co.uk/money/index.rss", "language": "en"},
+    {"name": "Monevator", "url": "https://monevator.com/feed/", "language": "en"}
+  ]
+}

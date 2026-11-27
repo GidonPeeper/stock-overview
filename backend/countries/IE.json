@@ -1,0 +1,199 @@
+{
+  "code": "IE",
+  "name": "Ireland",
+  "currency": "EUR",
+  "currency_note": "",
+  "timezone": "Europe/Dublin",
+  "languages": ["en", "ga"],
+  "checked_on": "2026-11-26",
+  "tax_year": {
+    "label": "2026",
+    "starts": "01-01",
+    "ends": "12-31",
+    "return_due": "File your return (Form 11, Form 12 or CGT form CG1) by 31 October of the next year; CGT itself is paid earlier, by 15 December or 31 January.",
+    "source": "https://www.revenue.ie/en/gains-gifts-and-inheritance/transfering-an-asset/when-and-how-do-you-pay-and-file-cgt.aspx"
+  },
+  "summary": "Irish residents pay Capital Gains Tax on profits from shares (31% from 7 October 2026), income tax plus USC and PRSI on dividends, and 33% DIRT on deposit interest. Funds and most ETFs have their own regime: 38% exit tax on income and gains, charged every eight years even if you do not sell. Budget 2027 announced a cut in the fund rate to 35% from 2027 and a new Investment Account from July 2027.",
+  "topics": [
+    {
+      "id": "gains",
+      "title": "Profit when you sell",
+      "points": [
+        "Capital Gains Tax (CGT) is charged on the chargeable gain: the sale price minus the purchase price and allowable costs such as broker or legal fees. You add up all gains and losses for the calendar year.",
+        "The standard rate is 31% for disposals on or after 7 October 2026 and was 33% for disposals before that date.",
+        "The first €1,270 of gains each year (after losses) is tax-free. This exemption is personal and cannot be passed to a spouse or civil partner.",
+        "When you sell part of a holding of the same shares, the oldest shares count as sold first (first in, first out). Shares sold within four weeks of buying are matched with the shares bought in those four weeks first.",
+        "Gains on funds and ETFs that fall under the fund regime are not taxed as CGT: see 'Funds and ETFs'. Other rates also exist, for example 40% on gains from foreign life policies and some foreign investment products.",
+        "Transfers between spouses or civil partners are usually exempt."
+      ],
+      "figures": [
+        {"label": "CGT rate (from 7 October 2026)", "value": "31%"},
+        {"label": "CGT rate (before 7 October 2026)", "value": "33%"},
+        {"label": "Yearly exemption", "value": "€1,270"}
+      ],
+      "sources": [
+        "https://www.revenue.ie/en/gains-gifts-and-inheritance/transfering-an-asset/how-to-calculate-cgt.aspx",
+        "https://www.revenue.ie/en/tax-professionals/tdm/income-tax-capital-gains-tax-corporation-tax/part-02/02-03-01a.pdf",
+        "https://www.revenue.ie/en/gains-gifts-and-inheritance/transfering-an-asset/selling-or-disposing-of-shares.aspx",
+        "https://www.revenue.ie/en/gains-gifts-and-inheritance/transfering-an-asset/what-is-exempt-from-cgt.aspx"
+      ]
+    },
+    {
+      "id": "dividends",
+      "title": "Dividends",
+      "points": [
+        "Dividends are added to your other income and taxed at your income tax rate (currently 20% on income within the standard rate band and 40% above it). Universal Social Charge (USC) and PRSI are also due.",
+        "Irish companies deduct Dividend Withholding Tax (DWT) of 25%. You are taxed on the gross dividend and the DWT counts as a credit; if it is more than your tax, you get a refund.",
+        "Foreign dividends are taxed on the gross amount at your income tax rate. The other country may withhold tax, and a tax treaty may reduce that or give relief. UK dividends are an exception: you are taxed on the net amount received, with no credit for UK tax.",
+        "Foreign dividends may also have Irish encashment tax deducted, which you can claim as a credit against your income tax."
+      ],
+      "figures": [
+        {"label": "Dividend Withholding Tax (Irish companies)", "value": "25%"},
+        {"label": "Income tax", "value": "20% / 40%, plus USC and PRSI"}
+      ],
+      "sources": [
+        "https://www.revenue.ie/en/additional-incomes/dividend-income/index.aspx"
+      ]
+    },
+    {
+      "id": "interest",
+      "title": "Interest on savings",
+      "points": [
+        "Banks, credit unions and An Post deduct Deposit Interest Retention Tax (DIRT) of 33% from interest on deposit accounts of Irish residents.",
+        "Interest from a bank in another EU country is taxed at the same rate as DIRT, but you must declare it on your tax return yourself; if it is not returned on time the rate is 40%.",
+        "Interest from banks outside the EU (including the UK) is taxed at the higher of the DIRT rate and your income tax rate, so 40% for higher-rate taxpayers.",
+        "USC does not apply to deposit interest; PRSI may apply."
+      ],
+      "figures": [
+        {"label": "DIRT", "value": "33%"}
+      ],
+      "sources": [
+        "https://www.revenue.ie/en/additional-incomes/dirt/what-dirt-rate-is-applicable.aspx",
+        "https://www.revenue.ie/en/additional-incomes/dirt/foreign-deposit-income.aspx"
+      ]
+    },
+    {
+      "id": "funds",
+      "title": "Funds and ETFs",
+      "points": [
+        "Irish funds, and funds in the EU, EEA or an OECD country that are 'equivalent' to Irish regulated funds, are outside CGT. Their payouts and gains are taxed at 38% (exit tax, or investment undertaking tax) from 1 January 2026; it was 41% before. USC and PRSI do not apply.",
+        "Deemed disposal: every eight years after you buy, you are taxed as if you had sold and bought back your units, even if you did not sell. Tax paid then is credited when you really sell, so in total you do not pay more than on the actual sale.",
+        "An Irish fund normally deducts the tax itself. For ETFs traded on a stock exchange (held in a clearing system) nothing is deducted: you must work out the tax yourself and put it on your Form 11, including the eight-year deemed disposal.",
+        "A loss on such a fund cannot be set against other gains, and no CGT loss relief is available.",
+        "Funds in the EU, EEA or OECD that are not 'equivalent' are taxed under the normal rules: income tax on payouts and CGT on gains. Revenue's manual lists what makes a fund equivalent."
+      ],
+      "figures": [
+        {"label": "Exit tax on equivalent funds (2026)", "value": "38%"},
+        {"label": "Deemed disposal", "value": "Every 8 years"}
+      ],
+      "sources": [
+        "https://www.revenue.ie/en/tax-professionals/tdm/income-tax-capital-gains-tax-corporation-tax/part-27/27-01a-02.pdf",
+        "https://www.revenue.ie/en/tax-professionals/tdm/income-tax-capital-gains-tax-corporation-tax/part-27/27-04-01.pdf"
+      ]
+    },
+    {
+      "id": "allowances",
+      "title": "Tax-free amounts",
+      "points": [
+        "The only yearly tax-free amount specific to investments is the €1,270 CGT exemption for each individual.",
+        "There is no tax-free amount for deposit interest: DIRT is taken from all the interest paid."
+      ],
+      "figures": [
+        {"label": "CGT exemption", "value": "€1,270 a year"}
+      ],
+      "sources": [
+        "https://www.revenue.ie/en/gains-gifts-and-inheritance/transfering-an-asset/what-is-exempt-from-cgt.aspx",
+        "https://www.revenue.ie/en/additional-incomes/dirt/what-dirt-rate-is-applicable.aspx"
+      ]
+    },
+    {
+      "id": "losses",
+      "title": "Losses",
+      "points": [
+        "A loss on shares can be deducted from gains in the same year. Unused losses carry forward to later years; they cannot be set against earlier years (except losses in the year of death).",
+        "Losses can be transferred between spouses or civil partners who are jointly assessed; this happens automatically unless you ask by 1 April of the next year to keep your own.",
+        "Four-week rule: if you sell shares at a loss and buy the same shares back within four weeks, the loss can only be used against a gain on a later sale of those repurchased shares.",
+        "Losses on funds taxed under the fund regime (see 'Funds and ETFs') cannot be used at all."
+      ],
+      "sources": [
+        "https://www.revenue.ie/en/gains-gifts-and-inheritance/transfering-an-asset/if-you-make-a-loss.aspx",
+        "https://www.revenue.ie/en/gains-gifts-and-inheritance/transfering-an-asset/selling-or-disposing-of-shares.aspx",
+        "https://www.revenue.ie/en/tax-professionals/tdm/income-tax-capital-gains-tax-corporation-tax/part-27/27-04-01.pdf"
+      ]
+    },
+    {
+      "id": "foreign",
+      "title": "Foreign shares",
+      "points": [
+        "Foreign dividends are taxable in Ireland on the gross amount. Tax withheld abroad may be reduced or credited under a tax treaty; for UK dividends no credit is given.",
+        "Gains on foreign shares are taxed under Irish CGT. You may be able to claim a credit for foreign CGT you paid, on your return.",
+        "Foreign funds and ETFs: see 'Funds and ETFs'. Whether a non-Irish fund is 'equivalent' decides whether it is taxed at the fund rate with deemed disposal, or under the normal income tax and CGT rules."
+      ],
+      "sources": [
+        "https://www.revenue.ie/en/additional-incomes/dividend-income/index.aspx",
+        "https://www.revenue.ie/en/gains-gifts-and-inheritance/transfering-an-asset/how-to-calculate-cgt.aspx",
+        "https://www.revenue.ie/en/tax-professionals/tdm/income-tax-capital-gains-tax-corporation-tax/part-27/27-04-01.pdf"
+      ]
+    },
+    {
+      "id": "reporting",
+      "title": "What your broker does and what you do",
+      "points": [
+        "Irish banks deduct DIRT, Irish companies deduct DWT and Irish funds deduct exit tax. No one deducts CGT for you: you work it out, declare it and pay it yourself.",
+        "CGT is paid in advance of the return: by 15 December for disposals from 1 January to 30 November, and by 31 January of the next year for December disposals. You must register for CGT with Revenue to pay.",
+        "The return is due by 31 October of the next year, even if no tax is due. Dividends not taxed under PAYE: under €5,000 a year you can declare them on Form 12 in myAccount; above €5,000 you register for self-assessment and file Form 11 on ROS.",
+        "Foreign bank interest, foreign dividends and ETFs or funds where no tax was deducted must be declared by you on your return; offshore funds go in a separate section of Form 11."
+      ],
+      "sources": [
+        "https://www.revenue.ie/en/gains-gifts-and-inheritance/transfering-an-asset/when-and-how-do-you-pay-and-file-cgt.aspx",
+        "https://www.revenue.ie/en/additional-incomes/dividend-income/index.aspx",
+        "https://www.revenue.ie/en/additional-incomes/dirt/foreign-deposit-income.aspx",
+        "https://www.revenue.ie/en/tax-professionals/tdm/income-tax-capital-gains-tax-corporation-tax/part-27/27-04-01.pdf"
+      ]
+    },
+    {
+      "id": "crypto",
+      "title": "Crypto",
+      "points": [
+        "Selling, exchanging or spending crypto is most likely a disposal for CGT, with the same rate and €1,270 exemption as shares, unless you are trading in crypto as a business.",
+        "You must work out the gain, declare it on a tax return and pay the CGT by the normal CGT dates."
+      ],
+      "sources": [
+        "https://www.revenue.ie/en/tax-professionals/tdm/income-tax-capital-gains-tax-corporation-tax/part-02/02-01-03.pdf"
+      ]
+    }
+  ],
+  "dates": [
+    {"when": "12-15", "what": "Pay CGT on disposals made from 1 January to 30 November of this year."},
+    {"when": "01-31", "what": "Pay CGT on disposals made in December of the year before."},
+    {"when": "04-01", "what": "Last day for a spouse or civil partner to ask to keep their own losses for the year before."},
+    {"when": "10-31", "what": "Tax return (including CGT) due for the year before."}
+  ],
+  "official": [
+    {"title": "Revenue: How to calculate CGT", "url": "https://www.revenue.ie/en/gains-gifts-and-inheritance/transfering-an-asset/how-to-calculate-cgt.aspx"},
+    {"title": "Revenue: When to pay and file CGT", "url": "https://www.revenue.ie/en/gains-gifts-and-inheritance/transfering-an-asset/when-and-how-do-you-pay-and-file-cgt.aspx"},
+    {"title": "Revenue: Dividend income", "url": "https://www.revenue.ie/en/additional-incomes/dividend-income/index.aspx"},
+    {"title": "Revenue: DIRT rates", "url": "https://www.revenue.ie/en/additional-incomes/dirt/what-dirt-rate-is-applicable.aspx"},
+    {"title": "Revenue manual: Offshore funds and ETFs (Part 27-04-01)", "url": "https://www.revenue.ie/en/tax-professionals/tdm/income-tax-capital-gains-tax-corporation-tax/part-27/27-04-01.pdf"}
+  ],
+  "upcoming": [
+    "Budget 2027 announced a cut in the tax on Irish and equivalent offshore funds and on life assurance products (exit tax and investment undertaking tax) from 38% to 35%, from 1 January 2027, to be set in the Finance Bill.",
+    "A new Investment Account is planned to open on 1 July 2027: up to €12,000 can be paid in a year, the provider pays a flat 1% tax each year on the value above €50,000, and there is no CGT, DWT, exit tax or deemed disposal inside it.",
+    "The eight-year deemed disposal rule was not changed in Budget 2027; the government says it will keep reviewing it, and the Finance Bill is to clarify how ETFs are taxed."
+  ],
+  "not_covered": [
+    "Pensions (PRSAs, occupational pensions and the Standard Fund Threshold).",
+    "Property, rental income and development land.",
+    "Gift and inheritance tax (CAT).",
+    "Life assurance policies and personal portfolio investment undertakings (PPIUs).",
+    "Exact USC and PRSI rates and the income tax rate bands.",
+    "Non-residents and non-domiciled residents (remittance basis).",
+    "Trading as a business."
+  ],
+  "news": [
+    {"name": "RTÉ News: Business", "url": "https://www.rte.ie/feeds/rss/?index=/news/business/", "language": "en"},
+    {"name": "The Irish Times: Business", "url": "https://www.irishtimes.com/arc/outboundfeeds/feed-business/?outputType=xml", "language": "en"},
+    {"name": "The Irish Times: Your Money", "url": "https://www.irishtimes.com/arc/outboundfeeds/feed-your-money/?outputType=xml", "language": "en"},
+    {"name": "Irish Independent: Business", "url": "https://www.independent.ie/business/rss/", "language": "en"}
+  ]
+}

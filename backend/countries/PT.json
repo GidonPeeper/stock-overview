@@ -1,0 +1,167 @@
+{
+  "code": "PT",
+  "name": "Portugal",
+  "currency": "EUR",
+  "currency_note": "",
+  "timezone": "Europe/Lisbon",
+  "languages": ["pt"],
+  "checked_on": "2026-11-26",
+  "tax_year": {
+    "label": "2026",
+    "starts": "01-01",
+    "ends": "12-31",
+    "return_due": "File the IRS return (Modelo 3) online between 1 April and 30 June of the next year.",
+    "source": "https://info.portaldasfinancas.gov.pt/pt/informacao_fiscal/codigos_tributarios/cirs_rep/Pages/irs60.aspx"
+  },
+  "summary": "Portugal taxes dividends, interest and net gains on investments at a flat 28%, or you can choose to add them to your other income and pay the normal progressive rates. Part of the gain on listed shares and fund units held more than two years is tax-free. Gains on crypto held for a year or more are not taxed.",
+  "topics": [
+    {
+      "id": "gains",
+      "title": "Profit when you sell",
+      "points": [
+        "The net result of your gains and losses on shares, bonds, funds and other securities in a year is taxed at a special flat rate of 28%.",
+        "Holding-period relief for listed securities and units of open-ended funds: 10% of the gain is tax-free if you held them more than 2 and less than 5 years, 20% for 5 to 8 years, and 30% for 8 years or more.",
+        "You can choose to add the gains to your other income (englobamento) and pay the normal progressive income tax rates instead. Gains on assets held less than 365 days must be added if your taxable income, including those gains, reaches the top bracket of the income tax table.",
+        "When you sell part of a holding, the shares bought first count as sold first (first in, first out), counted separately for each bank or broker.",
+        "Gains on securities from issuers in tax havens on the government's list are taxed at 35%."
+      ],
+      "figures": [
+        {"label": "Flat rate on net gains", "value": "28%"},
+        {"label": "Tax-free part, held 2 to 5 years", "value": "10%"},
+        {"label": "Tax-free part, held 5 to 8 years", "value": "20%"},
+        {"label": "Tax-free part, held 8 years or more", "value": "30%"}
+      ],
+      "sources": [
+        "https://info.portaldasfinancas.gov.pt/pt/informacao_fiscal/codigos_tributarios/cirs_rep/Pages/irs72.aspx",
+        "https://info.portaldasfinancas.gov.pt/pt/informacao_fiscal/codigos_tributarios/cirs_rep/Pages/irs43.aspx",
+        "https://info.portaldasfinancas.gov.pt/pt/informacao_fiscal/legislacao/diplomas_legislativos/Documents/Lei_31_2024.pdf"
+      ]
+    },
+    {
+      "id": "dividends",
+      "title": "Dividends",
+      "points": [
+        "Dividends paid by Portuguese companies, and dividends on foreign shares paid to you through a Portuguese bank or broker, have 28% withheld as a final tax.",
+        "Dividends you receive without Portuguese withholding (for example from a foreign broker) are taxed at the same 28% special rate in your return.",
+        "You can instead choose to add dividends to your other income. If you do, only 50% of dividends from Portuguese companies (and, under conditions, companies in the EU or EEA) is taxed, and the 28% already withheld counts as a prepayment.",
+        "Income paid by entities in tax havens on the government's list is taxed at 35%."
+      ],
+      "figures": [
+        {"label": "Withholding / special rate", "value": "28%"},
+        {"label": "Part taxed if added to income (PT/EU companies)", "value": "50%"}
+      ],
+      "sources": [
+        "https://info.portaldasfinancas.gov.pt/pt/informacao_fiscal/codigos_tributarios/cirs_rep/Pages/irs71.aspx",
+        "https://info.portaldasfinancas.gov.pt/pt/informacao_fiscal/codigos_tributarios/cirs_rep/Pages/irs72.aspx",
+        "https://info.portaldasfinancas.gov.pt/pt/informacao_fiscal/codigos_tributarios/cirs_rep/Pages/irs40a.aspx"
+      ]
+    },
+    {
+      "id": "interest",
+      "title": "Interest on savings",
+      "points": [
+        "Interest is capital income: a Portuguese bank withholds 28% as a final tax. Interest received without Portuguese withholding is taxed at the 28% special rate in your return.",
+        "As with dividends, you can choose to add interest to your other income and pay the progressive rates instead; the withholding then counts as a prepayment."
+      ],
+      "figures": [
+        {"label": "Withholding / special rate", "value": "28%"}
+      ],
+      "sources": [
+        "https://info.portaldasfinancas.gov.pt/pt/informacao_fiscal/codigos_tributarios/cirs_rep/Pages/irs71.aspx",
+        "https://info.portaldasfinancas.gov.pt/pt/informacao_fiscal/codigos_tributarios/cirs_rep/Pages/irs72.aspx"
+      ]
+    },
+    {
+      "id": "funds",
+      "title": "Funds and ETFs",
+      "points": [
+        "Gains on units of open-ended funds, including ETFs, are taxed like gains on shares: 28%, with the same 10%, 20% or 30% tax-free part after 2, 5 or 8 years."
+      ],
+      "sources": [
+        "https://info.portaldasfinancas.gov.pt/pt/informacao_fiscal/codigos_tributarios/cirs_rep/Pages/irs43.aspx"
+      ]
+    },
+    {
+      "id": "losses",
+      "title": "Losses",
+      "points": [
+        "Gains and losses of the same year are netted, and only a positive balance is taxed.",
+        "A net loss can be carried forward for five years, but only if you choose (or are obliged) to add these gains and losses to your other income in the return.",
+        "Losses on deals with a counterparty in a tax haven on the government's list do not count."
+      ],
+      "figures": [
+        {"label": "Carry forward", "value": "5 years (when added to income)"}
+      ],
+      "sources": [
+        "https://info.portaldasfinancas.gov.pt/pt/informacao_fiscal/codigos_tributarios/cirs_rep/Pages/irs55.aspx",
+        "https://info.portaldasfinancas.gov.pt/pt/informacao_fiscal/codigos_tributarios/cirs_rep/Pages/irs43.aspx"
+      ]
+    },
+    {
+      "id": "foreign",
+      "title": "Foreign shares",
+      "points": [
+        "Tax paid abroad on foreign income can be credited, up to the Portuguese tax on that income (the 28% special rate, or the part of your progressive tax if you added it to your income).",
+        "If the foreign tax amount is not yet known by 30 June, the deadline for your return is extended to 31 December."
+      ],
+      "sources": [
+        "https://info.portaldasfinancas.gov.pt/pt/informacao_fiscal/codigos_tributarios/cirs_rep/Pages/irs81.aspx",
+        "https://info.portaldasfinancas.gov.pt/pt/informacao_fiscal/codigos_tributarios/cirs_rep/Pages/irs60.aspx"
+      ]
+    },
+    {
+      "id": "reporting",
+      "title": "What your broker does and what you do",
+      "points": [
+        "A Portuguese bank or broker withholds 28% on dividends and interest, which settles the tax unless you choose to add that income to your return.",
+        "Gains on sales are not settled by withholding: you declare them in your IRS return each year, both with a Portuguese and with a foreign broker. Income from a foreign broker without Portuguese withholding is also declared by you.",
+        "The return (Modelo 3) is filed online from 1 April to 30 June of the next year."
+      ],
+      "sources": [
+        "https://info.portaldasfinancas.gov.pt/pt/informacao_fiscal/codigos_tributarios/cirs_rep/Pages/irs71.aspx",
+        "https://info.portaldasfinancas.gov.pt/pt/informacao_fiscal/codigos_tributarios/cirs_rep/Pages/irs72.aspx",
+        "https://info.portaldasfinancas.gov.pt/pt/informacao_fiscal/codigos_tributarios/cirs_rep/Pages/irs60.aspx"
+      ]
+    },
+    {
+      "id": "crypto",
+      "title": "Crypto",
+      "points": [
+        "Gains on selling crypto held for less than 365 days are taxed at 28%, like other gains. Gains and losses on crypto held for 365 days or more are not taxed.",
+        "Swapping one crypto for another is not taxed at that moment: the new coins take over the cost of the ones you gave up. The coins bought first count as sold first."
+      ],
+      "figures": [
+        {"label": "Held less than 365 days", "value": "28%"},
+        {"label": "Held 365 days or more", "value": "Not taxed"}
+      ],
+      "sources": [
+        "https://info.portaldasfinancas.gov.pt/pt/informacao_fiscal/codigos_tributarios/cirs_rep/Pages/irs10.aspx",
+        "https://info.portaldasfinancas.gov.pt/pt/informacao_fiscal/codigos_tributarios/cirs_rep/Pages/irs72.aspx",
+        "https://info.portaldasfinancas.gov.pt/pt/informacao_fiscal/codigos_tributarios/cirs_rep/Pages/irs43.aspx"
+      ]
+    }
+  ],
+  "dates": [
+    {"when": "04-01", "what": "IRS return filing opens for the year before."},
+    {"when": "06-30", "what": "Last day to file the IRS return for the year before."}
+  ],
+  "official": [
+    {"title": "Portal das Finanças: IRS code, article 72 (special rates)", "url": "https://info.portaldasfinancas.gov.pt/pt/informacao_fiscal/codigos_tributarios/cirs_rep/Pages/irs72.aspx"},
+    {"title": "Portal das Finanças: IRS code, article 43 (capital gains)", "url": "https://info.portaldasfinancas.gov.pt/pt/informacao_fiscal/codigos_tributarios/cirs_rep/Pages/irs43.aspx"},
+    {"title": "Portal das Finanças: IRS code, article 71 (withholding)", "url": "https://info.portaldasfinancas.gov.pt/pt/informacao_fiscal/codigos_tributarios/cirs_rep/Pages/irs71.aspx"},
+    {"title": "Portal das Finanças: IRS code, article 60 (filing period)", "url": "https://info.portaldasfinancas.gov.pt/pt/informacao_fiscal/codigos_tributarios/cirs_rep/Pages/irs60.aspx"}
+  ],
+  "upcoming": [],
+  "not_covered": [
+    "The progressive income tax table and the exact top-bracket threshold.",
+    "Retirement savings plans (PPR) and other tax-favoured products.",
+    "Non-habitual residents (NHR) and the newer incentive regime for people moving to Portugal.",
+    "Property, rental income and the AIMI tax on property.",
+    "Unlisted shares and small companies, and gifts and inheritances (stamp duty)."
+  ],
+  "news": [
+    {"name": "RTP Notícias: Economia", "url": "https://www.rtp.pt/noticias/rss/economia", "language": "pt"},
+    {"name": "Jornal de Negócios", "url": "https://www.jornaldenegocios.pt/rss", "language": "pt"},
+    {"name": "ECO", "url": "https://eco.sapo.pt/feed/", "language": "pt"}
+  ]
+}

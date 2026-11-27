@@ -1,0 +1,168 @@
+{
+  "code": "CA",
+  "name": "Canada",
+  "currency": "USD",
+  "currency_note": "Canada uses Canadian dollars; the app shows US dollars, not Canadian. Amounts on this page are in Canadian dollars.",
+  "timezone": "America/Toronto",
+  "languages": ["en", "fr"],
+  "checked_on": "2026-11-27",
+  "tax_year": {
+    "label": "2026",
+    "starts": "01-01",
+    "ends": "12-31",
+    "return_due": "File and pay by 30 April of the next year (30 April 2026 for 2025).",
+    "source": "https://www.canada.ca/en/revenue-agency/services/tax/individuals/topics/important-dates-individuals.html"
+  },
+  "summary": "This page covers federal tax. Half of a capital gain is added to your income and taxed at your normal rates; dividends from Canadian companies are grossed up and get a dividend tax credit; interest is fully taxed. Provinces and territories add their own income tax; Quebec's is run by Revenu Québec.",
+  "topics": [
+    {
+      "id": "gains",
+      "title": "Profit when you sell",
+      "points": [
+        "Only half of a capital gain (the inclusion rate of 50%) is added to your income and taxed at your normal federal and provincial rates. The planned increase to two-thirds was cancelled in March 2025.",
+        "For identical shares or units bought at different times, your cost (adjusted cost base) is the average cost of the whole group.",
+        "For investments in a foreign currency, the sale proceeds are converted to Canadian dollars at the exchange rate at the time of the sale, and the cost at the rate when you bought, so currency moves are part of the gain or loss."
+      ],
+      "figures": [
+        {"label": "Part of the gain that is taxed", "value": "50%"}
+      ],
+      "sources": [
+        "https://www.canada.ca/en/revenue-agency/services/forms-publications/publications/t4037/capital-gains.html",
+        "https://www.canada.ca/en/revenue-agency/news/newsroom/tax-tips/tax-tips-2025/update-cra-administration-proposed-capital-gains-taxation-changes.html",
+        "https://www.pm.gc.ca/en/news/news-releases/2025/03/21/prime-minister-mark-carney-cancels-proposed-capital-gains-tax-increase"
+      ]
+    },
+    {
+      "id": "dividends",
+      "title": "Dividends",
+      "points": [
+        "Dividends from taxable Canadian companies are 'grossed up' and the grossed-up amount is added to your income: eligible dividends at 138% of the amount received, other dividends at 115%. You then claim a federal dividend tax credit, and a provincial one.",
+        "Foreign dividends are added to your income in full, in Canadian dollars, and do not get the dividend tax credit."
+      ],
+      "figures": [
+        {"label": "Gross-up, eligible dividends", "value": "138%"},
+        {"label": "Gross-up, other dividends", "value": "115%"}
+      ],
+      "sources": [
+        "https://www.canada.ca/en/revenue-agency/services/tax/individuals/topics/about-your-tax-return/tax-return/completing-a-tax-return/personal-income/line-12000-taxable-amount-dividends-eligible-other-than-eligible-taxable-canadian-corporations.html",
+        "https://www.canada.ca/en/revenue-agency/services/tax/individuals/topics/about-your-tax-return/tax-return/completing-a-tax-return/personal-income/line-12100-interest-other-investment-income.html"
+      ]
+    },
+    {
+      "id": "interest",
+      "title": "Interest on savings",
+      "points": [
+        "Interest from bank accounts, GICs and bonds is part of your income and taxed at your normal rates. You must report it even if you did not get a slip.",
+        "For GICs and similar investments, interest is reported for each complete investment year, even before it is paid out."
+      ],
+      "sources": [
+        "https://www.canada.ca/en/revenue-agency/services/tax/individuals/topics/about-your-tax-return/tax-return/completing-a-tax-return/personal-income/line-12100-interest-other-investment-income.html"
+      ]
+    },
+    {
+      "id": "accounts",
+      "title": "Tax-free and tax-deferred accounts",
+      "points": [
+        "Tax-Free Savings Account (TFSA): the yearly limit for 2026 is $7,000. Withdrawals are tax-free as long as you have no excess contributions. You must be a resident of Canada, 18 or older (19 in some provinces) and have a SIN to open one.",
+        "Registered Retirement Savings Plan (RRSP): contributions can be deducted up to your RRSP limit; the dollar maximum for 2026 is $33,810. Contributions made early in the next year can count for the year before (for 2025 the deadline was 2 March 2026).",
+        "First Home Savings Account (FHSA): up to $8,000 of room in the first year and $40,000 in total; contributions are deductible by the account holder."
+      ],
+      "figures": [
+        {"label": "TFSA limit 2026", "value": "$7,000"},
+        {"label": "RRSP dollar limit 2026", "value": "$33,810"},
+        {"label": "FHSA", "value": "$8,000 a year, $40,000 in total"}
+      ],
+      "sources": [
+        "https://www.canada.ca/en/revenue-agency/services/tax/registered-plans-administrators/pspa/mp-rrsp-dpsp-tfsa-limits-ympe.html",
+        "https://www.canada.ca/en/revenue-agency/services/tax/individuals/topics/tax-free-savings-account/opening.html",
+        "https://www.canada.ca/en/revenue-agency/services/tax/individuals/topics/first-home-savings-account/contributing-your-fhsa.html",
+        "https://www.canada.ca/en/revenue-agency/services/tax/individuals/topics/important-dates-individuals.html"
+      ]
+    },
+    {
+      "id": "losses",
+      "title": "Losses",
+      "points": [
+        "Capital losses first reduce capital gains of the same year. Net capital losses can be carried back three years or forward with no time limit, but usually only against taxable capital gains, not other income.",
+        "Superficial loss rule: a loss is denied if you, or someone affiliated with you (such as your spouse or a company you control), buys the same or identical property in the period from 30 calendar days before to 30 calendar days after the sale, and still owns it 30 days after the sale.",
+        "A denied superficial loss is usually added to the cost of the newly bought property, so it reduces the gain when that is sold."
+      ],
+      "figures": [
+        {"label": "Superficial loss window", "value": "30 days before to 30 days after"},
+        {"label": "Net capital loss carry-back", "value": "3 years"}
+      ],
+      "sources": [
+        "https://www.canada.ca/en/revenue-agency/services/forms-publications/publications/t4037/capital-gains.html"
+      ]
+    },
+    {
+      "id": "foreign",
+      "title": "Foreign shares",
+      "points": [
+        "Foreign dividends and interest are reported in Canadian dollars at the full amount; the foreign tax withheld is not subtracted.",
+        "Instead you claim a foreign tax credit: for each country, usually the lower of the foreign tax paid and the Canadian tax on your net income from that country. Residents of provinces other than Quebec claim the provincial part on Form T2036.",
+        "Form T1135: if the total cost of your specified foreign property was more than $100,000 at any time in the year, you file this information return with your tax return. Below $250,000 a simplified version can be used."
+      ],
+      "figures": [
+        {"label": "T1135 threshold", "value": "More than $100,000 (cost)"}
+      ],
+      "sources": [
+        "https://www.canada.ca/en/revenue-agency/services/tax/individuals/topics/about-your-tax-return/tax-return/completing-a-tax-return/personal-income/line-12100-interest-other-investment-income.html",
+        "https://www.canada.ca/en/revenue-agency/services/tax/individuals/topics/about-your-tax-return/tax-return/completing-a-tax-return/deductions-credits-expenses/line-40500-federal-foreign-tax-credit.html",
+        "https://www.canada.ca/en/revenue-agency/services/tax/international-non-residents/information-been-moved/foreign-reporting/questions-answers-about-form-t1135.html"
+      ]
+    },
+    {
+      "id": "reporting",
+      "title": "What your broker does and what you do",
+      "points": [
+        "Canadian brokers and banks send slips (such as the T5) showing interest and dividends; you must still report income without a slip.",
+        "You work out and report your capital gains yourself on the return, using your average cost.",
+        "Provincial and territorial tax is calculated on Form 428 with your federal return; Quebec residents follow Revenu Québec's rules for their provincial tax.",
+        "The return and any balance owing are due by 30 April of the next year."
+      ],
+      "sources": [
+        "https://www.canada.ca/en/revenue-agency/services/tax/individuals/topics/about-your-tax-return/tax-return/completing-a-tax-return/personal-income/line-12100-interest-other-investment-income.html",
+        "https://www.canada.ca/en/revenue-agency/services/forms-publications/publications/t4037/capital-gains.html",
+        "https://www.canada.ca/en/revenue-agency/services/tax/individuals/topics/about-your-tax-return/tax-return/completing-a-tax-return/deductions-credits-expenses/line-40500-federal-foreign-tax-credit.html",
+        "https://www.canada.ca/en/revenue-agency/services/tax/individuals/topics/important-dates-individuals.html"
+      ]
+    },
+    {
+      "id": "crypto",
+      "title": "Crypto",
+      "points": [
+        "Selling crypto, or exchanging one crypto-asset for another, is a disposition that you report in Canadian dollars.",
+        "First you decide whether you are carrying on a business of trading: if so, the profit is business income; if not, it is a capital gain or loss, of which half is taxed."
+      ],
+      "sources": [
+        "https://www.canada.ca/en/revenue-agency/services/forms-publications/publications/t4037/capital-gains.html"
+      ]
+    }
+  ],
+  "dates": [
+    {"when": "04-30", "what": "Tax return and payment due for the year before."}
+  ],
+  "official": [
+    {"title": "CRA: Capital gains guide (T4037)", "url": "https://www.canada.ca/en/revenue-agency/services/forms-publications/publications/t4037/capital-gains.html"},
+    {"title": "CRA: RRSP and TFSA limits", "url": "https://www.canada.ca/en/revenue-agency/services/tax/registered-plans-administrators/pspa/mp-rrsp-dpsp-tfsa-limits-ympe.html"},
+    {"title": "CRA: Interest and other investment income", "url": "https://www.canada.ca/en/revenue-agency/services/tax/individuals/topics/about-your-tax-return/tax-return/completing-a-tax-return/personal-income/line-12100-interest-other-investment-income.html"},
+    {"title": "CRA: Form T1135 questions and answers", "url": "https://www.canada.ca/en/revenue-agency/services/tax/international-non-residents/information-been-moved/foreign-reporting/questions-answers-about-form-t1135.html"},
+    {"title": "CRA: Important dates for individuals", "url": "https://www.canada.ca/en/revenue-agency/services/tax/individuals/topics/important-dates-individuals.html"}
+  ],
+  "upcoming": [
+    "The RRSP dollar limit for 2027 is $35,390."
+  ],
+  "not_covered": [
+    "Federal and provincial tax brackets and the dividend tax credit percentages.",
+    "Quebec's own tax system.",
+    "The lifetime capital gains exemption and small-business shares.",
+    "RRSP and RRIF withdrawals, pensions and the home buyers' plan.",
+    "Moving to or from Canada and non-residents."
+  ],
+  "news": [
+    {"name": "CBC News: Business", "url": "https://www.cbc.ca/webfeed/rss/rss-business", "language": "en"},
+    {"name": "MoneySense", "url": "https://www.moneysense.ca/feed/", "language": "en"},
+    {"name": "Radio-Canada: Économie", "url": "https://ici.radio-canada.ca/info/rss/info/economie/en-continu", "language": "fr"}
+  ]
+}
