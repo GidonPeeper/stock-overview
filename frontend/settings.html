@@ -19,131 +19,190 @@
       --faint:#7d8998; --green:#34c77b; --red:#f2707b; --amber:#e3b341; --border:#1f2833;
       --green-bg:rgba(52,199,123,.13); --red-bg:rgba(242,112,123,.13); --amber-bg:rgba(227,179,65,.14);
       --accent:#709af1; --accent-bg:rgba(112,154,241,0.15); --accent-fill:#2563eb; --on-accent:#ffffff;
-      --accent2:#ad86f4; --accent2-bg:rgba(173,134,244,0.15); --accent2-fill:#8242ee; --on-accent2:#ffffff; }
+      --accent2:#ad86f4; --accent2-bg:rgba(173,134,244,0.15); --accent2-fill:#8242ee; --on-accent2:#ffffff;
+      --shadow:0 1px 2px rgba(0,0,0,.4), 0 8px 24px -12px rgba(0,0,0,.5);
+      /* one scale for type, radii, shadows and motion (same on every page) */
+      --fs-2xs:11px; --fs-xs:12px; --fs-sm:13px; --fs-md:14px; --fs-base:15px; --fs-lg:17px; --fs-xl:20px; --fs-2xl:24px; --fs-3xl:28px;
+      --r-xs:6px; --r-sm:10px; --r-md:12px; --r-lg:14px; --r-card:16px; --r-pill:999px;
+      --shadow-pop:0 2px 6px rgba(0,0,0,.14), 0 18px 44px -14px rgba(0,0,0,.5);
+      --ease:cubic-bezier(.2,.7,.3,1); --t-fast:.15s; }
     :root[data-theme="light"]{ --bg:#f4f6f9; --panel:#ffffff; --panel2:#eff2f6; --panel3:#e1e7ef; --text:#151d28;
-      --muted:#526070; --faint:#667384; --green:#0f7f4c; --red:#c8323f; --amber:#8f5d00; --border:#e2e7ee;
+      --muted:#526070; --faint:#5e6a7a; --green:#0f7f4c; --red:#c8323f; --amber:#8f5d00; --border:#e2e7ee;
       --green-bg:rgba(15,127,76,.10); --red-bg:rgba(200,50,63,.09); --amber-bg:rgba(143,93,0,.10);
       --accent:#1557e8; --accent-bg:rgba(21,87,232,0.1); --accent-fill:#2563eb; --on-accent:#ffffff;
-      --accent2:#7935ed; --accent2-bg:rgba(121,53,237,0.1); --accent2-fill:#7c3aed; --on-accent2:#ffffff; }
+      --accent2:#7935ed; --accent2-bg:rgba(121,53,237,0.1); --accent2-fill:#7c3aed; --on-accent2:#ffffff;
+      --shadow:0 1px 2px rgba(21,29,40,.06), 0 8px 24px -16px rgba(21,29,40,.18);
+      --shadow-pop:0 2px 6px rgba(21,29,40,.08), 0 18px 44px -14px rgba(21,29,40,.28); }
     html{ color-scheme:dark; } :root[data-theme="light"]{ color-scheme:light; }
     *{ box-sizing:border-box; }
     [hidden]{ display:none !important; }
     body{ margin:0; background:var(--bg); color:var(--text);
-      font:15px/1.55 "Inter",-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif; -webkit-font-smoothing:antialiased; }
+      font:15px/1.55 "Inter",-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif; -webkit-font-smoothing:antialiased; font-variant-numeric:tabular-nums;
+      background-image:radial-gradient(1100px 420px at 50% -180px, var(--accent-bg), transparent 65%); background-repeat:no-repeat; }
+    h1,h2,h3{ text-wrap:balance; }
     a{ color:var(--accent); }
     :focus-visible{ outline:2px solid var(--accent); outline-offset:2px; }
-    .wrap{ max-width:780px; margin:0 auto; padding:14px 16px 80px; padding-top:calc(12px + env(safe-area-inset-top)); }
-    a.back{ display:inline-flex; align-items:center; min-height:44px; color:var(--accent); text-decoration:none; font-size:14.5px; font-weight:600; }
-    h1{ font-size:24px; margin:2px 0 4px; letter-spacing:-.02em; }
-    .sub{ color:var(--muted); font-size:13.5px; margin-bottom:16px; }
+    .wrap{ max-width:780px; margin:0 auto; padding:14px max(16px, env(safe-area-inset-right)) calc(80px + env(safe-area-inset-bottom)) max(16px, env(safe-area-inset-left));
+      padding-top:calc(12px + env(safe-area-inset-top)); }
+    a.back{ display:inline-flex; align-items:center; gap:6px; min-height:44px; color:var(--accent); text-decoration:none; font-size:var(--fs-base); font-weight:600; }
+    a.back:hover{ text-decoration:underline; text-underline-offset:3px; }
+    h1{ font-size:var(--fs-2xl); margin:2px 0 4px; letter-spacing:-.02em; }
+    .sub{ color:var(--muted); font-size:var(--fs-md); margin-bottom:16px; }
     /* in-page navigation */
     .toc{ position:sticky; top:0; z-index:5; display:flex; gap:6px; overflow-x:auto; scrollbar-width:none; padding:8px 0; margin:0 0 6px;
-      background:var(--bg); border-bottom:1px solid var(--border); }
+      background:var(--bg); background:color-mix(in srgb, var(--bg) 92%, transparent); backdrop-filter:blur(12px); -webkit-backdrop-filter:blur(12px);
+      border-bottom:1px solid var(--border); }
     .toc::-webkit-scrollbar{ display:none; }
-    .toc a{ flex:0 0 auto; display:inline-flex; align-items:center; min-height:40px; padding:0 14px; border-radius:20px; background:var(--panel2);
-      border:1px solid var(--border); color:var(--muted); font-size:13.5px; font-weight:600; text-decoration:none; }
+    .toc a{ flex:0 0 auto; display:inline-flex; align-items:center; min-height:40px; padding:0 14px; border-radius:var(--r-pill); background:var(--panel2);
+      border:1px solid var(--border); color:var(--muted); font-size:var(--fs-md); font-weight:600; text-decoration:none; }
     .toc a:hover{ color:var(--text); }
+    .toc a[aria-current="true"]{ background:var(--accent-bg); color:var(--accent); border-color:color-mix(in srgb, var(--accent) 50%, transparent); }
     .sec{ scroll-margin-top:64px; }
-    .sec > h2.st{ font-size:12px; text-transform:uppercase; letter-spacing:.08em; color:var(--muted); margin:28px 2px 10px; font-weight:650; display:flex; gap:8px; align-items:center; }
-    .sec > h2.st .n{ width:20px; height:20px; border-radius:50%; background:var(--accent2-bg); color:var(--accent2); display:grid; place-items:center; font-size:11px; letter-spacing:0; }
-    .card{ background:var(--panel); border:1px solid var(--border); border-radius:18px; padding:18px; margin-bottom:14px; scroll-margin-top:64px; }
-    .card h2{ font-size:16px; margin:0 0 6px; font-weight:650; letter-spacing:-.01em; }
+    .sec > h2.st{ font-size:var(--fs-xs); text-transform:uppercase; letter-spacing:.08em; color:var(--muted); margin:28px 2px 10px; font-weight:650; display:flex; gap:8px; align-items:center; }
+    .sec > h2.st .n{ width:20px; height:20px; border-radius:50%; background:var(--accent2-bg); color:var(--accent2); display:grid; place-items:center; font-size:var(--fs-2xs); letter-spacing:0; }
+    .card{ background:var(--panel); border:1px solid var(--border); border-radius:var(--r-card); padding:20px; margin-bottom:14px; scroll-margin-top:72px; box-shadow:var(--shadow); }
+    .card h2{ font-size:var(--fs-lg); margin:0 0 6px; font-weight:650; letter-spacing:-.01em; }
     .card > .sub{ margin-bottom:12px; }
     .welcome-hint{ border-color:color-mix(in srgb, var(--amber) 45%, var(--border)); background:var(--amber-bg); }
-    .welcome-hint p{ margin:0; font-size:14px; }
+    .welcome-hint p{ margin:0; font-size:var(--fs-md); }
     .row{ display:flex; justify-content:space-between; align-items:center; gap:10px; padding:10px 0; border-bottom:1px solid var(--border); min-height:44px; }
     .row:last-child{ border-bottom:none; }
-    .pill{ font-size:11px; padding:3px 10px; border-radius:20px; font-weight:650; white-space:nowrap; }
+    .pill{ font-size:var(--fs-2xs); padding:3px 10px; border-radius:var(--r-pill); font-weight:650; white-space:nowrap; }
     .live{ background:var(--green-bg); color:var(--green); }
     .sample{ background:var(--amber-bg); color:var(--amber); }
     .bad{ background:var(--red-bg); color:var(--red); }
     .up{ margin-top:10px; display:flex; gap:8px; flex-wrap:wrap; align-items:center; }
-    .up input[type=file]{ font-size:13px; color:var(--muted); max-width:100%; }
-    input[type=file]::file-selector-button{ font:inherit; font-size:13px; font-weight:600; min-height:40px; padding:0 14px; margin-right:10px;
-      border-radius:10px; border:1px solid var(--border); background:var(--panel2); color:var(--text); cursor:pointer; }
-    .up button{ background:var(--accent-fill); border:none; color:var(--on-accent); min-height:40px; padding:0 16px; border-radius:10px;
-      font-size:14px; font-weight:650; cursor:pointer; font-family:inherit; }
-    .msg{ font-size:13px; margin-top:6px; min-height:18px; }
+    .up input[type=file]{ font-size:var(--fs-sm); color:var(--muted); max-width:100%; }
+    input[type=file]::file-selector-button{ font:inherit; font-size:var(--fs-sm); font-weight:600; min-height:40px; padding:0 14px; margin-right:10px;
+      border-radius:var(--r-sm); border:1px solid var(--border); background:var(--panel2); color:var(--text); cursor:pointer; }
+    .up button{ background:var(--accent-fill); border:none; color:var(--on-accent); min-height:40px; padding:0 16px; border-radius:var(--r-sm);
+      font-size:var(--fs-md); font-weight:650; cursor:pointer; font-family:inherit; }
+    .msg{ font-size:var(--fs-sm); margin-top:6px; min-height:18px; overflow-wrap:anywhere; }
+    .msg.ok, .msg.err{ font-weight:550; }
     .ok{ color:var(--green); } .err{ color:var(--red); }
-    code{ background:var(--panel2); padding:1px 6px; border-radius:5px; font-size:12px; overflow-wrap:anywhere; }
-    .files{ font-size:12px; color:var(--faint); margin-top:10px; overflow-wrap:anywhere; }
+    code{ background:var(--panel2); padding:1px 6px; border-radius:var(--r-xs); font-size:var(--fs-xs); overflow-wrap:anywhere; }
+    .files{ font-size:var(--fs-xs); color:var(--faint); margin-top:10px; overflow-wrap:anywhere; }
     .ipt{ background:var(--panel2); border:1px solid var(--border); color:var(--text); min-height:40px;
-      border-radius:10px; padding:0 11px; font-size:14px; font-family:inherit; }
+      border-radius:var(--r-sm); padding:0 11px; font-size:var(--fs-md); font-family:inherit; transition:border-color var(--t-fast),box-shadow var(--t-fast); }
     textarea.ipt{ padding:8px 11px; }
-    .ipt:focus{ outline:none; border-color:var(--accent); }
-    .btn{ background:var(--accent-fill); border:none; color:var(--on-accent); min-height:40px; padding:0 16px; border-radius:10px;
-      font-size:14px; font-weight:650; cursor:pointer; font-family:inherit; display:inline-flex; align-items:center; justify-content:center; }
+    .ipt:hover{ border-color:color-mix(in srgb, var(--muted) 45%, var(--border)); }
+    .ipt:focus{ outline:none; border-color:var(--accent); box-shadow:0 0 0 3px var(--accent-bg); }
+    .ipt[aria-invalid="true"]{ border-color:var(--red); box-shadow:0 0 0 3px var(--red-bg); }
+    .ipt::placeholder{ color:var(--faint); opacity:1; }
+    .btn{ background:var(--accent-fill); border:1px solid transparent; color:var(--on-accent); min-height:40px; padding:0 16px; border-radius:var(--r-sm);
+      font-size:var(--fs-md); font-weight:650; cursor:pointer; font-family:inherit; display:inline-flex; align-items:center; justify-content:center; gap:6px; white-space:nowrap; }
+    .btn:hover{ filter:brightness(1.08); }
+    .btn:active, .chip:active, .up button:active{ transform:translateY(1px); }
+    .btn.danger{ background:var(--red-bg); color:var(--red); border-color:color-mix(in srgb, var(--red) 40%, transparent); }
     .bal{ width:110px; text-align:right; }
-    .del{ background:none; border:none; color:var(--faint); cursor:pointer; font-size:15px; min-width:40px; min-height:40px; border-radius:10px; }
-    .del:hover{ color:var(--red); background:var(--panel2); }
+    .del{ background:none; border:none; color:var(--faint); cursor:pointer; font-size:var(--fs-base); min-width:40px; min-height:40px; border-radius:var(--r-sm); }
+    .del:hover{ color:var(--red); background:var(--red-bg); }
     .form{ display:flex; gap:8px; flex-wrap:wrap; align-items:center; margin:12px 0 4px; }
-    .label{ font-size:12px; text-transform:uppercase; letter-spacing:.05em; color:var(--muted); margin:16px 0 2px; font-weight:650; }
-    .r-sub{ display:block; font-size:12px; color:var(--faint); }
+    /* forms: labels above the fields, six columns on wide screens, two on phones */
+    .form-grid{ display:grid; grid-template-columns:repeat(6,minmax(0,1fr)); gap:2px 12px; align-items:end; margin:14px 0 4px;
+      padding:12px 14px 14px; border-radius:var(--r-md); background:color-mix(in srgb, var(--panel2) 55%, transparent); border:1px solid var(--border); }
+    .form-grid .fld{ margin:6px 0; grid-column:span 2; min-width:0; }
+    .form-grid .c1{ grid-column:span 1; } .form-grid .c3{ grid-column:span 3; } .form-grid .c4{ grid-column:span 4; } .form-grid .c6{ grid-column:1/-1; }
+    .form-grid .form-h{ grid-column:1/-1; font-size:var(--fs-sm); font-weight:650; color:var(--text); margin:0 0 2px; }
+    .form-acts{ grid-column:1/-1; display:flex; gap:10px; align-items:center; flex-wrap:wrap; margin-top:8px; }
+    .form-grid details.more{ grid-column:1/-1; }
+    .opt-l{ font-weight:400; color:var(--faint); }
+    .label{ font-size:var(--fs-xs); text-transform:uppercase; letter-spacing:.05em; color:var(--muted); margin:20px 0 2px; font-weight:650; }
+    /* loading, empty and could-not-load: the same look everywhere */
+    .ph{ min-height:var(--h,64px); display:flex; flex-direction:column; gap:12px; padding:6px 0; }
+    .ph::before,.ph::after{ content:""; height:14px; border-radius:var(--r-xs); background:linear-gradient(90deg,var(--panel2) 0%,var(--panel3) 50%,var(--panel2) 100%);
+      background-size:200% 100%; animation:sh 1.4s infinite linear; }
+    .ph::after{ width:62%; }
+    @keyframes sh{ from{background-position:100% 0} to{background-position:-100% 0} }
+    .empty{ color:var(--muted); font-size:var(--fs-md); padding:6px 0; line-height:1.55; }
+    .is-error{ display:flex; gap:10px; align-items:flex-start; flex-wrap:wrap; color:var(--text); background:var(--amber-bg); border-radius:var(--r-md); padding:10px 12px; font-size:var(--fs-md); }
+    .is-error::before{ content:"!"; flex:0 0 20px; height:20px; margin-top:1px; border-radius:50%; background:var(--amber); color:var(--bg);
+      display:grid; place-items:center; font-size:var(--fs-xs); font-weight:800; }
+    .is-error > span{ flex:1; min-width:0; }
+    .linkbtn{ background:none; border:0; padding:0; color:var(--accent); font:inherit; font-weight:600; cursor:pointer; text-decoration:underline; text-underline-offset:2px; }
+    .r-sub{ display:block; font-size:var(--fs-xs); color:var(--faint); }
+    .sr{ position:absolute; width:1px; height:1px; padding:0; margin:-1px; overflow:hidden; clip:rect(0,0,0,0); white-space:nowrap; border:0; }
     /* ---- Add an account / Connected accounts (accounts.js) ---- */
     .combo{ position:relative; }
     .combo .ipt.q{ width:100%; font-size:16px; min-height:46px; padding:0 13px; }
     .combo-list{ position:absolute; left:0; right:0; top:100%; margin-top:4px; z-index:20; background:var(--panel);
-      border:1px solid var(--border); border-radius:12px; max-height:min(360px,60vh); overflow:auto; box-shadow:0 10px 28px rgba(0,0,0,.28); }
-    .grp{ font-size:11px; text-transform:uppercase; letter-spacing:.05em; color:var(--muted); padding:9px 12px 3px; }
-    .opt{ display:flex; align-items:center; gap:8px; padding:9px 12px; min-height:44px; cursor:pointer; }
+      border:1px solid var(--border); border-radius:var(--r-md); max-height:min(360px,60vh); overflow:auto; box-shadow:var(--shadow-pop); padding:4px; }
+    .grp{ font-size:var(--fs-2xs); text-transform:uppercase; letter-spacing:.05em; color:var(--muted); padding:9px 12px 3px; }
+    .opt{ display:flex; align-items:center; gap:8px; padding:9px 12px; min-height:44px; cursor:pointer; border-radius:var(--r-sm); }
     .opt.act, .opt:hover{ background:var(--panel2); }
+    .opt.act{ box-shadow:inset 3px 0 0 var(--accent); }
     .opt-name{ flex:1; min-width:0; }
-    .opt-meta{ display:block; font-size:11.5px; color:var(--faint); }
-    .tag{ font-size:10.5px; padding:2px 8px; border-radius:20px; background:var(--accent-bg); color:var(--accent);
+    .opt-meta{ display:block; font-size:var(--fs-xs); color:var(--faint); }
+    .tag{ font-size:var(--fs-2xs); padding:2px 8px; border-radius:var(--r-pill); background:var(--accent-bg); color:var(--accent);
       font-weight:650; white-space:nowrap; }
     .tag.grey{ background:var(--panel2); color:var(--muted); }
     .chips{ display:flex; gap:6px; flex-wrap:wrap; margin:10px 0 0; }
-    .chip{ border:1px solid var(--border); background:var(--panel2); color:var(--muted); border-radius:20px; padding:0 13px; min-height:38px;
-      font-size:13px; cursor:pointer; font-family:inherit; display:inline-flex; align-items:center; gap:6px; }
-    .chip:hover{ color:var(--text); }
+    .chip{ border:1px solid var(--border); background:var(--panel2); color:var(--muted); border-radius:var(--r-pill); padding:0 13px; min-height:38px;
+      font-size:var(--fs-sm); cursor:pointer; font-family:inherit; display:inline-flex; align-items:center; gap:6px; }
+    .chip:hover{ color:var(--text); border-color:color-mix(in srgb, var(--muted) 45%, var(--border)); }
     .chip.on{ background:var(--accent-fill); border-color:var(--accent-fill); color:var(--on-accent); }
     .chip.on .pill{ background:color-mix(in srgb, var(--on-accent) 20%, transparent); color:var(--on-accent); }
     .chip.dim{ opacity:.65; }
     .acct-head{ margin-top:16px; padding-top:14px; border-top:1px solid var(--border); }
     .acct-head b{ font-size:16px; }
-    .facts{ display:flex; flex-wrap:wrap; gap:4px 14px; font-size:12.5px; color:var(--muted); margin:10px 0 4px; }
+    .facts{ display:flex; flex-wrap:wrap; gap:4px 14px; font-size:var(--fs-sm); color:var(--muted); margin:10px 0 4px; }
     .steps{ margin:8px 0; padding-left:22px; }
-    .steps li{ margin:5px 0; font-size:13.5px; }
-    .note{ font-size:12.5px; color:var(--muted); background:var(--panel2); border-radius:10px; padding:8px 11px; margin:8px 0; }
+    .steps li{ margin:5px 0; font-size:var(--fs-md); }
+    .note{ font-size:var(--fs-sm); color:var(--muted); background:var(--panel2); border-radius:var(--r-sm); padding:8px 11px; margin:8px 0; }
     .note.warn{ color:var(--amber); }
-    .fine{ font-size:12px; color:var(--faint); margin-top:8px; }
-    .doc{ color:var(--accent); font-size:13px; text-decoration:none; }
-    .fld{ display:flex; flex-direction:column; gap:3px; font-size:12px; color:var(--muted); margin:9px 0; }
-    .fld .ipt{ width:100%; font-size:15px; }
-    .chk{ display:flex; gap:8px; align-items:center; font-size:13.5px; margin:9px 0; min-height:40px; }
+    .fine{ font-size:var(--fs-xs); color:var(--faint); margin-top:8px; }
+    .doc{ color:var(--accent); font-size:var(--fs-sm); text-decoration:none; }
+    .fld{ display:flex; flex-direction:column; gap:5px; font-size:var(--fs-sm); color:var(--text); font-weight:550; margin:10px 0; }
+    .fld .ipt{ width:100%; font-size:var(--fs-base); font-weight:400; }
+    .fld.sm{ margin:0; gap:3px; font-size:var(--fs-xs); color:var(--muted); }
+    .fld.sm .ipt{ font-size:var(--fs-md); }
+    .chk{ display:flex; gap:8px; align-items:center; font-size:var(--fs-md); margin:9px 0; min-height:40px; }
     .btn.ghost{ background:var(--panel2); color:var(--text); border:1px solid var(--border); }
     .btn.ghost:hover{ border-color:var(--accent2); }
-    .btn.sm{ min-height:36px; padding:0 12px; font-size:13px; }
-    .btn:disabled{ opacity:.6; cursor:default; }
+    .btn.sm{ min-height:36px; padding:0 12px; font-size:var(--fs-sm); }
+    .btn:disabled{ opacity:.55; cursor:default; transform:none; filter:none; }
+    .btn-row{ display:flex; gap:8px; flex-wrap:wrap; align-items:center; margin-top:10px; }
+    /* a sign-in in steps (Trade Republic) */
+    .tr-box{ margin-top:12px; padding:12px 14px 14px; border:1px solid var(--border); border-radius:var(--r-md); background:color-mix(in srgb, var(--panel2) 55%, transparent); }
+    .step-h{ display:flex; align-items:center; gap:8px; font-size:var(--fs-md); font-weight:650; margin-bottom:2px; }
+    .step-n{ width:22px; height:22px; border-radius:50%; background:var(--accent2-bg); color:var(--accent2); display:grid; place-items:center; font-size:var(--fs-xs); font-weight:750; flex-shrink:0; }
     .map{ display:grid; grid-template-columns:repeat(auto-fill,minmax(150px,1fr)); gap:0 10px; }
     .pvwrap{ overflow-x:auto; margin-top:6px; }
-    .pv{ width:100%; border-collapse:collapse; font-size:12px; }
+    .pv{ width:100%; border-collapse:collapse; font-size:var(--fs-xs); }
     .pv th,.pv td{ padding:5px 6px; border-bottom:1px solid var(--border); text-align:left; white-space:nowrap; }
     .pv th{ color:var(--muted); font-weight:600; }
-    .agg{ border:1px solid var(--border); border-radius:12px; padding:10px 12px; margin:8px 0; }
+    .agg{ border:1px solid var(--border); border-radius:var(--r-md); padding:10px 12px; margin:8px 0; }
     .copy{ display:flex; gap:6px; align-items:center; }
-    .copy .ipt{ flex:1; min-width:0; font-size:13px; }
+    .copy .ipt{ flex:1; min-width:0; font-size:var(--fs-sm); }
     #eb-key{ width:100%; margin-top:6px; font:12px/1.4 ui-monospace,Menlo,monospace; }
     select.ipt{ max-width:100%; }
     .crow{ display:flex; justify-content:space-between; gap:10px; padding:11px 0; border-bottom:1px solid var(--border); }
     .crow:last-child{ border-bottom:none; }
-    .cmeta{ font-size:12px; color:var(--faint); }
-    .cerr{ font-size:12px; color:var(--red); margin-top:2px; }
+    .cmeta{ font-size:var(--fs-xs); color:var(--faint); }
+    .cerr{ font-size:var(--fs-xs); color:var(--red); margin-top:2px; }
     .cact{ display:flex; gap:4px; align-items:flex-start; flex-shrink:0; }
     .flash{ animation:flash 1.6s ease-out; }
     @keyframes flash{ 0%{ box-shadow:0 0 0 3px var(--accent); } 100%{ box-shadow:0 0 0 0 transparent; } }
     details.adv{ margin-top:14px; border-top:1px solid var(--border); padding-top:10px; }
-    details.adv > summary, details.more > summary{ cursor:pointer; font-size:13.5px; color:var(--muted); min-height:40px; display:flex; align-items:center; }
+    details.adv > summary, details.more > summary{ cursor:pointer; font-size:var(--fs-md); color:var(--muted); min-height:40px; display:flex; align-items:center; }
     details.adv > summary:hover, details.more > summary:hover{ color:var(--text); }
     details.adv > summary::before, details.more > summary::before{ content:"▸"; margin-right:8px; transition:transform .15s; display:inline-block; }
     details.adv[open] > summary::before, details.more[open] > summary::before{ transform:rotate(90deg); }
-    .state{ display:flex; gap:10px; align-items:flex-start; font-size:14px; }
+    .state{ display:flex; gap:10px; align-items:flex-start; font-size:var(--fs-md); }
     .state .d{ width:10px; height:10px; border-radius:50%; margin-top:6px; flex:0 0 10px; }
-    /* phones: every control at least 44px tall */
-    @media(max-width:640px){
-      .ipt,.btn,.up button,.chip,.del,input[type=file]::file-selector-button{ min-height:44px; }
+    /* phones and touch screens: every control at least 44px tall */
+    @media(max-width:640px), (pointer:coarse){
+      .ipt,.btn,.up button,.chip,.del,.toc a,input[type=file]::file-selector-button{ min-height:44px; }
       .btn.sm{ min-height:44px; }
       .del{ min-width:44px; }
+      .linkbtn{ display:inline-flex; align-items:center; min-height:44px; }
+    }
+    @media(max-width:640px){
+      .card{ padding:16px; }
+      .form-grid{ grid-template-columns:repeat(2,minmax(0,1fr)); padding:10px 12px 12px; }
+      .form-grid .fld, .form-grid .c3, .form-grid .c4{ grid-column:1/-1; }
+      .form-grid .c1{ grid-column:span 1; }
+      .form-acts .btn{ flex:1 1 100%; }
       .form > .ipt{ flex:1 1 40% !important; min-width:0 !important; width:auto !important; }
       .form > .ipt:first-child{ flex-basis:100% !important; }
       .form > label{ flex:1 1 100%; }
@@ -154,16 +213,16 @@
       .row > :last-child{ margin-left:auto; }
     }
     /* ---- colours and theme ---- */
-    .seg{ display:inline-flex; background:var(--panel2); border:1px solid var(--border); border-radius:12px; padding:3px; gap:2px; }
-    .seg button{ background:none; border:none; color:var(--muted); padding:0 14px; min-height:36px; border-radius:9px; cursor:pointer;
-      font:inherit; font-size:13.5px; font-weight:600; }
+    .seg{ display:inline-flex; background:var(--panel2); border:1px solid var(--border); border-radius:var(--r-md); padding:3px; gap:2px; }
+    .seg button{ background:none; border:none; color:var(--muted); padding:0 14px; min-height:36px; border-radius:var(--r-sm); cursor:pointer;
+      font:inherit; font-size:var(--fs-md); font-weight:600; }
     .fld .seg{ align-self:flex-start; }
     .seg button:hover{ color:var(--text); }
     .seg button[aria-pressed="true"]{ background:var(--panel); color:var(--text); box-shadow:0 1px 3px rgba(0,0,0,.25); }
     [data-theme="dark"] .seg button[aria-pressed="true"]{ background:var(--panel3); }
     .ap-presets{ display:grid; grid-template-columns:repeat(auto-fill,minmax(150px,1fr)); gap:8px; margin:12px 0 4px; }
-    .ap-preset{ display:flex; align-items:center; gap:10px; min-height:48px; padding:8px 12px; border-radius:12px; cursor:pointer; text-align:left;
-      background:var(--panel2); border:1px solid var(--border); color:var(--text); font:inherit; font-size:13.5px; font-weight:600; }
+    .ap-preset{ display:flex; align-items:center; gap:10px; min-height:48px; padding:8px 12px; border-radius:var(--r-md); cursor:pointer; text-align:left;
+      background:var(--panel2); border:1px solid var(--border); color:var(--text); font:inherit; font-size:var(--fs-md); font-weight:600; }
     .ap-preset:hover{ border-color:var(--muted); }
     .ap-preset[aria-pressed="true"]{ border-color:var(--accent); box-shadow:inset 0 0 0 1px var(--accent); }
     .ap-sw{ display:inline-flex; flex-shrink:0; }
@@ -171,18 +230,18 @@
     .ap-sw i + i{ margin-left:-6px; }
     .ap-custom{ display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:0 14px; align-items:start; margin-top:6px; }
     .ap-pick{ display:flex; gap:8px; align-items:center; }
-    .ap-pick input[type=color]{ flex:0 0 44px; width:44px; height:40px; padding:2px; border-radius:10px; border:1px solid var(--border);
+    .ap-pick input[type=color]{ flex:0 0 44px; width:44px; height:40px; padding:2px; border-radius:var(--r-sm); border:1px solid var(--border);
       background:var(--panel2); cursor:pointer; }
     .ap-pick .ipt{ flex:1; min-width:0; font-family:ui-monospace,Menlo,monospace; text-transform:lowercase; }
-    .fld-err{ color:var(--red); font-size:12.5px; min-height:0; }
+    .fld-err{ color:var(--red); font-size:var(--fs-sm); min-height:0; }
     .ipt[aria-invalid="true"]{ border-color:var(--red); }
     .ap-prev{ display:grid; grid-template-columns:1fr 1fr; gap:10px; margin:12px 0 4px; }
-    .ap-box{ border-radius:14px; padding:12px; border:1px solid; font-size:12.5px; min-width:0; }
+    .ap-box{ border-radius:var(--r-lg); padding:12px; border:1px solid; font-size:var(--fs-sm); min-width:0; }
     .ap-box .ap-t{ font-weight:650; margin-bottom:8px; opacity:.8; }
     .ap-tabs{ display:flex; gap:4px; margin-bottom:10px; }
-    .ap-tabs span{ padding:5px 9px; border-radius:8px; font-weight:600; }
+    .ap-tabs span{ padding:5px 9px; border-radius:var(--r-sm); font-weight:600; }
     .ap-row{ display:flex; gap:8px; align-items:center; flex-wrap:wrap; }
-    .ap-btn{ padding:6px 11px; border-radius:9px; font-weight:650; }
+    .ap-btn{ padding:6px 11px; border-radius:var(--r-sm); font-weight:650; }
     .ap-box svg{ display:block; width:100%; height:44px; margin-top:8px; }
     @media(max-width:640px){
       .ap-custom{ grid-template-columns:1fr; }
@@ -192,9 +251,9 @@
     }
     /* ---- country ---- */
     .ctry-effects{ display:grid; gap:8px; margin:14px 0 6px; }
-    .ctry-effects .state{ font-size:13.5px; }
+    .ctry-effects .state{ font-size:var(--fs-md); }
     .ctry-effects .state .d{ margin-top:7px; }
-    .ctry-suggest{ display:flex; flex-wrap:wrap; gap:8px; align-items:center; color:var(--text); font-size:13.5px; padding:10px 12px; }
+    .ctry-suggest{ display:flex; flex-wrap:wrap; gap:8px; align-items:center; color:var(--text); font-size:var(--fs-md); padding:10px 12px; }
     .ctry-suggest p{ margin:0; flex:1 1 100%; }
     .ctry-grid{ display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:0 12px; margin-top:4px; }
     .ctry-grid .chips{ margin:0; }
@@ -202,6 +261,9 @@
     .ctry-save{ display:flex; gap:10px; align-items:center; flex-wrap:wrap; margin-top:10px; }
     #ctry-list .tag + .tag{ margin-left:4px; }
     @media(max-width:640px){ .ctry-grid{ grid-template-columns:1fr; } .ctry-save .btn{ flex:1 1 100%; } }
+    @media(prefers-reduced-motion:reduce){
+      *, *::before, *::after{ animation-duration:.01ms !important; animation-iteration-count:1 !important; transition-duration:.01ms !important; scroll-behavior:auto !important; }
+    }
   </style>
   <!-- the colours chosen here, as this device last saved them (colors.js): applied before the first paint -->
   <script>try{ var so=JSON.parse(localStorage.getItem("so.colors")||"null"); if(so&&so.css){ var st=document.createElement("style"); st.id="so-colors"; st.textContent=so.css; document.head.appendChild(st); } }catch(e){}</script>
@@ -241,14 +303,14 @@
       <div class="card" id="connected">
         <h2>Connected accounts</h2>
         <div class="sub">Accounts that update on their own or from a file. Refresh, renew or remove them here.</div>
-        <div id="conn-list"><span style="color:var(--faint)">Loading…</span></div>
+        <div id="conn-list"><div class="ph" style="--h:48px"><span class="sr">Loading…</span></div></div>
         <input type="file" id="conn-file" accept=".csv,.txt,.tsv" hidden />
       </div>
     </section>
 
     <!-- 2. Statements -->
     <section class="sec" id="upload">
-      <h2 class="st"><span class="n">2</span>Upload a statement</h2>
+      <h2 class="st"><span class="n">2</span>Statements</h2>
       <div class="card" id="statements">
         <h2>Broker statement files</h2>
         <div class="sub">For DeGiro, Trade Republic and Trading 212 you can upload the full statement from the broker.
@@ -267,8 +329,8 @@
           </ol>
           <div class="fine">Either file works. A PDF is converted here, and every trade is checked against its booked amount.</div>
           <div class="up"><input type="file" id="f-degiro" accept=".pdf,.csv" aria-label="DeGiro statement file" />
-            <button onclick="up('degiro')">Upload</button></div>
-          <div class="msg" id="m-degiro"></div>
+            <button type="button" onclick="up('degiro')">Upload</button></div>
+          <div class="msg" id="m-degiro" role="status"></div>
         </div>
 
         <div class="upanel" data-p="trade_republic" role="tabpanel" hidden>
@@ -278,15 +340,15 @@
           </ol>
           <div class="fine">One file covers trades, dividends and interest. Every PDF row is checked against the running balance.</div>
           <div class="up"><input type="file" id="f-trade_republic" accept=".pdf,.csv,.json" aria-label="Trade Republic statement file" />
-            <button onclick="up('trade_republic')">Upload</button></div>
-          <div class="msg" id="m-trade_republic"></div>
+            <button type="button" onclick="up('trade_republic')">Upload</button></div>
+          <div class="msg" id="m-trade_republic" role="status"></div>
           <details class="adv">
             <summary>Dividends and interest file (JSON, rarely needed)</summary>
             <div class="fine" style="margin-top:0">Filled in automatically from the transaction export above. Only needed for data you
               typed up yourself; the format is in <code>income_trade_republic.sample.json</code>.</div>
             <div class="up"><input type="file" id="f-tr_income" accept=".json" aria-label="Trade Republic dividends file" />
-              <button onclick="up('tr_income')">Upload</button></div>
-            <div class="msg" id="m-tr_income"></div>
+              <button type="button" onclick="up('tr_income')">Upload</button></div>
+            <div class="msg" id="m-tr_income" role="status"></div>
           </details>
         </div>
 
@@ -304,8 +366,8 @@
           </ol>
           <div class="note warn">Don't upload a statement for an account that also has a key: it would count twice.</div>
           <div class="up"><input type="file" id="f-t212_statement" accept=".pdf,.csv,.json" aria-label="Trading 212 statement file" />
-            <button onclick="up('t212_statement')">Upload</button></div>
-          <div class="msg" id="m-t212_statement"></div>
+            <button type="button" onclick="up('t212_statement')">Upload</button></div>
+          <div class="msg" id="m-t212_statement" role="status"></div>
         </div>
       </div>
     </section>
@@ -318,22 +380,23 @@
         <div class="sub">Type in a balance and update it when it changes: cash, savings and pension pots such as a 401(k), IRA,
           pensioen or lijfrente. Banks in the EU (Rabobank, ING, ABN AMRO, bunq, EU Revolut…) can also update on their own:
           add them under <a href="#add-account">Add an account</a> → Bank link.</div>
-        <div id="cash-list"><span style="color:var(--faint)">Loading…</span></div>
-        <div class="form">
-          <input id="c-name" placeholder="Account name" style="flex:2;min-width:120px" class="ipt" aria-label="Account name" />
-          <input id="c-inst" placeholder="Bank (e.g. Starling)" style="flex:2;min-width:120px" class="ipt" aria-label="Bank" />
-          <input id="c-bal" placeholder="Balance" type="number" step="0.01" style="flex:1;min-width:90px" class="ipt" aria-label="Balance" />
-          <input id="c-rate" placeholder="Interest %" type="number" step="0.01" style="width:100px" class="ipt" aria-label="Interest rate in percent" />
-          <select id="c-cur" class="ipt ccy-default" style="width:80px" aria-label="Currency"><option>GBP</option><option>EUR</option><option>USD</option></select>
-          <select id="c-type" class="ipt" style="width:160px" aria-label="Type of account">
+        <div id="cash-list"><div class="ph" style="--h:48px"><span class="sr">Loading…</span></div></div>
+        <div class="form-grid" role="group" aria-labelledby="cash-form-h">
+          <div class="form-h" id="cash-form-h">Add an account</div>
+          <label class="fld c3"><span>Account name</span><input id="c-name" class="ipt" autocomplete="off" placeholder="e.g. Easy saver" /></label>
+          <label class="fld c3"><span>Bank <span class="opt-l">(optional)</span></span><input id="c-inst" class="ipt" placeholder="e.g. Starling" /></label>
+          <label class="fld"><span>Balance</span><input id="c-bal" type="number" step="0.01" inputmode="decimal" class="ipt" /></label>
+          <label class="fld c1"><span>Currency</span><select id="c-cur" class="ipt ccy-default"><option>GBP</option><option>EUR</option><option>USD</option></select></label>
+          <label class="fld c1"><span>Interest, % a year <span class="opt-l">(optional)</span></span><input id="c-rate" type="number" step="0.01" inputmode="decimal" class="ipt" /></label>
+          <label class="fld"><span>Type</span><select id="c-type" class="ipt">
             <option value="cash">Cash</option>
             <option value="savings">Savings</option>
             <option value="retirement">Retirement / 401(k)</option>
             <option value="other">Other account</option>
-          </select>
-          <button class="btn" onclick="addAccount()">Add</button>
+          </select></label>
+          <div class="form-acts"><button class="btn" type="button" onclick="addAccount()">Add account</button></div>
         </div>
-        <div class="msg" id="m-cash"></div>
+        <div class="msg" id="m-cash" role="status"></div>
       </div>
 
       <div class="card" id="fin">
@@ -342,53 +405,53 @@
           Adding a name that already exists updates it.</div>
 
         <div class="label">Loans</div>
-        <div id="fin-loans"><span style="color:var(--faint)">Loading…</span></div>
-        <div class="form">
-          <input id="l-name" placeholder="Loan name" class="ipt" style="flex:2;min-width:120px" aria-label="Loan name" />
-          <input id="l-bal" placeholder="Balance" type="number" step="0.01" class="ipt" style="flex:1;min-width:90px" aria-label="Loan balance" />
-          <input id="l-rate" placeholder="Rate %" type="number" step="0.01" class="ipt" style="width:90px" aria-label="Interest rate in percent" />
-          <input id="l-pay" placeholder="Per month" type="number" step="0.01" class="ipt" style="width:100px" aria-label="Payment per month" />
-          <select id="l-cur" class="ipt ccy-default" style="width:80px" aria-label="Currency"><option>GBP</option><option>EUR</option><option>USD</option></select>
-          <button class="btn" onclick="addFin('loans')">Add</button>
+        <div id="fin-loans"><div class="ph" style="--h:48px"><span class="sr">Loading…</span></div></div>
+        <div class="form-grid" role="group" aria-label="Add a loan">
+          <label class="fld c3"><span>Loan name</span><input id="l-name" class="ipt" autocomplete="off" placeholder="e.g. Student loan" /></label>
+          <label class="fld"><span>Still to pay</span><input id="l-bal" type="number" step="0.01" inputmode="decimal" class="ipt" /></label>
+          <label class="fld c1"><span>Currency</span><select id="l-cur" class="ipt ccy-default"><option>GBP</option><option>EUR</option><option>USD</option></select></label>
+          <label class="fld"><span>Interest, % a year <span class="opt-l">(optional)</span></span><input id="l-rate" type="number" step="0.01" inputmode="decimal" class="ipt" /></label>
+          <label class="fld"><span>Payment a month <span class="opt-l">(optional)</span></span><input id="l-pay" type="number" step="0.01" inputmode="decimal" class="ipt" /></label>
+          <div class="form-acts"><button class="btn" type="button" onclick="addFin('loans')">Add loan</button></div>
         </div>
 
         <div class="label">Income</div>
-        <div id="fin-income"><span style="color:var(--faint)">Loading…</span></div>
-        <div class="form">
-          <input id="i-name" placeholder="Source (e.g. Salary)" class="ipt" style="flex:2;min-width:140px" aria-label="Income source" />
-          <input id="i-amt" placeholder="Per month" type="number" step="0.01" class="ipt" style="width:110px" aria-label="Amount per month" />
-          <select id="i-cur" class="ipt ccy-default" style="width:80px" aria-label="Currency"><option>GBP</option><option>EUR</option><option>USD</option></select>
-          <select id="i-fixed" class="ipt" style="width:120px" aria-label="Fixed or variable"><option value="1">Fixed</option><option value="0">Variable</option></select>
-          <select id="i-tax" class="ipt" style="width:126px" title="Salary and commission: before tax" aria-label="Before or after tax"><option value="before">Before tax</option><option value="after">After tax</option></select>
+        <div id="fin-income"><div class="ph" style="--h:48px"><span class="sr">Loading…</span></div></div>
+        <div class="form-grid" role="group" aria-label="Add income">
+          <label class="fld c3"><span>Source</span><input id="i-name" class="ipt" autocomplete="off" placeholder="e.g. Salary" /></label>
+          <label class="fld"><span>Amount a month</span><input id="i-amt" type="number" step="0.01" inputmode="decimal" class="ipt" /></label>
+          <label class="fld c1"><span>Currency</span><select id="i-cur" class="ipt ccy-default"><option>GBP</option><option>EUR</option><option>USD</option></select></label>
+          <label class="fld c3"><span>Before or after tax</span><select id="i-tax" class="ipt"><option value="before">Before tax (salary, commission)</option><option value="after">After tax (what lands in your account)</option></select></label>
+          <label class="fld c3"><span>Every month the same?</span><select id="i-fixed" class="ipt"><option value="1">Fixed</option><option value="0">Variable</option></select></label>
+          <details class="more" id="i-more">
+            <summary>Pension and start date (optional)</summary>
+            <div class="form-grid" style="margin:4px 0 0;padding:0;border:0;background:none">
+              <label class="fld"><span>Pension, % of pay</span><input id="i-pen" type="number" step="0.1" min="0" max="100" inputmode="decimal" class="ipt" /></label>
+              <label class="fld c4"><span>How your pension is paid (see your payslip)</span><select id="i-pentype" class="ipt">
+                <option value="relief_at_source">After tax (relief at source, e.g. NEST)</option>
+                <option value="sacrifice">Salary sacrifice</option>
+                <option value="net_pay">Before tax (net pay)</option>
+              </select></label>
+              <label class="fld"><span>Employer adds, % of pay</span><input id="i-emp" type="number" step="0.1" min="0" max="100" inputmode="decimal" class="ipt" /></label>
+              <label class="fld"><span>First payslip month</span><input id="i-start" type="month" class="ipt" /></label>
+            </div>
+            <div class="fine" style="margin:4px 0 6px">Pension: the share of pay your payslip takes for the pension. If "Gross for Tax" on the payslip equals your pay,
+              it's taken after tax. First payslip month: only matters if you started this tax year.</div>
+          </details>
+          <div class="form-acts"><button class="btn" type="button" onclick="addFin('income')">Add income</button></div>
         </div>
-        <details class="more" id="i-more">
-          <summary>Pension and start date (optional)</summary>
-          <div class="form" style="margin-top:4px">
-            <input id="i-pen" placeholder="Pension %" type="number" step="0.1" min="0" max="100" class="ipt" style="width:110px" title="% of pay deducted for your pension on the payslip" aria-label="Pension percent" />
-            <select id="i-pentype" class="ipt" style="width:250px" title="How your pension is paid (see your payslip)" aria-label="How your pension is paid">
-              <option value="relief_at_source">After tax (relief at source, e.g. NEST)</option>
-              <option value="sacrifice">Salary sacrifice</option>
-              <option value="net_pay">Before tax (net pay)</option>
-            </select>
-            <input id="i-emp" placeholder="Employer %" type="number" step="0.1" min="0" max="100" class="ipt" style="width:116px" title="What your employer pays into your pension, % of pay" aria-label="Employer pension percent" />
-            <label class="sub" style="margin:0;font-size:13px;display:flex;gap:6px;align-items:center">Started <input id="i-start" type="month" class="ipt" style="width:160px" title="First payslip month. Only matters in your first tax year." /></label>
-          </div>
-          <div class="fine" style="margin:4px 0 6px">Pension %: the share of pay your payslip takes for the pension. If "Gross for Tax" on the payslip equals your pay,
-            it's taken after tax. Employer %: what your employer adds. Started: the month of your first payslip, if it was this tax year.</div>
-        </details>
-        <div class="form" style="margin-top:6px"><button class="btn" onclick="addFin('income')">Add income</button></div>
         <div class="fine" style="margin-top:2px">"Before tax" amounts have UK income tax and National Insurance taken off, so totals show your take-home pay.</div>
 
         <div class="label">Monthly payments</div>
-        <div id="fin-expenses"><span style="color:var(--faint)">Loading…</span></div>
-        <div class="form">
-          <input id="e-name" placeholder="Payment (e.g. Rent)" class="ipt" style="flex:2;min-width:140px" aria-label="Payment name" />
-          <input id="e-amt" placeholder="Per month" type="number" step="0.01" class="ipt" style="width:110px" aria-label="Amount per month" />
-          <select id="e-cur" class="ipt ccy-default" style="width:80px" aria-label="Currency"><option>GBP</option><option>EUR</option><option>USD</option></select>
-          <select id="e-fixed" class="ipt" style="width:120px" aria-label="Fixed or variable"><option value="1">Fixed</option><option value="0">Variable</option></select>
-          <button class="btn" onclick="addFin('expenses')">Add</button>
+        <div id="fin-expenses"><div class="ph" style="--h:48px"><span class="sr">Loading…</span></div></div>
+        <div class="form-grid" role="group" aria-label="Add a monthly payment">
+          <label class="fld c3"><span>Payment</span><input id="e-name" class="ipt" autocomplete="off" placeholder="e.g. Rent" /></label>
+          <label class="fld"><span>Amount a month</span><input id="e-amt" type="number" step="0.01" inputmode="decimal" class="ipt" /></label>
+          <label class="fld c1"><span>Currency</span><select id="e-cur" class="ipt ccy-default"><option>GBP</option><option>EUR</option><option>USD</option></select></label>
+          <label class="fld c3"><span>Every month the same?</span><select id="e-fixed" class="ipt"><option value="1">Fixed</option><option value="0">Variable</option></select></label>
+          <div class="form-acts"><button class="btn" type="button" onclick="addFin('expenses')">Add payment</button></div>
         </div>
-        <div class="msg" id="m-fin"></div>
+        <div class="msg" id="m-fin" role="status"></div>
         <div id="fin-totals" class="sub" style="margin:8px 0 0"></div>
       </div>
 
@@ -396,21 +459,21 @@
         <h2>Things you own</h2>
         <div class="sub">A watch, a car, art, jewellery. Counted in your net worth at the value you enter (what you could sell it for),
           not in your savings. Update the value now and then.</div>
-        <div id="asset-list"><span style="color:var(--faint)">Loading…</span></div>
-        <div class="form">
-          <input id="a-name" placeholder="What (e.g. Omega watch)" class="ipt" style="flex:2;min-width:150px" aria-label="What it is" />
-          <select id="a-cat" class="ipt" style="width:130px" aria-label="Category">
+        <div id="asset-list"><div class="ph" style="--h:48px"><span class="sr">Loading…</span></div></div>
+        <div class="form-grid" role="group" aria-label="Add something you own">
+          <label class="fld c3"><span>What it is</span><input id="a-name" class="ipt" autocomplete="off" placeholder="e.g. Omega watch" /></label>
+          <label class="fld"><span>Category</span><select id="a-cat" class="ipt">
             <option value="watch">Watch</option><option value="jewellery">Jewellery</option><option value="car">Car</option>
             <option value="art">Art</option><option value="collectible">Collectible</option><option value="property">Property</option>
             <option value="other" selected>Other</option>
-          </select>
-          <input id="a-val" placeholder="Worth now" type="number" step="0.01" class="ipt" style="width:110px" aria-label="Worth now" />
-          <input id="a-paid" placeholder="Price paid" type="number" step="0.01" class="ipt" style="width:110px" aria-label="Price paid" />
-          <input id="a-bought" type="date" class="ipt" style="width:150px" title="Date bought (optional)" aria-label="Date bought" />
-          <select id="a-cur" class="ipt ccy-default" style="width:80px" aria-label="Currency"><option>GBP</option><option>EUR</option><option>USD</option></select>
-          <button class="btn" onclick="addAsset()">Add</button>
+          </select></label>
+          <label class="fld c1"><span>Currency</span><select id="a-cur" class="ipt ccy-default"><option>GBP</option><option>EUR</option><option>USD</option></select></label>
+          <label class="fld"><span>Worth now</span><input id="a-val" type="number" step="0.01" inputmode="decimal" class="ipt" /></label>
+          <label class="fld"><span>Price paid <span class="opt-l">(optional)</span></span><input id="a-paid" type="number" step="0.01" inputmode="decimal" class="ipt" /></label>
+          <label class="fld"><span>Date bought <span class="opt-l">(optional)</span></span><input id="a-bought" type="date" class="ipt" /></label>
+          <div class="form-acts"><button class="btn" type="button" onclick="addAsset()">Add</button></div>
         </div>
-        <div class="msg" id="m-assets"></div>
+        <div class="msg" id="m-assets" role="status"></div>
       </div>
     </section>
 
@@ -460,12 +523,12 @@
         </div>
         <div class="ctry-save"><button class="btn" id="ctry-save" type="button">Save</button>
           <span id="ctry-dirty" class="fine" style="margin:0" hidden>Not saved yet</span></div>
-        <div class="msg" id="m-ctry"></div>
+        <div class="msg" id="m-ctry" role="status"></div>
       </div>
 
       <div class="card" id="storage">
         <h2>Where your data is saved</h2>
-        <div id="sync-status" class="state" style="margin:8px 0 4px"><span style="color:var(--faint)">Checking…</span></div>
+        <div id="sync-status" class="state" style="margin:8px 0 4px"><div class="ph" style="--h:40px;flex:1"><span class="sr">Checking…</span></div></div>
         <div id="sync-howto" class="sub" style="margin:10px 0 0" hidden>This host wipes its disk on every restart. To keep
           your changes, give the app a private place to save them: create a <b>private</b> GitHub repository, make a
           fine-grained token with <b>Contents: read &amp; write</b> on that repository only, and add two settings on the
@@ -477,7 +540,7 @@
       <div class="card" id="datafiles">
         <h2>Data files in use</h2>
         <div class="sub" style="margin-bottom:4px">Which broker files the dashboard reads right now.</div>
-        <div id="status"><span style="color:var(--faint)">Loading…</span></div>
+        <div id="status"><div class="ph" style="--h:48px"><span class="sr">Loading…</span></div></div>
         <div class="files" id="files"></div>
       </div>
 
@@ -591,22 +654,22 @@
     function renderCash(c){
       CASH_ROWS=c.accounts||[];
       const el=document.getElementById("cash-list");
-      if(!c.accounts.length){ el.innerHTML='<span style="color:var(--faint)">No accounts yet. Add your first one below.</span>'; return; }
+      if(!c.accounts.length){ el.innerHTML='<div class="empty">No accounts yet. Add your first one below.</div>'; return; }
       el.innerHTML=(c.sample?'<div class="msg" style="color:var(--amber);margin-bottom:6px">Example accounts shown. Add a real one to replace them.</div>':'')+
         c.accounts.map((a,i)=>a.auto?`<div class="row"><span>${esc(a.name)}
             <span class="pill" style="background:var(--panel2);color:var(--muted);margin-left:4px">updates itself</span>
             <span class="r-sub">${esc(a.institution)} · ${esc(a.currency)} · <b>${own0(a.balance,a.currency)}</b>${a.rate_known?"":' · <span style="color:var(--amber)">interest rate not set</span>'}</span></span>
-          <span style="display:flex;gap:6px;align-items:center;flex-wrap:wrap;justify-content:flex-end">
-            <select class="ipt" id="autot-${i}" aria-label="Kind of account: ${esc(a.name)}" style="width:auto">
-              ${["cash","savings"].map(t=>`<option value="${t}"${a.type===t?" selected":""}>${TYPE_LABEL[t]}</option>`).join("")}</select>
-            <input class="ipt bal" type="number" step="0.01" min="0" max="25" inputmode="decimal" placeholder="Interest %" value="${a.rate_known?a.rate:""}" id="autor-${i}" aria-label="Interest rate a year of ${esc(a.name)}, in percent" />
-            <button class="btn" onclick="saveAuto(${i})">Save</button>
+          <span style="display:flex;gap:8px;align-items:flex-end;flex-wrap:wrap;justify-content:flex-end">
+            <label class="fld sm"><span>Kind</span><select class="ipt" id="autot-${i}" aria-label="Kind of account: ${esc(a.name)}" style="width:auto">
+              ${["cash","savings"].map(t=>`<option value="${t}"${a.type===t?" selected":""}>${TYPE_LABEL[t]}</option>`).join("")}</select></label>
+            <label class="fld sm"><span>Interest, % a year</span><input class="ipt bal" type="number" step="0.01" min="0" max="25" inputmode="decimal" value="${a.rate_known?a.rate:""}" id="autor-${i}" aria-label="Interest rate a year of ${esc(a.name)}, in percent" /></label>
+            <button class="btn ghost" type="button" onclick="saveAuto(${i})">Save</button>
           </span></div>`:`<div class="row"><span>${esc(a.name)}
             <span class="pill" style="background:var(--panel2);color:var(--muted);margin-left:4px">${TYPE_LABEL[a.type]||"Cash"}</span>
             <span class="r-sub">${esc(a.institution||"—")} · ${esc(a.currency)}${a.rate?` · ${a.rate}% interest`:""}</span></span>
           <span style="display:flex;gap:6px;align-items:center">
             <input class="ipt bal" type="number" step="0.01" value="${a.balance}" id="bal-${btoa(unescape(encodeURIComponent(a.name))).replace(/[=+/]/g,'')}" aria-label="Balance of ${esc(a.name)}" />
-            <button class="btn" onclick="saveAccount('${a.name.replace(/\\/g,"\\\\").replace(/'/g,"\\'")}','${(a.institution||"").replace(/'/g,"\\'")}','${a.currency}','${a.type||"cash"}',${a.rate||0})">Save</button>
+            <button class="btn ghost" type="button" onclick="saveAccount('${a.name.replace(/\\/g,"\\\\").replace(/'/g,"\\'")}','${(a.institution||"").replace(/'/g,"\\'")}','${a.currency}','${a.type||"cash"}',${a.rate||0})">Save</button>
             <button class="del" title="Remove" aria-label="Remove ${esc(a.name)}" onclick="delAccount('${a.name.replace(/'/g,"\\'")}')">✕</button>
           </span></div>`).join("")+
         `<div class="row"><span style="font-weight:650">Total (all accounts)</span><span style="font-weight:650">${money0(c.total_eur)}</span></div>`;
@@ -619,8 +682,16 @@
     }
     function loadFailed(ids,what,e,retry){
       ids.forEach((id,i)=>{ const el=document.getElementById(id); if(el) el.innerHTML=i?"":
-        `<span class="err">${esc(what)} could not load: ${esc(e.message)}</span> <button class="btn" onclick="${retry}">Try again</button>`; });
+        `<div class="is-error"><span>${esc(what)} could not load: ${esc(e.message)} <button class="linkbtn" type="button" onclick="${retry}">Try again</button></span></div>`; });
     }
+    // A form sent with a required field left empty: the field says so, and gets the focus.
+    function missing(ids){
+      const empty=ids.filter(id=>!document.getElementById(id).value.trim());
+      ids.forEach(id=>document.getElementById(id).setAttribute("aria-invalid",String(empty.includes(id))));
+      if(empty.length) document.getElementById(empty[0]).focus();
+      return empty.length>0;
+    }
+    document.addEventListener("input",e=>{ if(e.target.getAttribute&&e.target.getAttribute("aria-invalid")==="true") e.target.removeAttribute("aria-invalid"); });
     let CASH_ROWS=[];
     function saveAuto(i){
       const a=CASH_ROWS[i]; if(!a) return;
@@ -646,7 +717,7 @@
     }
     function addAccount(){
       const n=document.getElementById("c-name").value, b=document.getElementById("c-bal").value;
-      if(!n||!b){ const m=document.getElementById("m-cash"); m.textContent="Fill in a name and a balance."; m.className="msg err"; return; }
+      if(missing(["c-name","c-bal"])){ const m=document.getElementById("m-cash"); m.textContent="Fill in a name and a balance."; m.className="msg err"; return; }
       const fd=new FormData(); fd.append("name",n); fd.append("institution",document.getElementById("c-inst").value);
       fd.append("balance",b); fd.append("currency",document.getElementById("c-cur").value);
       fd.append("type",document.getElementById("c-type").value);
@@ -654,6 +725,7 @@
       postCash(fd, savedMsg()); ["c-name","c-bal","c-rate"].forEach(id=>document.getElementById(id).value="");
     }
     async function delAccount(name){
+      if(!confirm(`Remove “${name}”? Its balance is no longer counted in your net worth.`)) return;
       const msg=document.getElementById("m-cash");
       const r=await fetch("/api/cash/"+encodeURIComponent(name),{method:"DELETE"}).catch(()=>null);
       if(r&&r.ok) return renderCash(await r.json());
@@ -668,7 +740,7 @@
       document.getElementById("fin-loans").innerHTML=demo+(f.loans.map(l=>
         `<div class="row"><span>${esc(l.name)}<span class="r-sub">${l.rate||0}% · ${own0(l.monthly_payment,l.currency||"EUR")} a month${l.payoff?` · paid off ${l.payoff}`:""}</span></span>
          <span style="display:flex;gap:8px;align-items:center"><b>${own0(l.balance,l.currency||"EUR")}</b>
-         <button class="del" title="Remove" aria-label="Remove ${esc(l.name)}" onclick="delFin('loans','${E(l.name)}')">✕</button></span></div>`).join("")||'<span style="color:var(--faint)">None</span>');
+         <button class="del" title="Remove" aria-label="Remove ${esc(l.name)}" onclick="delFin('loans','${E(l.name)}')">✕</button></span></div>`).join("")||'<div class="empty">No loans.</div>');
       const variable=x=>x.fixed===false?' <span class="pill" style="background:var(--panel2);color:var(--muted)">variable</span>':'';
       const li=(x,k)=>`<div class="row"><span>${esc(x.name)}${variable(x)}</span><span style="display:flex;gap:8px;align-items:center"><b>${own0(x.amount,x.currency)} a month</b>
          <button class="del" title="Remove" aria-label="Remove ${esc(x.name)}" onclick="delFin('${k}','${E(x.name)}')">✕</button></span></div>`;
@@ -692,12 +764,12 @@
             ${f.tax&&f.tax.note?`<span class="r-sub" style="color:var(--amber)">${esc(f.tax.note)}</span>`:""}</span>
           <span style="display:flex;gap:4px;align-items:center;text-align:right"><span><b>${money0(x.net_monthly_eur)} a month</b><span class="r-sub">take-home</span></span>${acts(x)}</span></div>`;
       };
-      document.getElementById("fin-income").innerHTML=f.income.map(inc).join("")||'<span style="color:var(--faint)">None</span>';
-      document.getElementById("fin-expenses").innerHTML=f.expenses.map(x=>li(x,"expenses")).join("")||'<span style="color:var(--faint)">None</span>';
+      document.getElementById("fin-income").innerHTML=f.income.map(inc).join("")||'<div class="empty">No income yet.</div>';
+      document.getElementById("fin-expenses").innerHTML=f.expenses.map(x=>li(x,"expenses")).join("")||'<div class="empty">No monthly payments yet.</div>';
       const t=f.totals;
       document.getElementById("fin-totals").innerHTML=
         `Owed <b>${money0(t.debt_eur)}</b> · income after tax <b>${money0(t.monthly_income)} a month</b> · payments <b>${money0(t.monthly_payments)} a month</b> · left over <b style="color:${t.free_cashflow>=0?'var(--green)':'var(--red)'}">${money0(t.free_cashflow)} a month</b>`+
-        (f.tax&&f.tax.applied?`<br><span style="font-size:12px">${esc(f.tax.rules)} Your payslip is the final word.</span>`:"");
+        (f.tax&&f.tax.applied?`<br><span style="font-size:var(--fs-xs)">${esc(f.tax.rules)} Your payslip is the final word.</span>`:"");
       renderAssets(f);
     }
     function editIncome(x){
@@ -713,7 +785,7 @@
     const CAT={watch:"Watch",jewellery:"Jewellery",car:"Car",art:"Art",collectible:"Collectible",property:"Property",other:"Other"};
     function renderAssets(f){
       const el=document.getElementById("asset-list"), a=f.assets||[];
-      if(!a.length){ el.innerHTML='<span style="color:var(--faint)">Nothing yet. Add something you own below.</span>'; return; }
+      if(!a.length){ el.innerHTML='<div class="empty">Nothing yet. Add something you own below.</div>'; return; }
       el.innerHTML=a.map(x=>{
         const id="av-"+btoa(unescape(encodeURIComponent(x.name))).replace(/[=+/]/g,"");
         const ch=x.change_eur!=null?` · paid ${own0(x.paid,x.currency)} (<span style="color:${x.change_eur>=0?'var(--green)':'var(--red)'}">${x.change_eur>=0?"+":"−"}${money0(Math.abs(x.change_eur))}</span>)`:"";
@@ -721,7 +793,7 @@
             <span class="r-sub">${esc(x.currency)}${x.bought?` · bought ${esc(x.bought)}`:""}${ch}</span></span>
           <span style="display:flex;gap:6px;align-items:center">
             <input class="ipt bal" type="number" step="0.01" value="${x.value}" id="${id}" aria-label="Value of ${esc(x.name)}" />
-            <button class="btn" onclick="saveAsset('${E(x.name)}','${id}','${x.category}','${x.currency}',${x.paid||0},'${x.bought||""}')">Save</button>
+            <button class="btn ghost" type="button" onclick="saveAsset('${E(x.name)}','${id}','${x.category}','${x.currency}',${x.paid||0},'${x.bought||""}')">Save</button>
             <button class="del" title="Remove" aria-label="Remove ${esc(x.name)}" onclick="delFin('assets','${E(x.name)}')">✕</button></span></div>`;
       }).join("")+`<div class="row"><span style="font-weight:650">Total</span><span style="font-weight:650">${money0(f.totals.assets_eur)}</span></div>`;
     }
@@ -737,7 +809,7 @@
     }
     function addAsset(){
       const n=document.getElementById("a-name").value, v=document.getElementById("a-val").value;
-      if(!n||!v){ const m=document.getElementById("m-assets"); m.textContent="Fill in what it is and what it is worth now."; m.className="msg err"; return; }
+      if(missing(["a-name","a-val"])){ const m=document.getElementById("m-assets"); m.textContent="Fill in what it is and what it is worth now."; m.className="msg err"; return; }
       postAsset(assetForm(n,v,document.getElementById("a-cat").value,document.getElementById("a-cur").value,
         document.getElementById("a-paid").value,document.getElementById("a-bought").value));
       ["a-name","a-val","a-paid","a-bought"].forEach(id=>document.getElementById(id).value="");
@@ -756,7 +828,7 @@
       const fd=new FormData();
       if(kind==="loans"){
         const n=document.getElementById("l-name").value, b=document.getElementById("l-bal").value;
-        if(!n||!b){ const m=document.getElementById("m-fin"); m.textContent="Fill in the loan name and balance."; m.className="msg err"; return; }
+        if(missing(["l-name","l-bal"])){ const m=document.getElementById("m-fin"); m.textContent="Fill in the loan name and what is still to pay."; m.className="msg err"; return; }
         fd.append("name",n); fd.append("balance",b);
         fd.append("rate",document.getElementById("l-rate").value||0);
         fd.append("monthly_payment",document.getElementById("l-pay").value||0);
@@ -765,7 +837,7 @@
       }else{
         const p=kind==="income"?"i":"e";
         const n=document.getElementById(p+"-name").value, a=document.getElementById(p+"-amt").value;
-        if(!n||!a){ const m=document.getElementById("m-fin"); m.textContent="Fill in a name and an amount."; m.className="msg err"; return; }
+        if(missing([p+"-name",p+"-amt"])){ const m=document.getElementById("m-fin"); m.textContent="Fill in a name and an amount."; m.className="msg err"; return; }
         fd.append("name",n); fd.append("monthly_eur",a);
         fd.append("fixed",document.getElementById(p+"-fixed").value);
         fd.append("currency",document.getElementById(p+"-cur").value);
@@ -782,6 +854,8 @@
       postFin(kind, fd, savedMsg());
     }
     async function delFin(kind,name){
+      const what={loans:"loan",income:"income",expenses:"monthly payment",assets:"item"}[kind]||"entry";
+      if(!confirm(`Remove the ${what} “${name}”?`)) return;
       const msg=document.getElementById("m-fin");
       const r=await fetch("/api/finances/"+kind+"/"+encodeURIComponent(name),{method:"DELETE"}).catch(()=>null);
       if(r&&r.ok) return renderFin(await r.json());
@@ -1097,6 +1171,22 @@
       }).catch(() => render());
       render();
     });
+  </script>
+  <script>
+    /* ---- the section bar at the top: marks the group you are in ---- */
+    (() => {
+      const links = [...document.querySelectorAll(".toc a")];
+      const secs = links.map(a => document.querySelector(a.getAttribute("href"))).filter(Boolean);
+      if (!("IntersectionObserver" in window) || !secs.length) return;
+      const seen = new Map();
+      const mark = () => {
+        let best = null;
+        for (const s of secs) if (seen.get(s)) { best = s; break; }
+        links.forEach(a => { const on = best && a.getAttribute("href") === "#" + best.id; if (on) a.setAttribute("aria-current", "true"); else a.removeAttribute("aria-current"); });
+      };
+      const io = new IntersectionObserver(es => { es.forEach(e => seen.set(e.target, e.isIntersecting)); mark(); }, {rootMargin: "-80px 0px -55% 0px"});
+      secs.forEach(s => io.observe(s));
+    })();
   </script>
   <script src="/accounts.js"></script>
 </body>

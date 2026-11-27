@@ -43,7 +43,7 @@
       INST = cat.institutions || [];
       AGG = Object.fromEntries((cat.aggregators || []).map(a => [norm(a.id), a]));
     } catch (e) {
-      $("acct-panel").innerHTML = '<div class="msg err">Could not load the list of brokers and banks.</div>';
+      $("acct-panel").innerHTML = '<div class="is-error" style="margin-top:12px"><span>Could not load the list of brokers and banks. <button class="linkbtn" type="button" onclick="location.reload()">Try again</button></span></div>';
       return;
     }
     renderChips();
@@ -221,15 +221,15 @@
           <input class="ipt" data-field="${esc(f.name)}" type="${f.secret ? "password" : "text"}" autocomplete="off"
             autocapitalize="off" spellcheck="false" /></label>`).join("")}
         ${isaBox(inst)}
-        <button class="btn" id="cf-go" type="button">Connect</button>
-        <div class="msg" id="cf-msg"></div>
+        <div class="btn-row"><button class="btn" id="cf-go" type="button">Connect</button></div>
+        <div class="msg" id="cf-msg" role="status"></div>
         <div class="fine">Read-only: the app can only look, never trade or move money. Your key is checked with
           ${esc(inst.name)} first, then kept on your own server (encrypted in the backup vault) and never shown again.</div></div>`;
       $("cf-go").addEventListener("click", () => connect(inst, m));
     } else if (m.support === "import") {
       const accept = (m.accept || [m.file_format || "csv"]).map(f => "." + f).join(",");
       box.innerHTML = head + `<div class="up"><input type="file" id="cf-file" accept="${esc(accept)}" />
-        <button class="btn" id="cf-go" type="button">Upload</button></div><div class="msg" id="cf-msg"></div>`;
+        <button class="btn" id="cf-go" type="button">Upload</button></div><div class="msg" id="cf-msg" role="status"></div>`;
       $("cf-go").addEventListener("click", () => importFile(m));
     } else if (m.support === "csv") {
       box.innerHTML = head + `<div>${labelBox(inst)}
@@ -238,7 +238,7 @@
         ${isaBox(inst)}
         <div class="up"><input type="file" id="cf-file" accept=".csv,.txt,.tsv" />
           <button class="btn" id="cf-read" type="button">Read file</button></div>
-        <div class="msg" id="cf-msg"></div><div id="cf-map"></div></div>`;
+        <div class="msg" id="cf-msg" role="status"></div><div id="cf-map"></div></div>`;
       csvFile = null; csvMapping = null;
       $("cf-read").addEventListener("click", () => csvPreview());
       $("cf-ccy").addEventListener("change", () => csvFile && csvPreview(csvMapping));
@@ -282,7 +282,7 @@
         <div class="facts">${covers ? `<span>Would track: <b>${esc(covers)}</b></span>` : ""}
           ${a.consent_renewal_days ? `<span>Reconnect every <b>${esc(a.consent_renewal_days)} days</b></span>` : ""}</div>
         ${a.cost ? `<div class="cmeta">${esc(a.cost)}</div>` : ""}
-        ${m.verified === false ? `<div class="cmeta" style="color:#e3b341">Unverified for ${esc(inst.name)}.</div>` : ""}
+        ${m.verified === false ? `<div class="cmeta" style="color:var(--amber)">Unverified for ${esc(inst.name)}.</div>` : ""}
         ${m.notes ? `<div class="note">${esc(m.notes)}</div>` : ""}
         ${open && steps.length ? `<details><summary class="cmeta" style="cursor:pointer">How it would work</summary>
           <ol class="steps">${steps.map(s => `<li>${esc(s)}</li>`).join("")}</ol></details>` : ""}
@@ -340,10 +340,10 @@
       <details><summary class="cmeta" style="cursor:pointer">Or paste the key</summary>
         <textarea class="ipt" id="eb-key" rows="5" autocomplete="off" autocapitalize="off" spellcheck="false"
           placeholder="-----BEGIN PRIVATE KEY-----"></textarea></details>
-      <div style="margin-top:10px"><button class="btn" id="eb-save" type="button">Save and check</button>
+      <div class="btn-row"><button class="btn" id="eb-save" type="button">Save and check</button>
         ${st.configured ? '<button class="btn ghost" id="eb-cancel" type="button">Cancel</button>' : ""}
-        ${st.source === "app" ? '<button class="btn ghost" id="eb-forget" type="button">Remove the saved key</button>' : ""}</div>
-      <div class="msg" id="eb-msg"></div>
+        ${st.source === "app" ? '<button class="btn danger" id="eb-forget" type="button">Remove the saved key</button>' : ""}</div>
+      <div class="msg" id="eb-msg" role="status"></div>
       <div class="fine">The key is checked with Enable Banking, then kept on your own server (encrypted in the backup
         vault) and never shown again. It can only read the accounts you link.</div>
       ${docLink(a, "Enable Banking docs")}`;
@@ -397,8 +397,8 @@
         <label class="fld"><span>Bank</span><select class="ipt" id="eb-bank"><option>Loading…</option></select></label>
       </div>
       ${labelBox(inst)}
-      <button class="btn" id="eb-go" type="button" disabled>Link</button>
-      <div class="msg" id="eb-msg"></div>
+      <div class="btn-row"><button class="btn" id="eb-go" type="button" disabled>Link</button></div>
+      <div class="msg" id="eb-msg" role="status"></div>
       <div class="fine">You go to your bank to approve read-only access to your balances, then come back here.
         On iPhone the bank may finish in Safari: then just open this app again. Access lasts up to the bank's maximum
         (often 180 days); the app reminds you to renew it.</div>`;
@@ -473,16 +473,17 @@
       `<div class="note warn">Unofficial: Trade Republic has no public API. This signs in the way Trade Republic's
         own web app does, like the open-source tool pytr. It may stop working when Trade Republic changes its app,
         and using it may be against Trade Republic's terms. You decide.</div>
-      <div id="tr-form">
+      <div id="tr-form" class="tr-box">
+        <div class="step-h"><span class="step-n" aria-hidden="true">1</span>Your phone number and PIN</div>
         ${renew ? `<div class="sub" style="margin:8px 0">Signing in again for “${esc(renew.label)}”.</div>` : labelBox(inst)}
         <label class="fld"><span>Phone number, with the country code</span>
           <input class="ipt" id="tr-phone" type="tel" inputmode="tel" autocomplete="tel" placeholder="+49 170 1234567" /></label>
         <label class="fld"><span>PIN</span>
           <input class="ipt" id="tr-pin" type="password" inputmode="numeric" autocomplete="off" /></label>
-        <button class="btn" id="tr-go" type="button">Sign in</button>
+        <div class="btn-row"><button class="btn" id="tr-go" type="button">Sign in</button></div>
       </div>
       <div id="tr-step"></div>
-      <div class="msg" id="tr-msg"></div>
+      <div class="msg" id="tr-msg" role="status"></div>
       <div class="fine">Your PIN goes to Trade Republic once, to start the sign-in, and is never stored. The app keeps
         only the sign-in session, on your own computer (encrypted in the backup vault). It can only read: it has no way
         to trade, move money or change settings.</div>` + docLink(m, "pytr, the open-source tool this follows");
@@ -517,19 +518,21 @@
     info($("tr-msg"), "");
     const box = $("tr-step");
     if (s.step === "app") {
-      box.innerHTML = `<div class="note"><b>Check your phone.</b> ${esc(s.message)}
+      box.innerHTML = `<div class="tr-box"><div class="step-h"><span class="step-n" aria-hidden="true">2</span>Approve in the Trade Republic app</div>
+        <div class="note"><b>Check your phone.</b> ${esc(s.message)}
           <span class="cmeta" id="tr-left"></span></div>
-        <button class="btn sm ghost" id="tr-cancel" type="button">Cancel</button>`;
+        <div class="btn-row"><button class="btn sm ghost" id="tr-cancel" type="button">Cancel</button></div></div>`;
       setTimeout(trPoll, 1500);
     } else {
       const n = s.step === "code" ? 4 : 6;
-      box.innerHTML = `<label class="fld"><span>${esc(s.message)}</span>
+      box.innerHTML = `<div class="tr-box"><div class="step-h"><span class="step-n" aria-hidden="true">2</span>Enter the code</div>
+        <label class="fld"><span>${esc(s.message)}</span>
           <input class="ipt" id="tr-code" inputmode="numeric" autocomplete="one-time-code" maxlength="${n}"
-            placeholder="${"0".repeat(n)}" /></label>
-        <button class="btn" id="tr-ok" type="button">Confirm</button>
+            placeholder="${"0".repeat(n)}" style="max-width:220px;letter-spacing:.2em" /></label>
+        <div class="btn-row"><button class="btn" id="tr-ok" type="button">Confirm</button>
         ${s.can_resend ? '<button class="btn ghost" id="tr-sms" type="button">Send it by SMS</button>' : ""}
         <button class="btn ghost" id="tr-cancel" type="button">Cancel</button>
-        <span class="cmeta" id="tr-left"></span>`;
+        <span class="cmeta" id="tr-left"></span></div></div>`;
       const go = () => trConfirm($("tr-code").value.trim());
       $("tr-ok").addEventListener("click", go);
       $("tr-code").addEventListener("keydown", e => { if (e.key === "Enter") go(); });
@@ -750,7 +753,7 @@
   function consentHtml(c) {
     const k = c.consent; if (!k) return "";
     if (k.expired) return c.error ? "" : `<div class="cerr">Bank access ended on ${esc(day(k.expires))}. Press Renew to link it again.</div>`;
-    if (k.warn) return `<div class="cerr" style="color:#e3b341">Bank access ends ${k.days_left ? "in " + esc(days(k.days_left)) : "today"}
+    if (k.warn) return `<div class="cerr" style="color:var(--amber)">Bank access ends ${k.days_left ? "in " + esc(days(k.days_left)) : "today"}
       (${esc(day(k.expires))}). Press Renew to keep it updating.</div>`;
     return `<div class="cmeta">Renew in ${esc(days(k.days_left))} (bank access until ${esc(day(k.expires))})</div>`;
   }
@@ -767,7 +770,7 @@
   async function loadConnections() {
     let d;
     try { d = await (await fetch("/api/connections")).json(); }
-    catch (e) { $("conn-list").innerHTML = '<span class="err">Could not load connected accounts.</span>'; return; }
+    catch (e) { $("conn-list").innerHTML = '<div class="is-error"><span>Could not load connected accounts. <button class="linkbtn" type="button" onclick="location.reload()">Try again</button></span></div>'; return; }
     const rows = [];
     for (const c of d.connections || []) {
       const [cls, word] = STATUS[c.status] || STATUS.pending;
@@ -782,7 +785,7 @@
           <div class="cmeta">${esc(c.institution_name)}${esc(via)}${c.summary ? " · " + esc(c.summary) : ""}</div>
           <div class="cmeta">Updated ${esc(ago(c.last_sync))} · ${esc((c.updates || "").toLowerCase())}</div>
           ${consentHtml(c)}
-          ${c.error ? `<div class="cerr" ${c.status === "pending" || signin ? 'style="color:#e3b341"' : ""}>${esc(c.error)}</div>` : ""}
+          ${c.error ? `<div class="cerr" ${c.status === "pending" || signin ? 'style="color:var(--amber)"' : ""}>${esc(c.error)}</div>` : ""}
           ${dupHtml(c)}</div>
         <div class="cact">${signin ? `<button class="btn sm" type="button" data-act="tr-signin" data-id="${esc(c.id)}" data-label="${esc(c.label)}">Sign in again</button>`
             : `<button class="btn sm ghost" type="button" data-act="${csv ? "file" : "refresh"}" data-id="${esc(c.id)}">${csv ? "New file" : "Refresh"}</button>`}
@@ -803,7 +806,7 @@
         <div class="cact"><button class="btn sm ghost" type="button" data-act="upload" data-inst="${esc(f.institution)}">New file</button></div></div>`);
     }
     $("conn-list").innerHTML = rows.join("") ||
-      '<span style="color:var(--faint)">Nothing connected yet. Add your first account above.</span>';
+      '<div class="empty">Nothing connected yet. Add your first account above.</div>';
   }
 
   let fileFor = null;

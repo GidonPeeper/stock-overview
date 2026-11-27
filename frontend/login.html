@@ -20,33 +20,47 @@
       --accent:#709af1; --accent-bg:rgba(112,154,241,0.15); --accent-fill:#2563eb; --on-accent:#ffffff; }
     :root[data-theme="light"]{ --bg:#f4f6f9; --panel:#ffffff; --panel2:#eff2f6; --text:#151d28; --muted:#526070; --border:#d5dce5; --red:#c8323f;
       --accent:#1557e8; --accent-bg:rgba(21,87,232,0.1); --accent-fill:#2563eb; --on-accent:#ffffff; }
+    html{ color-scheme:dark; } :root[data-theme="light"]{ color-scheme:light; }
     * { box-sizing:border-box; }
-    body { margin:0; min-height:100vh; background:var(--bg); color:var(--text);
-      font:16px/1.5 "Inter",-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
-      background-image:radial-gradient(900px 400px at 50% -140px, var(--accent-bg), transparent 65%);
-      display:flex; align-items:center; justify-content:center; padding:24px; }
-    .card { width:100%; max-width:360px; background:var(--panel); border:1px solid var(--border); border-radius:18px; padding:28px 24px; text-align:center; }
-    img.logo { width:72px; height:72px; border-radius:18px; margin-bottom:14px; }
-    h1 { font-size:20px; margin:0 0 4px; }
-    p.sub { color:var(--muted); font-size:13px; margin:0 0 22px; }
+    body { margin:0; min-height:100vh; min-height:100dvh; background:var(--bg); color:var(--text);
+      font:16px/1.5 "Inter",-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif; -webkit-font-smoothing:antialiased;
+      background-image:radial-gradient(900px 400px at 50% -140px, var(--accent-bg), transparent 65%); background-repeat:no-repeat;
+      display:flex; align-items:center; justify-content:center;
+      padding:max(24px, env(safe-area-inset-top)) max(16px, env(safe-area-inset-right)) max(24px, env(safe-area-inset-bottom)) max(16px, env(safe-area-inset-left)); }
+    :focus-visible { outline:2px solid var(--accent); outline-offset:2px; }
+    .card { width:100%; max-width:380px; background:var(--panel); border:1px solid var(--border); border-radius:16px; padding:28px 24px 24px;
+      box-shadow:0 1px 2px rgba(0,0,0,.2), 0 16px 40px -20px rgba(0,0,0,.45); }
+    .head { text-align:center; }
+    img.logo { width:64px; height:64px; border-radius:16px; margin-bottom:12px; }
+    h1 { font-size:20px; margin:0 0 4px; letter-spacing:-.02em; }
+    p.sub { color:var(--muted); font-size:14px; margin:0 0 20px; }
+    label { display:block; font-size:13px; font-weight:600; margin:0 0 6px; }
     input { width:100%; background:var(--panel2); border:1px solid var(--border); color:var(--text);
-      border-radius:10px; padding:13px 14px; font-size:16px; margin-bottom:12px; }
-    input:focus { outline:none; border-color:var(--accent); }
-    button { width:100%; background:var(--accent-fill); color:var(--on-accent); border:none; border-radius:10px;
-      padding:14px; font-size:16px; font-weight:600; cursor:pointer; }
-    .err { color:var(--red); font-size:13px; min-height:18px; margin-bottom:6px; }
+      border-radius:10px; padding:0 14px; min-height:48px; font:inherit; font-size:16px; margin-bottom:14px; transition:border-color .15s, box-shadow .15s; }
+    input:focus { outline:none; border-color:var(--accent); box-shadow:0 0 0 3px var(--accent-bg); }
+    button { width:100%; min-height:48px; background:var(--accent-fill); color:var(--on-accent); border:none; border-radius:10px;
+      padding:0 14px; font:inherit; font-size:16px; font-weight:650; cursor:pointer; margin-top:4px; }
+    button:hover { filter:brightness(1.08); }
+    button:active { transform:translateY(1px); }
+    .err { color:var(--red); font-size:14px; font-weight:550; min-height:0; margin-bottom:10px; text-align:center; }
+    .err:empty { display:none; }
+    @media (prefers-reduced-motion:reduce) { * { transition:none !important; } }
   </style>
   <!-- the colours chosen in Settings, as this device last saved them (no API before signing in) -->
   <script>try{ var so=JSON.parse(localStorage.getItem("so.colors")||"null"); if(so&&so.css){ var st=document.createElement("style"); st.id="so-colors"; st.textContent=so.css; document.head.appendChild(st); } }catch(e){}</script>
 </head>
 <body>
   <form class="card" method="POST" action="/login">
-    <img class="logo" src="/icon-192.png" alt="" />
-    <h1>Stock Overview</h1>
-    <p class="sub">Sign in to see your portfolio</p>
-    <div class="err" id="err"></div>
-    <input name="username" type="text" placeholder="Username" autocomplete="username" autocapitalize="none" required />
-    <input name="password" type="password" placeholder="Password" autocomplete="current-password" required />
+    <div class="head">
+      <img class="logo" src="/icon-192.png" alt="" />
+      <h1>Stock Overview</h1>
+      <p class="sub">Sign in to see your portfolio</p>
+    </div>
+    <div class="err" id="err" role="alert"></div>
+    <label for="username">Username</label>
+    <input id="username" name="username" type="text" autocomplete="username" autocapitalize="none" spellcheck="false" required />
+    <label for="password">Password</label>
+    <input id="password" name="password" type="password" autocomplete="current-password" required />
     <button type="submit">Sign in</button>
   </form>
   <script>
