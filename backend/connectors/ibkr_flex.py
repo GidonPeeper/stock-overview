@@ -3,8 +3,8 @@
 A Flex token can only download reports the account holder defined; it can
 never trade or move money. Setup (IBKR Portal, Performance & Reports -> Flex
 Queries): make an Activity Flex Query with Open Positions, Trades, Cash
-Transactions and Cash Report, format XML, period "Last 365 Calendar Days";
-then switch on Flex Web Service and generate a token.
+Transactions, Cash Report and Interest Details (Tiers), format XML, period
+"Last 365 Calendar Days"; then switch on Flex Web Service and generate a token.
 
 Two calls, both GET, both need a User-Agent header:
 
@@ -26,6 +26,20 @@ Mapping (amounts stay in each row's own currency; the app converts to EUR):
   CashTransaction "Dividends" / "Payment In Lieu Of Dividends" / "Withholding
                   Tax" -> dividends (net); "Broker/Bond Interest Received" -> interest
   CashReportCurrency endingCash per currency -> cash
+  TierInterestDetail (section "Interest Details (Tiers)") -> the interest rate
+                  of each currency's cash, as IBKR states it (below)
+
+Interest rate. "Interest Details (Tiers)" covers "interest paid and charged on
+long and short cash balances", one row per value date per tier, with Rate "the
+interest rate for the applicable tier" in % a year
+(ibkrguides.com/reportingreference/reportguide/interest%20details%20(tiers)fq.htm,
+.../creditinterestdetails_default.htm). IBKR's pages give display names only;
+the XML names (TierInterestDetails > TierInterestDetail: currency, valueDate,
+interestType, totalPrincipal, rate, totalInterest, ...) are those of the
+open-source parser ibflex (github.com/csingley/ibflex, Types.py). The rate of
+a currency's cash is the stated tier rates on its latest value date, weighted
+by the principal in each tier (IBKR pays nothing on the first part of a
+balance), before tax. Without the section the account says how to add it.
 """
 
 from __future__ import annotations
@@ -35,6 +49,7 @@ import os
 import re
 import time
 import xml.etree.ElementTree as ET
+from datetime import date
 
 from .base import Holding
 from .live import ConnectorError, Snapshot, num, request
@@ -189,8 +204,60 @@ def _rows(parent: ET.Element | None, tag: str, prefer: tuple[str, ...]) -> list[
     return [r for r in rows if not r.get("levelOfDetail")]
 
 
+INTEREST_SETUP = {
+    "status": "setup",
+    "text": "To read the rate IBKR pays on this cash, add the section Interest Details (Tiers) to "
+            "your Flex Query.",
+    "steps": [
+        "In the IBKR Portal, go to Performance & Reports, then Flex Queries.",
+        "Edit your Activity Flex Query. Under Sections, tick Interest Details (Tiers), select all "
+        "its fields and save. The Query ID and the token stay the same.",
+        "The rate shows here after the next update (the report is made once a day).",
+    ],
+}
+
+
+def tier_rates(statements: list[ET.Element]) -> dict[str, dict] | None:
+    """{currency: rate info} from Interest Details (Tiers), as IBKR states it:
+    the tier rates on the latest value date, weighted by each tier's principal.
+    None when no statement has the section."""
+    found, days = False, {}
+    for st in statements:
+        section = st.find("TierInterestDetails")
+        if section is None:
+            continue
+        found = True
+        for t in section.findall("TierInterestDetail"):
+            ccy = (t.get("currency") or "").upper()
+            kind = (t.get("interestType") or "").lower()
+            if not ccy or ccy == "BASE_SUMMARY" or any(w in kind for w in ("debit", "short", "borrow")):
+                continue
+            principal = num(t.get("totalPrincipal"), num(t.get("securitiesPrincipal")))
+            rate = num(t.get("rate"), None)
+            day = _date(t.get("valueDate"))[:10]
+            if principal <= 0 or rate is None or not day:
+                continue
+            days.setdefault(ccy, {}).setdefault(day, []).append((principal, rate))
+    if not found:
+        return None
+    out = {}
+    for ccy, by_day in days.items():
+        day = max(by_day)
+        tiers = sorted(by_day[day], key=lambda pr: pr[1])
+        total = sum(p for p, _ in tiers)
+        pct = sum(p * r for p, r in tiers) / total
+        parts = ", ".join(f"{r:g}% on {p:,.0f}" for p, r in tiers)
+        d = date.fromisoformat(day)
+        out[ccy] = {"status": "ok", "source": "provider", "pct": round(pct, 2), "basis": "gross",
+                    "from": day, "to": day, "currency": ccy,
+                    "note": f"stated by IBKR for {d.day} {d:%b}"
+                            + (f" ({parts} {ccy})" if len(tiers) > 1 else "") + ", before tax"}
+    return out
+
+
 def parse(root: ET.Element, label: str = "IBKR") -> Snapshot:
     snap = Snapshot()
+    rates = tier_rates(list(root.iter("FlexStatement")))
     to_date = ""
     unmatched = 0   # cancellations without origTradeID (add it to the Flex Query)
     for st in root.iter("FlexStatement"):
@@ -272,8 +339,15 @@ def parse(root: ET.Element, label: str = "IBKR") -> Snapshot:
         for r in per_ccy:
             ccy = (r.get("currency") or "").upper()
             ccy = base_ccy.upper() if ccy == "BASE_SUMMARY" else ccy
+            if rates is None:
+                rate = INTEREST_SETUP
+            else:
+                rate = rates.get(ccy) or {
+                    "status": "none",
+                    "text": f"IBKR's interest details show no interest on {ccy} cash. If it earns "
+                            "none, enter 0%."}
             snap.cash.append({"name": f"cash {ccy}", "currency": ccy,
-                              "balance": round(num(r.get("endingCash")), 2)})
+                              "balance": round(num(r.get("endingCash")), 2), "interest": rate})
 
     if root.find(".//FlexStatement") is None:
         raise ConnectorError("The IBKR report is empty. Check the Flex Query has an account selected.")

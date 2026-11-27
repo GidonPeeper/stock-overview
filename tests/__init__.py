@@ -4,6 +4,7 @@ import os
 # No network in tests: unknown ISINs are not looked up on Yahoo (instruments.py).
 os.environ.setdefault("TICKER_LOOKUP", "0")
 os.environ.setdefault("PRICE_GAPS", "0")      # no hourly-price requests (backend/closes.py)
+os.environ.setdefault("INTEREST_LOOKUP", "0") # no background interest reads (backend/interest.py)
 
 # Settings saved on this computer (data/settings.json) must not steer the
 # tests: they read their choices from the environment, or an empty folder.

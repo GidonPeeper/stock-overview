@@ -181,8 +181,9 @@ class StarlingTest(TempStore):
     def test_balances(self):
         fake = self.http(STARLING_ROUTES)
         snap = starling.fetch({"token": "tok"})
-        self.assertEqual(snap.cash, [{"name": "Personal", "currency": "GBP", "balance": 1234.56},
-                                     {"name": "Euro", "currency": "EUR", "balance": 50.0}])
+        # "ref": the account's uid, to match the interest found for it (backend/interest.py)
+        self.assertEqual(snap.cash, [{"name": "Personal", "currency": "GBP", "balance": 1234.56, "ref": "a1"},
+                                     {"name": "Euro", "currency": "EUR", "balance": 50.0, "ref": "a2"}])
         self.assertEqual(fake.calls[0]["headers"]["Authorization"], "Bearer tok")
 
     def test_403_hint(self):
@@ -310,8 +311,12 @@ class IbkrTest(TempStore):
                          [("BUY", 10, 1501.0, "2026-01-05 09:30:00"), ("SELL", 5, 1999.0, "2026-03-02 10:15:00")])
         self.assertEqual([(d["amount"], d["date"]) for d in snap.dividends], [(2.5, "2026-05-15"), (-0.38, "2026-05-15")])
         self.assertEqual([(i["amount"], i["currency"]) for i in snap.interest], [(4.1, "GBP")])
-        self.assertEqual(snap.cash, [{"name": "cash GBP", "currency": "GBP", "balance": 700.0},
-                                     {"name": "cash USD", "currency": "USD", "balance": 140.5}])
+        self.assertEqual([{k: c[k] for k in ("name", "currency", "balance")} for c in snap.cash],
+                         [{"name": "cash GBP", "currency": "GBP", "balance": 700.0},
+                          {"name": "cash USD", "currency": "USD", "balance": 140.5}])
+        # no Interest Details (Tiers) in this query: each cash row says how to add it
+        self.assertEqual({c["interest"]["status"] for c in snap.cash}, {"setup"})
+        self.assertIn("Interest Details (Tiers)", snap.cash[0]["interest"]["text"])
         self.assertIn("3 positions", snap.summary)
 
     def flex(self, positions="", trades=""):

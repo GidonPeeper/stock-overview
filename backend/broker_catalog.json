@@ -1564,14 +1564,14 @@
             "Sign up for a free developer account at developer.starlingbank.com.",
             "Open 'Personal Access' and link your Starling bank account.",
             "Click 'Create Token' and give it a name.",
-            "Tick only account:read and balance:read. That is all this app needs.",
+            "Tick only account:read, balance:read and transaction:read. All three only let the app read; none can move money. transaction:read lets the app work out the interest your accounts earn.",
             "Click Create and copy the whole token. Paste it below."
           ],
           "covers": [
             "cash",
             "transactions"
           ],
-          "notes": "Free, read-only token for your own account, with no 90-day reconnect. Starling's developer docs say a personal access token does not expire. The balance includes money in Spaces.",
+          "notes": "Free, read-only token for your own account, with no 90-day reconnect. Starling's developer docs say a personal access token does not expire. The balance includes money in Spaces. Starling's API states no interest rate; with transaction:read the app works it out from the interest paid into each account (a token without it still shows the balances).",
           "docs_url": "https://developer.starlingbank.com/docs",
           "verified": true
         },
@@ -2391,7 +2391,7 @@
           "steps": [
             "Log in to the IBKR Portal on the website. Go to Performance & Reports, then Flex Queries.",
             "Next to Activity Flex Query, click + to make a new query. Name it, for example 'Dashboard'.",
-            "Under Sections, add Open Positions, Trades, Cash Transactions and Cash Report. Select all fields in each and click Save.",
+            "Under Sections, add Open Positions, Trades, Cash Transactions, Cash Report and Interest Details (Tiers). Select all fields in each and click Save. Interest Details (Tiers) gives the interest rate IBKR pays on your cash.",
             "Under Delivery Configuration, set Format to XML (not CSV) and Period to Last 365 Calendar Days.",
             "Click Continue, then Create. On the Flex Queries page, click the Info icon next to the query and copy the Query ID shown at the top.",
             "Go to Flex Queries, then Flex Web Service Configuration. Tick Flex Web Service Status and click Save.",

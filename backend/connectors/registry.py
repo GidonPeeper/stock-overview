@@ -61,6 +61,13 @@ class Spec:
     retry: float = 120.0            # seconds before retrying after a failure
     persist: bool = False           # keep the last balances in connections.json
     restore: Callable[[dict], Snapshot | None] | None = None   # rebuild a saved snapshot
+    # How the interest rate of its cash is found (backend/interest.py): a
+    # background read, (creds, conn) -> {"accounts": {ref: result}} or one
+    # status for all; or, when the API has nothing, why (shown to the user).
+    # A connector that learns it with the balances puts "interest" on each
+    # cash row instead (IBKR, Trade Republic).
+    interest: Callable[[dict, dict], dict] | None = None
+    interest_note: str = ""
     extra: dict = field(default_factory=dict)
 
 
@@ -110,12 +117,12 @@ CONNECTORS: dict[str, Spec] = {
         id="starling", name="Starling", feeds=("cash",), ttl=300, updates="Every few minutes",
         fields=({"name": "token", "label": "Personal access token", "secret": True,
                  "aliases": ("access_token", "personal_access_token", "api_token")},),
-        fetch=starling.fetch),
+        fetch=starling.fetch, interest=starling.interest),
     "wise": Spec(
         id="wise", name="Wise", feeds=("cash",), ttl=300, updates="Every few minutes",
         fields=({"name": "token", "label": "API token", "secret": True,
                  "aliases": ("api_token", "personal_token", "access_token")},),
-        fetch=wise.fetch),
+        fetch=wise.fetch, interest_note=wise.INTEREST_NOTE),
     "ibkr_flex": Spec(
         id="ibkr_flex", name="Interactive Brokers", feeds=("holdings", "trades", "cash", "dividends"),
         ttl=6 * 3600, updates="Once a day (IBKR prepares the report overnight)",
@@ -130,13 +137,13 @@ CONNECTORS: dict[str, Spec] = {
                  "aliases": ("public_api_key", "x_api_key")},
                 {"name": "user_key", "label": "User key", "secret": True,
                  "aliases": ("x_user_key",)}),
-        fetch=etoro.fetch),
+        fetch=etoro.fetch, interest_note=etoro.INTEREST_NOTE),
     "bitvavo": Spec(
         id="bitvavo", name="Bitvavo", feeds=("holdings", "cash"), ttl=300, updates="Every few minutes",
         fields=({"name": "api_key", "label": "API key", "secret": True, "aliases": ("key",)},
                 {"name": "api_secret", "label": "API secret", "secret": True,
                  "aliases": ("secret",)}),
-        fetch=bitvavo.fetch),
+        fetch=bitvavo.fetch, interest_note=bitvavo.INTEREST_NOTE),
     # One Enable Banking application serves every linked bank; each connection
     # is one consent at one bank. Banks allow about 4 background reads a day,
     # so balances are kept for 6 hours (and saved, to survive a restart).
@@ -144,7 +151,7 @@ CONNECTORS: dict[str, Spec] = {
         id="enablebanking", name="Enable Banking", feeds=("cash",),
         ttl=enablebanking.BALANCES_TTL, retry=enablebanking.RETRY, persist=True,
         updates="Up to 4 times a day (a bank limit), and when you press Refresh",
-        fetch=enablebanking.fetch, first_wait=10.0,
+        fetch=enablebanking.fetch, first_wait=10.0, interest_note=enablebanking.INTEREST_NOTE,
         extra={"flow": "bank_link", "psu": True}),
     # Unofficial: Trade Republic's own web sign-in (phone, PIN, approve in the
     # app). Positions and cash every few minutes, the history a few times a
@@ -155,6 +162,7 @@ CONNECTORS: dict[str, Spec] = {
         ttl=300, retry=300.0, persist=True, restore=traderepublic_live.restore,
         updates="Every few minutes (history a few times a day)",
         fetch=traderepublic_live.fetch, first_wait=8.0, validate_wait=60.0,
+        interest_note=traderepublic_live.INTEREST_NOTE,
         extra={"flow": "tr_login", "managed_by": "traderepublic",
                "managed_feeds": ("holdings", "trades")}),
 }

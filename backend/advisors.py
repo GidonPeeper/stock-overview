@@ -212,9 +212,10 @@ def _fund_isins() -> frozenset[str]:
 
 
 def _bank_accounts(c: "_Ctx") -> list[dict]:
-    """Cash and savings accounts with an interest rate entered in Settings
-    (not pensions). An account that updates itself counts once its rate has
-    been entered: until then its rate is unknown, not 0%."""
+    """Cash and savings accounts with a known interest rate (not pensions). An
+    account that updates itself counts once its rate is known: found from the
+    account (backend/interest.py) or entered in Settings. Until then its rate
+    is unknown, not 0%."""
     return [a for a in ((c.cash or {}).get("accounts") or [])
             if a.get("type") in ("cash", "savings") and (not a.get("auto") or a.get("rate_known"))]
 
