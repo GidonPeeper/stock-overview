@@ -1,0 +1,198 @@
+{
+  "code": "FI",
+  "name": "Finland",
+  "currency": "EUR",
+  "currency_note": "",
+  "timezone": "Europe/Helsinki",
+  "languages": ["fi", "sv"],
+  "checked_on": "2026-11-26",
+  "tax_year": {
+    "label": "2026",
+    "starts": "01-01",
+    "ends": "12-31",
+    "return_due": "Vero prepares a pre-completed tax return by the end of March of the next year; corrections are due on the date printed on it (in 2026 this was 1, 14, 21 or 28 April).",
+    "source": "https://www.vero.fi/en/individuals/tax-cards-and-tax-returns/your_tax_return_and_tax_assessment_deci/"
+  },
+  "summary": "Investment income is capital income, taxed at 30% up to €30,000 a year and 34% above. Dividends and fund payouts have tax withheld at payment, but tax on a gain from selling is yours to pay, usually as a prepayment. An equity savings account (osakesäästötili) lets you trade listed shares tax-free inside it until you withdraw.",
+  "topics": [
+    {
+      "id": "gains",
+      "title": "Profit when you sell",
+      "points": [
+        "A gain on shares or fund units is capital income: 30% on capital income up to €30,000 in the year and 34% on the part above.",
+        "The same rules apply to Finnish and foreign shares, listed or not, and whether you trade through a Finnish or a foreign account.",
+        "Instead of the real purchase price and costs, you may deduct a deemed acquisition cost (hankintameno-olettama): 20% of the sale price if you held the shares under 10 years, 40% if you held them at least 10 years.",
+        "If your total sales of assets in a year are €1,000 or less, the gains are tax-free (tax-exempt sales do not count towards this). You must still report them.",
+        "Shares in the same company are sold first in, first out (FIFO), counted separately for each securities account.",
+        "No tax is withheld on sales: you pay it yourself, ideally as a prepayment or an additional prepayment (lisäennakko) to avoid interest."
+      ],
+      "figures": [
+        {"label": "Capital income up to €30,000", "value": "30%"},
+        {"label": "Capital income above €30,000", "value": "34%"},
+        {"label": "Deemed acquisition cost, held under 10 years", "value": "20% of the sale price"},
+        {"label": "Deemed acquisition cost, held 10 years or more", "value": "40% of the sale price"},
+        {"label": "Small-sales limit per year", "value": "€1,000"}
+      ],
+      "sources": [
+        "https://www.vero.fi/en/individuals/property/investments/selling-shares/",
+        "https://www.vero.fi/en/individuals/property/investments/pay-tax-on-investments/",
+        "https://www.vero.fi/en/individuals/property/investments/report-the-information-on-your-investments/"
+      ]
+    },
+    {
+      "id": "dividends",
+      "title": "Dividends",
+      "points": [
+        "For dividends from a listed company, 85% is taxable capital income and 15% is tax-free.",
+        "The paying company withholds 25.5% of the whole dividend and sends it to Vero; the final tax is settled in your assessment.",
+        "Dividends from listed companies in another EEA country, or in a country with a tax treaty covering dividends, are taxed the same way. A foreign company does not withhold Finnish tax, though its own country may withhold tax at source.",
+        "Dividends from unlisted companies follow different rules, not covered here."
+      ],
+      "figures": [
+        {"label": "Taxable part of a listed-company dividend", "value": "85%"},
+        {"label": "Withheld on listed-company dividends", "value": "25.5%"}
+      ],
+      "sources": [
+        "https://www.vero.fi/en/individuals/property/investments/dividends/dividends-from-a-listed-company/",
+        "https://www.vero.fi/en/individuals/property/investments/dividends/foreign-dividends/",
+        "https://www.vero.fi/en/individuals/property/investments/pay-tax-on-investments/"
+      ]
+    },
+    {
+      "id": "interest",
+      "title": "Interest on savings",
+      "points": [
+        "Interest on deposits (and on some bonds) paid by a Finnish bank or issuer is subject to a 30% source tax on interest (korkotulon lähdevero), withheld by the payer. This is final: the interest is not added to your taxable income and does not go in your return.",
+        "Other interest, for example from abroad, is ordinary capital income at 30% / 34%, and you report it."
+      ],
+      "figures": [
+        {"label": "Source tax on deposit interest", "value": "30%"}
+      ],
+      "sources": [
+        "https://www.vero.fi/syventavat-vero-ohjeet/ohje-hakusivu/48890/korkotulojen-verotus4/",
+        "https://www.vero.fi/en/About-us/contact-us/forms/filling-instructions/50B-Capital-income-and-deductions-Instructions/"
+      ]
+    },
+    {
+      "id": "funds",
+      "title": "Funds and ETFs",
+      "points": [
+        "Fund income is capital income. For distributing units (tuotto-osuus), the fund company withholds 30% each time it pays out.",
+        "For accumulating units (kasvuosuus), you pay tax only when you sell.",
+        "You can switch between the distributing and accumulating units of the same fund without tax. Switching to another fund counts as a sale.",
+        "The deemed acquisition cost (20% or 40%) can also be used when selling fund units.",
+        "If a foreign fund's home country taxes its payouts, that tax is credited against your Finnish tax."
+      ],
+      "figures": [
+        {"label": "Withheld on fund payouts", "value": "30%"}
+      ],
+      "sources": [
+        "https://www.vero.fi/en/individuals/property/investments/investment-fund-shares/",
+        "https://www.vero.fi/en/individuals/property/investments/pay-tax-on-investments/"
+      ]
+    },
+    {
+      "id": "accounts",
+      "title": "Tax-free and tax-deferred accounts",
+      "points": [
+        "Equity savings account (osakesäästötili): you can buy and sell listed shares inside it without tax on each sale, and dividends and interest are not taxed when they arrive.",
+        "You can deposit at most €100,000 in money. You cannot move shares you already own into the account.",
+        "Tax is due only when you withdraw: each withdrawal is split into tax-free capital and taxable profit in proportion to the account's value. The bank withholds 30% of the profit.",
+        "All profit is taxable, including the 15% of dividends that would be tax-free outside the account, and the deemed acquisition cost cannot be used.",
+        "A loss can only be deducted in the year you close the account.",
+        "You may have only one account at a time; holding more leads to a tax increase of €10 a day per account. You can move the account to another bank without tax."
+      ],
+      "figures": [
+        {"label": "Maximum deposits", "value": "€100,000"},
+        {"label": "Withheld on profit when withdrawing", "value": "30%"}
+      ],
+      "sources": [
+        "https://www.vero.fi/en/individuals/property/investments/equity-savings-account/",
+        "https://www.vero.fi/henkiloasiakkaat/omaisuus/sijoitukset/osakes%C3%A4%C3%A4st%C3%B6tili/"
+      ]
+    },
+    {
+      "id": "losses",
+      "title": "Losses",
+      "points": [
+        "A loss on selling shares or fund units is first deducted from capital gains, then from your other capital income.",
+        "Any loss left over is carried forward for the next 5 years.",
+        "A sale loss is not deductible at all if the total purchase price of the shares you sold in the year was €1,000 or less.",
+        "Losses on shares do not reduce tax on earned income."
+      ],
+      "figures": [
+        {"label": "Carry-forward period", "value": "5 years"}
+      ],
+      "sources": [
+        "https://www.vero.fi/en/individuals/property/investments/selling-shares/",
+        "https://www.vero.fi/en/individuals/property/investments/investment-fund-shares/"
+      ]
+    },
+    {
+      "id": "foreign",
+      "title": "Foreign shares",
+      "points": [
+        "Gains on foreign shares are taxed exactly like Finnish ones.",
+        "Tax withheld abroad on dividends is credited against Finnish tax, up to the amount the tax treaty allows. Under the usual treaty rule, double taxation is removed in Finland as your country of residence.",
+        "Report foreign dividends and the tax paid abroad yourself (form 16B, or in MyTax)."
+      ],
+      "sources": [
+        "https://www.vero.fi/en/individuals/property/investments/dividends/foreign-dividends/",
+        "https://www.vero.fi/en/About-us/contact-us/forms/filling-instructions/50B-Capital-income-and-deductions-Instructions/",
+        "https://www.vero.fi/en/individuals/property/investments/report-the-information-on-your-investments/"
+      ]
+    },
+    {
+      "id": "reporting",
+      "title": "What your broker does and what you do",
+      "points": [
+        "Finnish payers withhold tax on dividends, fund payouts, deposit interest and equity savings account withdrawals, and report them to Vero. These appear in your pre-completed tax return; check them.",
+        "Sales of shares and funds are often pre-filled in the return as well, but no tax is withheld on the gain.",
+        "If you sold securities through a foreign broker, you must report the gain or loss yourself (form 9A, or in MyTax). Vero also receives information from abroad.",
+        "Keep the records needed to calculate gains and losses for 6 years after the end of the tax year."
+      ],
+      "sources": [
+        "https://www.vero.fi/en/individuals/property/investments/report-the-information-on-your-investments/",
+        "https://www.vero.fi/en/individuals/property/investments/pay-tax-on-investments/",
+        "https://www.vero.fi/en/individuals/property/investments/selling-shares/"
+      ]
+    },
+    {
+      "id": "crypto",
+      "title": "Crypto",
+      "points": [
+        "Exchanging crypto for euros or other currency, for another crypto asset, or using it to pay for goods creates a capital gain or loss, taxed as capital income.",
+        "Gains are worked out first in, first out (FIFO); Vero offers a FIFO calculator. The deemed acquisition cost (20% or 40%) can also be used.",
+        "From tax year 2026 Vero receives much more information on crypto trading from Finland and abroad."
+      ],
+      "sources": [
+        "https://www.vero.fi/en/individuals/property/investments/virtual-currencies/"
+      ]
+    }
+  ],
+  "dates": [
+    {"when": "01-31", "what": "An additional prepayment for last year's sale gains, due in January, avoids late-payment interest."},
+    {"when": "03-31", "what": "The pre-completed tax return is ready in MyTax by the end of March."},
+    {"when": "04-28", "what": "Latest of the April due dates for corrections in 2026; your own date is printed on the return."}
+  ],
+  "official": [
+    {"title": "Vero: Investments", "url": "https://www.vero.fi/en/individuals/property/investments/"},
+    {"title": "Vero: Selling shares", "url": "https://www.vero.fi/en/individuals/property/investments/selling-shares/"},
+    {"title": "Vero: Equity savings account", "url": "https://www.vero.fi/en/individuals/property/investments/equity-savings-account/"},
+    {"title": "Vero: Investment fund shares", "url": "https://www.vero.fi/en/individuals/property/investments/investment-fund-shares/"},
+    {"title": "Vero: Pay tax on investments", "url": "https://www.vero.fi/en/individuals/property/investments/pay-tax-on-investments/"}
+  ],
+  "upcoming": [],
+  "not_covered": [
+    "Dividends from unlisted companies.",
+    "Life insurance and capital redemption contracts.",
+    "Pension savings (PS-sopimus).",
+    "Derivatives and CFDs.",
+    "Real estate, and moving to or from Finland."
+  ],
+  "news": [
+    {"name": "Yle Talous", "url": "https://yle.fi/rss/t/18-204933/fi", "language": "fi"},
+    {"name": "Helsingin Sanomat Talous", "url": "https://www.hs.fi/rss/talous.xml", "language": "fi"},
+    {"name": "Kauppalehti", "url": "https://feeds.kauppalehti.fi/rss/main", "language": "fi"}
+  ]
+}

@@ -1,0 +1,122 @@
+{
+  "code": "GR",
+  "name": "Greece",
+  "currency": "EUR",
+  "currency_note": "",
+  "timezone": "Europe/Athens",
+  "languages": ["el"],
+  "checked_on": "2026-11-26",
+  "tax_year": {
+    "label": "2026",
+    "starts": "01-01",
+    "ends": "12-31",
+    "return_due": "The income tax return (E1) is filed between 15 March and 15 July of the next year.",
+    "source": "https://minfin.gov.gr/koinopoiisi-kodikopoiisis-tou-kodika-forologias-eisodimatos-symfona-me-to-arthro-83-par-55-tou-n-5104-2024/"
+  },
+  "summary": "Dividends are taxed at 5% and interest at 15%, both withheld at payment as a final tax. Gains on listed shares are only taxed if you own at least 0.5% of the company (and bought after 2008); small private holdings of listed shares are therefore normally outside the tax. Taxable gains, for example on bonds or unlisted shares, are taxed at 15%.",
+  "topics": [
+    {
+      "id": "gains",
+      "title": "Profit when you sell",
+      "points": [
+        "A gain on listed shares and other listed securities is only taxable if you hold at least 0.5% of the company's share capital. Below that, the Income Tax Code does not tax the gain.",
+        "For listed securities the rule only covers those acquired on or after 1 January 2009.",
+        "Gains on unlisted shares, on government bonds, treasury bills and corporate bonds, and on derivatives are taxable whatever the size of the holding.",
+        "A taxable gain is taxed at 15%. The gain is the sale price minus the purchase price, both including directly related costs. When you bought the same security several times, the average purchase price is used; if the purchase price cannot be shown, it is taken as zero."
+      ],
+      "figures": [
+        {"label": "Tax on taxable gains", "value": "15%"},
+        {"label": "Holding in a listed company above which gains are taxed", "value": "0.5%"}
+      ],
+      "sources": [
+        "https://minfin.gov.gr/koinopoiisi-kodikopoiisis-tou-kodika-forologias-eisodimatos-symfona-me-to-arthro-83-par-55-tou-n-5104-2024/"
+      ]
+    },
+    {
+      "id": "dividends",
+      "title": "Dividends",
+      "points": [
+        "Dividends are taxed at 5%.",
+        "When a dividend is paid with tax withheld, that 5% is final for individuals: nothing more is due on it."
+      ],
+      "figures": [
+        {"label": "Tax on dividends", "value": "5%"}
+      ],
+      "sources": [
+        "https://minfin.gov.gr/koinopoiisi-kodikopoiisis-tou-kodika-forologias-eisodimatos-symfona-me-to-arthro-83-par-55-tou-n-5104-2024/"
+      ]
+    },
+    {
+      "id": "interest",
+      "title": "Interest on savings",
+      "points": [
+        "Interest is taxed at 15%, withheld at payment; for individuals the withheld tax is final.",
+        "Interest on corporate bonds that meet the Code's conditions is taxed at 5% for Greek tax residents."
+      ],
+      "figures": [
+        {"label": "Tax on interest", "value": "15%"},
+        {"label": "Tax on qualifying corporate bond interest", "value": "5%"}
+      ],
+      "sources": [
+        "https://minfin.gov.gr/koinopoiisi-kodikopoiisis-tou-kodika-forologias-eisodimatos-symfona-me-to-arthro-83-par-55-tou-n-5104-2024/"
+      ]
+    },
+    {
+      "id": "losses",
+      "title": "Losses",
+      "points": [
+        "A loss on a taxable sale of securities is carried forward for five years and can only be set against future taxable gains on securities."
+      ],
+      "figures": [
+        {"label": "Carry-forward period", "value": "5 years"}
+      ],
+      "sources": [
+        "https://minfin.gov.gr/koinopoiisi-kodikopoiisis-tou-kodika-forologias-eisodimatos-symfona-me-to-arthro-83-par-55-tou-n-5104-2024/"
+      ]
+    },
+    {
+      "id": "foreign",
+      "title": "Foreign shares",
+      "points": [
+        "Tax paid abroad on foreign income reduces your Greek tax on that income, but never by more than the Greek tax due on it. You need documents proving the foreign tax was paid."
+      ],
+      "sources": [
+        "https://minfin.gov.gr/koinopoiisi-kodikopoiisis-tou-kodika-forologias-eisodimatos-symfona-me-to-arthro-83-par-55-tou-n-5104-2024/"
+      ]
+    },
+    {
+      "id": "reporting",
+      "title": "What your broker does and what you do",
+      "points": [
+        "For listed securities, the purchase and sale prices are those on the transaction documents issued by the broker or bank.",
+        "Taxable gains and foreign income are declared in the yearly E1 return, filed between 15 March and 15 July of the next year."
+      ],
+      "sources": [
+        "https://minfin.gov.gr/koinopoiisi-kodikopoiisis-tou-kodika-forologias-eisodimatos-symfona-me-to-arthro-83-par-55-tou-n-5104-2024/"
+      ]
+    }
+  ],
+  "dates": [
+    {"when": "03-15", "what": "Filing of the E1 income tax return for the year before opens."},
+    {"when": "07-15", "what": "Last day to file the E1 return for the year before."}
+  ],
+  "official": [
+    {"title": "Ministry of National Economy and Finance: codified Income Tax Code (to law 5264/2025)", "url": "https://minfin.gov.gr/koinopoiisi-kodikopoiisis-tou-kodika-forologias-eisodimatos-symfona-me-to-arthro-83-par-55-tou-n-5104-2024/"},
+    {"title": "Ministry of National Economy and Finance: tax legislation codification", "url": "https://minfin.gov.gr/kodikopoiisi-forologikis-nomothesias/"},
+    {"title": "AADE (Independent Authority for Public Revenue)", "url": "https://www.aade.gr/"}
+  ],
+  "upcoming": [],
+  "not_covered": [
+    "Mutual funds and ETFs: their tax treatment was not confirmed on an official page for this summary.",
+    "Crypto: no official treatment was found in the Income Tax Code.",
+    "Transaction taxes on stock exchange sales.",
+    "Property and the ENFIA property tax.",
+    "Changes made by laws passed after law 5264/2025 (December 2025).",
+    "Moving to or from Greece, and non-dom regimes."
+  ],
+  "news": [
+    {"name": "Naftemporiki", "url": "https://www.naftemporiki.gr/feed/", "language": "el"},
+    {"name": "Oikonomikos Tachydromos (ot.gr)", "url": "https://www.ot.gr/feed/", "language": "el"},
+    {"name": "newmoney", "url": "https://www.newmoney.gr/feed/", "language": "el"}
+  ]
+}

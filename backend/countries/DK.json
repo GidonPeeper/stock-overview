@@ -1,0 +1,197 @@
+{
+  "code": "DK",
+  "name": "Denmark",
+  "currency": "EUR",
+  "currency_note": "Denmark uses kroner (DKK); the app shows euros. Tax figures below are in kroner.",
+  "timezone": "Europe/Copenhagen",
+  "languages": ["da"],
+  "checked_on": "2026-11-26",
+  "tax_year": {
+    "label": "2026",
+    "starts": "01-01",
+    "ends": "12-31",
+    "return_due": "Skattestyrelsen prepares a tax assessment (årsopgørelse) in March of the next year; you correct it by the deadline, normally 1 May (20 May in 2026), or by 1 July if you must file the extended return (oplysningsskema).",
+    "source": "https://skat.dk/borger/aarsopgoerelse/aarsopgoerelsen-hvornaar-sker-hvad"
+  },
+  "summary": "Gains and dividends on shares and share-based funds are share income (aktieindkomst), taxed at 27% up to a yearly limit and 42% above it. Some funds are taxed every year on their change in value (lagerbeskatning) rather than when you sell, and bond-based funds and interest are capital income taxed at your personal rate. A share savings account (aktiesparekonto) taxes the yearly return at 17%.",
+  "topics": [
+    {
+      "id": "gains",
+      "title": "Profit when you sell",
+      "points": [
+        "A gain on shares is share income (aktieindkomst), added to your dividends for the year. Share income up to DKK 79,400 is taxed at 27% and the part above at 42% (2026).",
+        "For a married couple living together at the end of the year the limit is doubled: DKK 158,800 in 2026, counted on their combined share income.",
+        "Gains and losses are worked out with the average method (gennemsnitsmetoden): the average purchase price of all your shares in the same company, in all your accounts."
+      ],
+      "figures": [
+        {"label": "Share income up to DKK 79,400 (2026)", "value": "27%"},
+        {"label": "Share income above DKK 79,400 (2026)", "value": "42%"},
+        {"label": "Limit for a married couple (2026)", "value": "DKK 158,800"}
+      ],
+      "sources": [
+        "https://skat.dk/borger/aktier-og-andre-vaerdipapirer/skat-af-aktier",
+        "https://svmn.dk/tal-og-metode/satser/satser-og-beloebsgraenser-i-lovgivningen/personskatteloven"
+      ]
+    },
+    {
+      "id": "dividends",
+      "title": "Dividends",
+      "points": [
+        "Dividends are share income and count towards the same 27% / 42% bands as gains.",
+        "Danish companies and funds withhold dividend tax (udbytteskat) of 27% when they pay out.",
+        "Dividends from Danish listed shares held in a Danish account are usually reported automatically; dividends received abroad you enter yourself."
+      ],
+      "figures": [
+        {"label": "Danish dividend tax withheld", "value": "27%"}
+      ],
+      "sources": [
+        "https://skat.dk/borger/aktier-og-andre-vaerdipapirer/skat-af-aktier",
+        "https://info.skat.dk/data.aspx?oid=2169093"
+      ]
+    },
+    {
+      "id": "interest",
+      "title": "Interest on savings",
+      "points": [
+        "Interest is capital income (kapitalindkomst). It is taxed together with your other income, so the rate depends on your situation rather than being one fixed rate.",
+        "The tax on positive net capital income is capped at 42%."
+      ],
+      "figures": [
+        {"label": "Ceiling on tax on positive net capital income", "value": "42%"}
+      ],
+      "sources": [
+        "https://info.skat.dk/data.aspx?oid=2047206",
+        "https://svmn.dk/tal-og-metode/satser/satser-og-beloebsgraenser-i-lovgivningen/personskatteloven"
+      ]
+    },
+    {
+      "id": "funds",
+      "title": "Funds and ETFs",
+      "points": [
+        "Danish tax splits funds into two kinds, with different rules: investment associations (investeringsforeninger) and investment companies (investeringsselskaber). Ask the fund provider if you are not sure which one you hold.",
+        "Investment association: you pay tax on its payouts and on your gain when you sell (realisation). For a share-based one the gain is share income, like shares. For a bond-based one the gain is capital income, and gains and losses together are only counted if they exceed DKK 2,000 in the year.",
+        "Investment company: you are taxed every year on the change in value, sold or not (mark-to-market, lagerbeskatning). The gain is the value at the end of the year minus the value at the start (or the price paid or received if you bought or sold during the year). A fall in value is a deductible loss.",
+        "An investment company counts as share-based, and its yearly gain as share income, only if it meets the conditions and is on Skattestyrelsen's list of share-based investment companies. Otherwise it counts as bond-based and the yearly gain is capital income, taxed at your personal rate.",
+        "The list for 2026 was published on 3 November 2026 and applies to the whole year."
+      ],
+      "figures": [
+        {"label": "Small-amount limit for bond-based association funds", "value": "DKK 2,000"}
+      ],
+      "sources": [
+        "https://skat.dk/borger/aktier-og-andre-vaerdipapirer/skat-af-investeringsbeviser-udstedt-af-investeringsforeninger-og-investeringsselskaber",
+        "https://info.skat.dk/data.aspx?oid=1899913",
+        "https://info.skat.dk/data.aspx?oid=2292808",
+        "https://skat.dk/erhverv/ekapital/vaerdipapirer/beviser-og-aktier-i-investeringsforeninger-og-selskaber-ifpa"
+      ]
+    },
+    {
+      "id": "accounts",
+      "title": "Tax-free and tax-deferred accounts",
+      "points": [
+        "Share savings account (aktiesparekonto): the yearly return is taxed at 17% on a mark-to-market basis. That is the value at the end of the year (including dividends) minus the value at the start, adjusted for deposits and withdrawals.",
+        "Your bank calculates and pays the tax from the account; nothing goes on your own assessment.",
+        "The deposit ceiling is DKK 174,200 in 2026 and DKK 179,300 in 2027. Room for new deposits is measured against the account's market value on 31 December of the year before. If the value grows above the ceiling you need not sell, but you cannot deposit more.",
+        "Depositing too much costs a 3% charge each year on the excess until it is taken out.",
+        "A loss in one year becomes a negative tax carried forward against later years. It is lost if you close the account.",
+        "Only people fully taxable in Denmark can open one; each person may have one account, in their own name only.",
+        "Allowed: shares traded on a regulated market or MTF, share-based minimum-taxed investment funds (at least 50% shares), and investment companies on Skattestyrelsen's share-based list."
+      ],
+      "figures": [
+        {"label": "Tax on the yearly return", "value": "17%"},
+        {"label": "Deposit ceiling 2026", "value": "DKK 174,200"},
+        {"label": "Deposit ceiling 2027", "value": "DKK 179,300"},
+        {"label": "Yearly charge on over-deposits", "value": "3%"}
+      ],
+      "sources": [
+        "https://skat.dk/borger/aktier-og-andre-vaerdipapirer/aktiesparekonto"
+      ]
+    },
+    {
+      "id": "losses",
+      "title": "Losses",
+      "points": [
+        "A loss on listed shares is deducted from your share dividends, gains on other listed shares and gains on share-based funds taxed mark-to-market.",
+        "What is left goes first against a spouse's share income (if married and living together), and is then carried forward to later years.",
+        "You can only deduct a loss on listed shares if Skattestyrelsen received the purchase details by 1 July of the year after you bought. Danish banks report purchases automatically; for an account abroad you must send the details yourself.",
+        "For shares held abroad you must also report the loss yourself before your deadline, or you lose the right to carry it forward."
+      ],
+      "sources": [
+        "https://skat.dk/borger/aktier-og-andre-vaerdipapirer/skat-af-aktier"
+      ]
+    },
+    {
+      "id": "foreign",
+      "title": "Foreign shares",
+      "points": [
+        "Dividends from foreign shares are share income. You can claim credit for foreign dividend tax, but only up to the rate the tax treaty allows that country.",
+        "If the other country withheld more than the treaty rate, you must ask that country's tax authority for the refund."
+      ],
+      "sources": [
+        "https://skat.dk/borger/aktier-og-andre-vaerdipapirer/skat-af-aktier"
+      ]
+    },
+    {
+      "id": "reporting",
+      "title": "What your broker does and what you do",
+      "points": [
+        "Danish banks and brokers report your purchases, sales, holdings and dividends to Skattestyrelsen. For listed shares in a Danish account, Skattestyrelsen usually calculates the gain or loss in its securities system (Værdipapirsystemet) and puts it on your assessment. You must still check it.",
+        "Skattestyrelsen generally receives no information from foreign brokers or platforms. For such an account you calculate gains, losses and dividends yourself and enter them in your assessment.",
+        "With a foreign account you must also report each year the account's market value in kroner on 31 December.",
+        "With a foreign account you must yourself know what type each security or fund is and how it is taxed under Danish rules."
+      ],
+      "sources": [
+        "https://skat.dk/borger/aktier-og-andre-vaerdipapirer/skat-af-aktier",
+        "https://skat.dk/borger/aktier-og-andre-vaerdipapirer/investering-og-skat"
+      ]
+    },
+    {
+      "id": "crypto",
+      "title": "Crypto",
+      "points": [
+        "For a private person, buying and selling crypto is normally treated as speculation. Gains are personal income, taxed like wages (but without the 8% labour market contribution), which can mean a tax of up to 53%.",
+        "Losses are deductible at a lower value: the deduction is worth 26% of the loss. Gains and losses are reported separately and may not be netted.",
+        "Gains and losses are worked out first-in, first-out (FIFO) across all your exchanges and wallets."
+      ],
+      "figures": [
+        {"label": "Highest tax on gains", "value": "up to 53%"},
+        {"label": "Value of a loss deduction", "value": "26% of the loss"}
+      ],
+      "sources": [
+        "https://skat.dk/borger/aktier-og-andre-vaerdipapirer/skat-paa-krypto-kend-reglerne-saa-du-undgaar-et-skattesmaek/beregn-og-oplys-gevinst-og-tab-paa-krypto"
+      ]
+    }
+  ],
+  "dates": [
+    {"when": "01-20", "what": "Danish banks must report last year's share purchases to Skattestyrelsen."},
+    {"when": "05-01", "what": "Usual deadline to correct the tax assessment for the year before (20 May in 2026)."},
+    {"when": "07-01", "what": "Deadline for the extended return, and for Skattestyrelsen to have purchase details for shares bought the year before."},
+    {"when": "12-31", "what": "Funds taxed mark-to-market and aktiesparekonto accounts are valued on this day."}
+  ],
+  "official": [
+    {"title": "Skattestyrelsen: Skat af aktier", "url": "https://skat.dk/borger/aktier-og-andre-vaerdipapirer/skat-af-aktier"},
+    {"title": "Skattestyrelsen: Aktiesparekonto", "url": "https://skat.dk/borger/aktier-og-andre-vaerdipapirer/aktiesparekonto"},
+    {"title": "Skattestyrelsen: Investeringsforeninger og investeringsselskaber", "url": "https://skat.dk/borger/aktier-og-andre-vaerdipapirer/skat-af-investeringsbeviser-udstedt-af-investeringsforeninger-og-investeringsselskaber"},
+    {"title": "Skattestyrelsen: List of share-based investment companies (IFPA)", "url": "https://skat.dk/erhverv/ekapital/vaerdipapirer/beviser-og-aktier-i-investeringsforeninger-og-selskaber-ifpa"},
+    {"title": "Skatte- og Vækstministeriet: Satser i personskatteloven", "url": "https://svmn.dk/tal-og-metode/satser/satser-og-beloebsgraenser-i-lovgivningen/personskatteloven"}
+  ],
+  "upcoming": [
+    "From 1 January 2027 the 27% band for share income rises to DKK 89,600 (DKK 179,200 for a married couple), and the aktiesparekonto deposit ceiling to DKK 179,300; both figures are already published by Skattestyrelsen."
+  ],
+  "unverified": [
+    {
+      "point": "A tax agreement between the government and Dansk Folkeparti, presented on 12 November 2026, would raise the aktiesparekonto ceiling in steps (reported as DKK 257,300 in 2027, DKK 334,300 in 2028 and DKK 514,600 from 2029) and base it on deposits rather than market value from 2028. A bill is expected in February 2027; until it is passed, the figures above apply.",
+      "source": "https://www.danskerhverv.dk/presse-og-nyheder/nyheder/2026/november/nu-haves-loftet-pa-aktiesparekontoen-til-514.600-kroner-det-skal-du-vide"
+    }
+  ],
+  "not_covered": [
+    "Unlisted shares and shares in your own company.",
+    "Pension savings (including the 15% tax on pension returns).",
+    "Bonds and currency gains beyond the DKK 2,000 small-amount rule.",
+    "Shares and funds bought before 2006 under the old rules.",
+    "Real estate, and moving to or from Denmark."
+  ],
+  "news": [
+    {"name": "DR Penge", "url": "https://www.dr.dk/nyheder/service/feeds/penge", "language": "da"},
+    {"name": "Børsen", "url": "https://borsen.dk/rss", "language": "da"}
+  ]
+}

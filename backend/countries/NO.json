@@ -1,0 +1,233 @@
+{
+  "code": "NO",
+  "name": "Norway",
+  "currency": "EUR",
+  "currency_note": "Norway uses kroner (NOK); the app shows euros. Tax figures below are in kroner.",
+  "timezone": "Europe/Oslo",
+  "languages": ["no"],
+  "checked_on": "2026-11-26",
+  "tax_year": {
+    "label": "2026",
+    "starts": "01-01",
+    "ends": "12-31",
+    "return_due": "The tax return (skattemelding) arrives pre-filled in spring; the deadline to correct and submit it is 30 April of the next year (31 May for sole traders).",
+    "source": "https://www.skatteetaten.no/en/person/taxes/tax-return/tax-return-person/"
+  },
+  "summary": "Capital income is taxed at 22%, but gains and dividends on shares are first multiplied by 1.72, so they are taxed at an effective 37.84%. A yearly shielding deduction (skjermingsfradrag) leaves a risk-free return on each share untaxed. Norway also has a wealth tax of about 1% on net wealth above NOK 1.9 million, with shares counted at 80% of their value.",
+  "topics": [
+    {
+      "id": "gains",
+      "title": "Profit when you sell",
+      "points": [
+        "A gain on shares, after deducting any unused shielding (see Tax-free amounts), is multiplied by 1.72 and taxed at 22%. The effective rate is 37.84% for 2026. Skatteetaten applies the factor itself; you do not adjust the figures.",
+        "This applies to shares in both Norwegian and foreign companies, and to share funds.",
+        "When you sell part of a holding, the shares bought first count as sold first (FIFU, first in, first out)."
+      ],
+      "figures": [
+        {"label": "Upward adjustment factor (2026)", "value": "1.72"},
+        {"label": "Effective rate on share gains (2026)", "value": "37.84%"}
+      ],
+      "sources": [
+        "https://www.skatteetaten.no/en/rates/factor-for-upward-adjustment-of-gainloss-or-dividend-on-shares/",
+        "https://www.skatteetaten.no/en/rettskilder/type/uttalelser/uttalelser/forskuddsutskrivingen-2026/",
+        "https://www.skatteetaten.no/person/skatt/hjelp-til-riktig-skatt/aksjer-og-verdipapirer/om/aksjesparekonto-ask/"
+      ]
+    },
+    {
+      "id": "dividends",
+      "title": "Dividends",
+      "points": [
+        "Dividends above the year's shielding deduction are multiplied by 1.72 and taxed at 22%: an effective 37.84% in 2026.",
+        "Dividends from Norwegian and foreign companies follow the same rule."
+      ],
+      "figures": [
+        {"label": "Effective rate on dividends (2026)", "value": "37.84%"}
+      ],
+      "sources": [
+        "https://www.skatteetaten.no/en/rates/factor-for-upward-adjustment-of-gainloss-or-dividend-on-shares/",
+        "https://www.skatteetaten.no/person/skatt/hjelp-til-riktig-skatt/aksjer-og-verdipapirer/om/skatteregler-for-gevinsttap-ved-realisasjoner-og-aksjeutbytte/"
+      ]
+    },
+    {
+      "id": "interest",
+      "title": "Interest on savings",
+      "points": [
+        "Interest is ordinary income (alminnelig inntekt), taxed at 22% for 2026, with no upward adjustment.",
+        "The same 22% applies to income from interest funds."
+      ],
+      "figures": [
+        {"label": "Tax on interest (2026)", "value": "22%"}
+      ],
+      "sources": [
+        "https://www.skatteetaten.no/en/rettskilder/type/uttalelser/uttalelser/forskuddsutskrivingen-2026/",
+        "https://www.skatteetaten.no/en/rates/factor-for-upward-adjustment-of-gainloss-or-dividend-on-shares/"
+      ]
+    },
+    {
+      "id": "funds",
+      "title": "Funds and ETFs",
+      "points": [
+        "Fund income is taxed by the fund's mix of shares and other securities. If the share part is more than 80% at the start of the year, payouts are taxed as share dividends (37.84%). If it is under 20%, they are taxed as interest (22%). In between, they are split.",
+        "For a gain on sale, the share part is the average of the fund's share part in the year you bought and the year you sold.",
+        "The share part of a fund also gets a shielding deduction.",
+        "ETFs count as funds (verdipapirfond). Foreign ETFs are usually not pre-filled in the return, so you enter them yourself."
+      ],
+      "figures": [
+        {"label": "Share part above which all is share income", "value": "80%"},
+        {"label": "Share part below which all is interest income", "value": "20%"}
+      ],
+      "sources": [
+        "https://www.skatteetaten.no/person/skatt/hjelp-til-riktig-skatt/aksjer-og-verdipapirer/om/beskatning-av-andeler-i-verdipapirfond/",
+        "https://www.skatteetaten.no/person/skatt/hjelp-til-riktig-skatt/aksjer-og-verdipapirer/om/utenlandske-aksjer-og-andre-finansprodukter/"
+      ]
+    },
+    {
+      "id": "wealth",
+      "title": "Tax on what you own",
+      "points": [
+        "Norway taxes net wealth (formuesskatt). For 2026 it applies to net wealth above NOK 1,900,000 for a single person and NOK 3,800,000 for a married couple.",
+        "The combined rate is 1.0% (0.35% to the municipality and 0.65% to the state), rising to 1.1% on wealth above NOK 21.5 million.",
+        "Listed and unlisted shares, and the share part of funds, count at 80% of their value. Other fund units count at their value on 1 January of the year after the income year. Debt is reduced in proportion when you own such discounted assets.",
+        "From income year 2026 you can ask to defer payment for up to three years if your wealth tax is above NOK 30,000; this is aimed at owners of business assets such as shares and ASK."
+      ],
+      "figures": [
+        {"label": "Tax-free wealth, single (2026)", "value": "NOK 1,900,000"},
+        {"label": "Tax-free wealth, married couple (2026)", "value": "NOK 3,800,000"},
+        {"label": "Combined rate (2026)", "value": "1.0%"},
+        {"label": "Rate above NOK 21.5 million (2026)", "value": "1.1%"},
+        {"label": "Value used for shares", "value": "80%"}
+      ],
+      "sources": [
+        "https://www.skatteetaten.no/en/rettskilder/type/uttalelser/uttalelser/forskuddsutskrivingen-2026/"
+      ]
+    },
+    {
+      "id": "allowances",
+      "title": "Tax-free amounts",
+      "points": [
+        "Shielding deduction (skjermingsfradrag): each share owned on 31 December gets a deduction equal to its cost (plus unused shielding from earlier years) times the year's shielding rate. Dividends up to that amount are tax-free.",
+        "Unused shielding is carried forward and can reduce later dividends or the gain when you sell that share. It stays with that share and cannot be moved to others.",
+        "The shielding rate is set in January after the income year, from the 3-month treasury bill rate. For 2025 it was 3.6%; the rate for 2026 will be published in January 2027."
+      ],
+      "figures": [
+        {"label": "Shielding rate for 2025", "value": "3.6%"}
+      ],
+      "sources": [
+        "https://www.skatteetaten.no/person/skatt/hjelp-til-riktig-skatt/aksjer-og-verdipapirer/om/skatteregler-for-gevinsttap-ved-realisasjoner-og-aksjeutbytte/",
+        "https://www.skatteetaten.no/en/rates/risk-free-interest-rate-for-shares-and-sole-proprietorships/"
+      ]
+    },
+    {
+      "id": "accounts",
+      "title": "Tax-free and tax-deferred accounts",
+      "points": [
+        "Share savings account (aksjesparekonto, ASK): you can buy and sell inside it without tax on gains, and dividends are not taxed when paid. Tax is due only when you take out more than you put in.",
+        "Taxable withdrawals in 2025 or 2026 are taxed at an effective 37.84%, after the account's shielding deduction. A loss is only deductible when the account is closed.",
+        "Only listed shares in companies based in the EEA, and share funds based in the EEA (more than 80% shares), are allowed. Cash may be held but earns no interest.",
+        "Moving shares you already own into an ASK counts as selling them, so any gain is taxed then.",
+        "You may have as many accounts as you like. The provider reports to Skatteetaten, and the figures are pre-filled in your return."
+      ],
+      "figures": [
+        {"label": "Effective rate on taxable withdrawals (2026)", "value": "37.84%"}
+      ],
+      "sources": [
+        "https://www.skatteetaten.no/person/skatt/hjelp-til-riktig-skatt/aksjer-og-verdipapirer/om/aksjesparekonto-ask/"
+      ]
+    },
+    {
+      "id": "losses",
+      "title": "Losses",
+      "points": [
+        "A loss on shares is deductible. It is multiplied by 1.72 like gains, so the deduction is worth 37.84% of the loss in 2026.",
+        "Losses inside an ASK only count when the account is closed."
+      ],
+      "figures": [
+        {"label": "Value of a share loss deduction (2026)", "value": "37.84%"}
+      ],
+      "sources": [
+        "https://www.skatteetaten.no/en/rates/factor-for-upward-adjustment-of-gainloss-or-dividend-on-shares/",
+        "https://www.skatteetaten.no/person/skatt/hjelp-til-riktig-skatt/aksjer-og-verdipapirer/om/aksjesparekonto-ask/"
+      ]
+    },
+    {
+      "id": "foreign",
+      "title": "Foreign shares",
+      "points": [
+        "As a Norwegian resident you are taxed on your worldwide wealth and income, including foreign shares.",
+        "Double taxation is normally relieved in Norway as your country of residence, for example by a credit for the foreign tax (kreditfradrag) claimed in the return.",
+        "Foreign shares and accounts at foreign banks are not pre-filled; you enter the holdings, dividends, gains and the purchase cost yourself."
+      ],
+      "sources": [
+        "https://oppslag.rettskilder.skatteetaten.no/rettskilder2/type/handboker/skatte-abc/gjeldende/skatteabc-U-20/skatteabc-U-20.006",
+        "https://www.skatteetaten.no/person/skatt/hjelp-til-riktig-skatt/aksjer-og-verdipapirer/om/utenlandske-aksjer-og-andre-finansprodukter/"
+      ]
+    },
+    {
+      "id": "reporting",
+      "title": "What your broker does and what you do",
+      "points": [
+        "Norwegian banks and other financial institutions report many of your holdings and income to Skatteetaten, and these are pre-filled in the return. They also report foreign shares they hold in custody for you.",
+        "Shares and securities held with foreign banks or brokers are not pre-filled: you must enter them yourself.",
+        "Shares in foreign companies not listed on Oslo Børs are not in the shareholder register, so you must give their purchase cost yourself.",
+        "If you do not submit by the deadline, the pre-filled return counts as submitted."
+      ],
+      "sources": [
+        "https://www.skatteetaten.no/person/skatt/hjelp-til-riktig-skatt/aksjer-og-verdipapirer/om/utenlandske-aksjer-og-andre-finansprodukter/",
+        "https://www.skatteetaten.no/person/skatt/hjelp-til-riktig-skatt/aksjer-og-verdipapirer/om/aksjonarmodellen/",
+        "https://www.skatteetaten.no/en/person/taxes/tax-return/tax-return-person/"
+      ]
+    },
+    {
+      "id": "crypto",
+      "title": "Crypto",
+      "points": [
+        "Crypto is an asset. A gain on selling or swapping it is taxed at 22% and a loss is deductible; the 1.72 share factor does not apply.",
+        "There is no rule that the coins bought first count as sold first.",
+        "Crypto counts for wealth tax at its market value on 1 January of the year after the income year."
+      ],
+      "figures": [
+        {"label": "Tax on crypto gains", "value": "22%"}
+      ],
+      "sources": [
+        "https://www.skatteetaten.no/person/skatt/hjelp-til-riktig-skatt/aksjer-og-verdipapirer/om/virtuell-valuta/skatteregler---virtuell-valuta/",
+        "https://www.skatteetaten.no/person/skatt/hjelp-til-riktig-skatt/aksjer-og-verdipapirer/om/virtuell-valuta/salg/"
+      ]
+    }
+  ],
+  "dates": [
+    {"when": "01-01", "what": "Fund units and crypto are valued on this day for last year's wealth tax."},
+    {"when": "04-30", "what": "Deadline to correct and submit the tax return for the year before."},
+    {"when": "12-31", "what": "Shares owned on this day get the year's shielding deduction."}
+  ],
+  "official": [
+    {"title": "Skatteetaten: Aksjer og verdipapirer", "url": "https://www.skatteetaten.no/person/skatt/hjelp-til-riktig-skatt/aksjer-og-verdipapirer/"},
+    {"title": "Skatteetaten: Aksjesparekonto (ASK)", "url": "https://www.skatteetaten.no/person/skatt/hjelp-til-riktig-skatt/aksjer-og-verdipapirer/om/aksjesparekonto-ask/"},
+    {"title": "Skatteetaten: Factor for upward adjustment", "url": "https://www.skatteetaten.no/en/rates/factor-for-upward-adjustment-of-gainloss-or-dividend-on-shares/"},
+    {"title": "Skatteetaten: Shielding rate (skjermingsrente)", "url": "https://www.skatteetaten.no/en/rates/risk-free-interest-rate-for-shares-and-sole-proprietorships/"},
+    {"title": "Skatteetaten: Forskuddsutskrivingen 2026 (rates incl. wealth tax)", "url": "https://www.skatteetaten.no/en/rettskilder/type/uttalelser/uttalelser/forskuddsutskrivingen-2026/"}
+  ],
+  "upcoming": [
+    "The shielding rate for 2026 will be set by Skatteetaten in January 2027."
+  ],
+  "unverified": [
+    {
+      "point": "The government's 2027 budget proposal raises the wealth tax threshold to NOK 1,990,000 for 2027 and keeps the rates. Parliament had not adopted it when this page was checked.",
+      "source": "https://www.regjeringen.no/no/statsbudsjett/2027/statsbudsjettet-2027-skatter-og-avgifter/statsbudsjettet-2027-provenyvirkninger-av-skatte-og-avgiftsendringer-for-2027/id3173279/"
+    },
+    {
+      "point": "The Finance Ministry consulted in 2026 on widening the ASK from 1 January 2027 to more kinds of shares; bonds and interest funds were being studied separately.",
+      "source": "https://www.regjeringen.no/no/aktuelt/horing-utvidet-aksjesparekonto-vil-gi-flere-investeringsmuligheter/id3167178/"
+    }
+  ],
+  "not_covered": [
+    "Pension savings (IPS) and endowment insurance (fondskonto) in detail.",
+    "Unlisted shares and holding companies (fritaksmetoden).",
+    "Bonds, derivatives and currency gains.",
+    "Exit tax when moving abroad, and real estate."
+  ],
+  "news": [
+    {"name": "E24", "url": "https://e24.no/rss2", "language": "no"},
+    {"name": "Dagens Næringsliv", "url": "https://services.dn.no/api/feed/rss/", "language": "no"},
+    {"name": "Finansavisen", "url": "https://ws.finansavisen.no/api/articles.rss", "language": "no"}
+  ]
+}
