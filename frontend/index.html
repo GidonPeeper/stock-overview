@@ -885,7 +885,7 @@
             <div class="ch"><h2>Interest on your cash</h2>
               <div class="acts"><button class="info" data-help="h-cash" aria-expanded="false" aria-label="How is this worked out?"><span>?</span></button></div></div>
             <div class="help" id="h-cash" hidden>
-              <p>Compares the interest rates you entered for your bank and savings accounts and shows where moving money earns more. Only moves within the same currency, so you take no currency risk.</p>
+              <p>Compares the interest rates of your bank and savings accounts and shows where moving money earns more. For an account that updates itself, the rate comes from the account: the rate the provider states, or the one worked out from the interest it paid (that figure is approximate). A rate you enter in Settings always wins. Only moves within the same currency, so you take no currency risk.</p>
               <p>Keep an everyday buffer where you bank. Trading 212 pays interest through money-market funds: very low risk, but <b>not</b> covered by a bank deposit guarantee. Not financial advice.</p>
             </div>
             <div id="cashopt" class="ph"></div>
@@ -1352,12 +1352,23 @@
     };
     function renderCashOpt(){
       const el=$("cashopt"); if(!CASH) return;
-      // an account that updates itself counts once its interest rate is entered in Settings
+      // an account that updates itself counts once its rate is known: found from
+      // the account (the interest it paid, or the provider's stated rate) or typed in Settings
       const banked=(CASH.accounts||[]).filter(a=>(a.type==="cash"||a.type==="savings")&&a.balance_eur>0);
       const rows=banked.filter(a=>!a.auto||a.rate_known)
         .map(a=>({...a, prot:PROTECT[(a.institution||"").toLowerCase()]||{ok:null,label:"check your bank's deposit guarantee"}}));
       const noRate=banked.filter(a=>a.auto&&!a.rate_known), noRateEur=noRate.reduce((s,a)=>s+a.balance_eur,0);
-      const missing=noRate.length?`<div class="empty" style="text-align:left">The interest rate is not set for ${noRate.map(a=>esc(a.name)).join(", ")} (${money0(noRateEur)} together), so that money is not counted here. <a href="/settings#cash">Enter the rates in Settings</a>.</div>`:"";
+      // rates still being looked up: ask again a few times, a few seconds apart
+      if(CASH.rate_checking&&!RATE_WAIT.timer&&RATE_WAIT.tries++<4) RATE_WAIT.timer=setTimeout(()=>{ RATE_WAIT.timer=null; loadCash(); },8000);
+      const checking=noRate.filter(a=>(a.rate_auto||{}).status==="checking");
+      const why={};   // one reason for several accounts (one Starling token) is said once
+      noRate.filter(a=>!checking.includes(a)).forEach(a=>{ const w=a.rate_auto||{}, k=w.text||"The interest rate is not set.";
+        (why[k]=why[k]||{w,names:[]}).names.push(a.name); });
+      const missing=noRate.length?`<div class="empty" style="text-align:left;margin-top:10px">Not counted yet: ${money0(noRateEur)} whose interest rate is not known.${checking.length?` Checking the interest paid into ${checking.map(a=>esc(a.name)).join(", ")}…`:""} You can also <a href="/settings#cash">enter a rate in Settings</a>.</div>`+
+        Object.entries(why).map(([k,{w,names}])=>`<div class="row" style="align-items:flex-start"><span>${names.map(esc).join(", ")}
+          <span class="r-sub" style="color:var(--muted)">${esc(k)}</span>${rateSteps(w.steps)}</span></div>`).join(""):"";
+      const found=rows.filter(a=>a.auto&&a.rate_note);
+      const sources=found.length?`<div class="note">${found.map(a=>`${esc(a.name)}: ${rateText(a)}, ${esc(a.rate_note)}`).join(" · ")}.</div>`:"";
       if(!rows.length){ if(missing){ el.className=""; el.innerHTML=missing; return; }
         return empty(el,'Add your bank and savings accounts with their interest rates in <a href="/settings#cash">Settings</a> to see where your cash earns most.'); }
       el.className="";
@@ -1383,7 +1394,14 @@
           <div class="stat"><div class="k">Could earn more</div>
             <div class="v num ${totalGain>1?'pos':''}">${totalGain>1?"+"+money0(totalGain)+" a year":(missing?"Not known yet":"Nothing ✓")}</div><div class="d">${totalGain>1?`+${money0(totalGainSafe)} using insured banks only`:(missing?"some rates are missing":"already at your best rates")}</div></div>
         </div>
-        ${plans||(missing?"":'<div class="empty">Your cash is already at your best rates.</div>')}${missing}`;
+        ${plans||(missing?"":'<div class="empty">Your cash is already at your best rates.</div>')}${sources}${missing}`;
+    }
+    const RATE_WAIT={timer:null,tries:0};
+    // "about 4.0%" for a rate worked out from the interest paid, the exact figure otherwise
+    function rateText(a){ return a.rate_source==="paid"&&a.rate>0?`about ${a.rate.toFixed(1)}%`:`${a.rate}%`; }
+    function rateSteps(steps){
+      return steps&&steps.length?`<details class="small" style="margin-top:4px"><summary class="linkbtn">How</summary>
+        <ol style="margin:6px 0 0;padding-left:20px;color:var(--muted)">${steps.map(s=>`<li>${esc(s)}</li>`).join("")}</ol></details>`:"";
     }
 
     /* ---- finances: loans, income, payments ---- */

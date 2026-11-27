@@ -381,7 +381,8 @@
         <h2>Bank, savings and pension accounts</h2>
         <div class="sub">Type in a balance and update it when it changes: cash, savings and pension pots such as a 401(k), IRA,
           pensioen or lijfrente. Banks in the EU (Rabobank, ING, ABN AMRO, bunq, EU Revolut…) can also update on their own:
-          add them under <a href="#add-account">Add an account</a> → Bank link.</div>
+          add them under <a href="#add-account">Add an account</a> → Bank link. An account that updates itself finds its
+          interest rate from the account where the bank allows it; you can always enter your own.</div>
         <div id="cash-list"><div class="ph" style="--h:48px"><span class="sr">Loading…</span></div></div>
         <div class="form-grid" role="group" aria-labelledby="cash-form-h">
           <div class="form-h" id="cash-form-h">Add an account</div>
@@ -661,11 +662,11 @@
       el.innerHTML=(c.sample?'<div class="msg" style="color:var(--amber);margin-bottom:6px">Example accounts shown. Add a real one to replace them.</div>':'')+
         c.accounts.map((a,i)=>a.auto?`<div class="row"><span>${esc(a.name)}
             <span class="pill" style="background:var(--panel2);color:var(--muted);margin-left:4px">updates itself</span>
-            <span class="r-sub">${esc(a.institution)} · ${esc(a.currency)} · <b>${own0(a.balance,a.currency)}</b>${a.rate_known?"":' · <span style="color:var(--amber)">interest rate not set</span>'}</span></span>
+            <span class="r-sub">${esc(a.institution)} · ${esc(a.currency)} · <b>${own0(a.balance,a.currency)}</b></span>${autoRate(a,i)}</span>
           <span style="display:flex;gap:8px;align-items:flex-end;flex-wrap:wrap;justify-content:flex-end">
             <label class="fld sm"><span>Kind</span><select class="ipt" id="autot-${i}" aria-label="Kind of account: ${esc(a.name)}" style="width:auto">
               ${["cash","savings"].map(t=>`<option value="${t}"${a.type===t?" selected":""}>${TYPE_LABEL[t]}</option>`).join("")}</select></label>
-            <label class="fld sm"><span>Interest, % a year</span><input class="ipt bal" type="number" step="0.01" min="0" max="25" inputmode="decimal" value="${a.rate_known?a.rate:""}" id="autor-${i}" aria-label="Interest rate a year of ${esc(a.name)}, in percent" /></label>
+            <label class="fld sm"><span>Your rate, % a year</span><input class="ipt bal" type="number" step="0.01" min="0" max="25" inputmode="decimal" value="${a.rate_source==="typed"?a.rate:""}" placeholder="${(a.rate_auto||{}).status==="ok"?"auto":""}" id="autor-${i}" aria-label="Your own interest rate a year for ${esc(a.name)}, in percent. Leave empty to use the rate found automatically." /></label>
             <button class="btn ghost" type="button" onclick="saveAuto(${i})">Save</button>
           </span></div>`:`<div class="row"><span>${esc(a.name)}
             <span class="pill" style="background:var(--panel2);color:var(--muted);margin-left:4px">${TYPE_LABEL[a.type]||"Cash"}</span>
@@ -676,6 +677,23 @@
             <button class="del" title="Remove" aria-label="Remove ${esc(a.name)}" onclick="delAccount('${a.name.replace(/'/g,"\\'")}')">✕</button>
           </span></div>`).join("")+
         `<div class="row"><span style="font-weight:650">Total (all accounts)</span><span style="font-weight:650">${money0(c.total_eur)}</span></div>`;
+      // rates still being looked up: ask again shortly (not while you are typing here)
+      if(c.rate_checking&&!RATE_WAIT.timer&&RATE_WAIT.tries++<4) RATE_WAIT.timer=setTimeout(function again(){
+        if(el.contains(document.activeElement)){ RATE_WAIT.timer=setTimeout(again,8000); return; }
+        RATE_WAIT.timer=null; loadCash(); },8000);
+    }
+    const RATE_WAIT={timer:null,tries:0};
+    // Where the interest rate of an account that updates itself comes from
+    // (backend/interest.py): your own rate, the one found, or why there is none.
+    function autoRate(a,i){
+      const f=a.rate_auto||{}, ok=f.status==="ok";
+      const found=ok?`${f.source==="paid"&&f.pct>0?"about "+f.pct.toFixed(1):f.pct}% a year, ${esc(f.note||"")}`:"";
+      if(a.rate_source==="typed") return `<span class="r-sub">Your rate: <b>${a.rate}%</b> a year${ok?` · found automatically: ${found}`:""} ·
+        <button class="linkbtn" type="button" onclick="saveAuto(${i},true)">${ok?"Use the rate found":"Clear your rate"}</button></span>`;
+      if(ok) return `<span class="r-sub">Interest: <b>${found}</b>. Type a rate to use your own instead.</span>`;
+      if(f.status==="checking") return `<span class="r-sub">Checking the interest paid into this account…</span>`;
+      return `<span class="r-sub" style="color:var(--amber)">Interest rate not known: ${esc(f.text||"type it in.")}</span>`+
+        (f.steps&&f.steps.length?`<details class="more"><summary>How to do it</summary><ol class="r-sub" style="margin:0 0 6px;padding-left:20px">${f.steps.map(s=>`<li>${esc(s)}</li>`).join("")}</ol></details>`:"");
     }
     // A list that could not load says why (the server's reason) and offers a retry; never "Loading…" for ever.
     async function getJSON(url){
@@ -696,12 +714,14 @@
     }
     document.addEventListener("input",e=>{ if(e.target.getAttribute&&e.target.getAttribute("aria-invalid")==="true") e.target.removeAttribute("aria-invalid"); });
     let CASH_ROWS=[];
-    function saveAuto(i){
+    function saveAuto(i, clear){
       const a=CASH_ROWS[i]; if(!a) return;
+      const rate=clear?"":document.getElementById("autor-"+i).value, auto=(a.rate_auto||{}).status==="ok";
       const fd=new FormData();
-      fd.append("name",a.name); fd.append("rate",document.getElementById("autor-"+i).value);
+      fd.append("name",a.name); fd.append("rate",rate);
       fd.append("type",document.getElementById("autot-"+i).value);
-      postCash(fd,"✓ Interest rate saved for "+a.name,"/api/cash/auto");
+      postCash(fd,rate.trim()?"✓ Your interest rate is saved for "+a.name:
+        (auto?"✓ "+a.name+" uses the rate found automatically":"✓ Saved for "+a.name),"/api/cash/auto");
     }
     function loadCash(){ fxReady.then(()=>getJSON("/api/cash")).then(renderCash).catch(e=>loadFailed(["cash-list"],"Your accounts",e,"loadCash()")); }
     async function postCash(fd, okMsg, url){
