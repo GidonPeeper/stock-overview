@@ -989,7 +989,21 @@ def list_record(item: dict, kind: str) -> dict | None:
     rec["amount"] = round(value, 2)
     if kind == "dividend":
         rec["isin"] = _isin(item)
+    if kind == "interest":
+        rate = stated_rate(item.get("subtitle"))
+        if rate is not None:
+            rec["rate"] = rate
     return rec
+
+
+_RATE_RE = re.compile(r"(\d{1,2}(?:[.,]\d{1,3})?)\s*%\s*p\.?\s*a\b", re.I)
+
+
+def stated_rate(subtitle) -> float | None:
+    """The yearly rate an interest payout states in its subtitle ("2 % p.a."
+    in pytr's fixture tests/events/zinsen.json; often null), else None."""
+    m = _RATE_RE.search(str(subtitle or ""))
+    return float(m.group(1).replace(",", ".")) if m else None
 
 
 def parse_event(item: dict, details: dict, kind: str) -> dict:
@@ -1176,7 +1190,8 @@ def build(events: dict, avg_buy: dict[str, float] | None = None,
                               "currency": r.get("currency") or "EUR"})
         elif k == "interest":
             interest.append({"date": day, "amount": float(r["amount"]),
-                             "currency": r.get("currency") or "EUR"})
+                             "currency": r.get("currency") or "EUR",
+                             **({"rate": r["rate"]} if r.get("rate") is not None else {})})
         elif k in ("tax", "tax_refund"):
             fees.append({"date": day, "amount": float(r["amount"]),
                          "currency": r.get("currency") or "EUR", "kind": k})
@@ -1239,6 +1254,35 @@ def assemble(positions: list[dict], cash: list[dict], history: dict, prices: dic
     return with_history(TRSnapshot(cash=cash, holdings=holdings, account=account), history)
 
 
+# Interest on cash: Trade Republic states no rate anywhere in what this module
+# reads (no subscription in pytr's api.py returns one), except that an interest
+# payout's subtitle can say it ("2 % p.a." in pytr's 2025 fixture; null in its
+# 2024 and 2026 ones). Payouts are monthly and booked after tax, and the
+# timeline read here keeps only investment items, so the cash balance history
+# needed to work a rate out is not available: without a stated rate it is
+# typed in.
+INTEREST_NOTE = ("Trade Republic states its interest rate only with some interest payments, and "
+                 "none read so far had it, so the rate cannot be read automatically. Enter it "
+                 "yourself.")
+
+
+def cash_rate(interest: list[dict], today: datetime | None = None) -> dict:
+    """The rate of the cash, from the latest interest payout (interest.py form)."""
+    paid = sorted((i for i in interest if i.get("kind") != "bonus" and i.get("date")),
+                  key=lambda i: i["date"])
+    if not paid:
+        return {"status": "none", "text": "Trade Republic paid no interest on this cash in the "
+                                          "history read. If it earns none, enter 0%."}
+    last = paid[-1]
+    day = datetime.fromisoformat(last["date"][:10])
+    if last.get("rate") is None or ((today or datetime.now()) - day).days > 45:
+        return {"status": "unsupported", "text": INTEREST_NOTE}
+    return {"status": "ok", "source": "provider", "pct": float(last["rate"]), "basis": "gross",
+            "from": last["date"][:10], "to": last["date"][:10],
+            "note": f"stated by Trade Republic with the interest paid on {day.day} {day:%b}, "
+                    "before tax"}
+
+
 def with_history(snap: TRSnapshot, history: dict) -> TRSnapshot:
     complete = bool(history.get("complete"))
     names = {h.isin: h.name for h in snap.holdings}
@@ -1255,7 +1299,9 @@ def with_history(snap: TRSnapshot, history: dict) -> TRSnapshot:
         trades, divs, interest, fees, unread = build(
             history.get("events") or {}, {h.isin: h.buy_price for h in snap.holdings},
             {i: n for i, n in names.items() if n}, _ticker)
-        snap = replace(snap, trades=trades, dividends=divs, interest=interest, fees=fees)
+        rate = cash_rate(interest)
+        snap = replace(snap, trades=trades, dividends=divs, interest=interest, fees=fees,
+                       cash=[{**c, "interest": rate} for c in snap.cash])
     n = len(snap.holdings)
     parts = [f"{n} position{'s' if n != 1 else ''}"]
     if not complete:

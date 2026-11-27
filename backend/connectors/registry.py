@@ -162,6 +162,7 @@ CONNECTORS: dict[str, Spec] = {
         ttl=300, retry=300.0, persist=True, restore=traderepublic_live.restore,
         updates="Every few minutes (history a few times a day)",
         fetch=traderepublic_live.fetch, first_wait=8.0, validate_wait=60.0,
+        interest_note=traderepublic_live.INTEREST_NOTE,
         extra={"flow": "tr_login", "managed_by": "traderepublic",
                "managed_feeds": ("holdings", "trades")}),
 }
