@@ -322,9 +322,9 @@ def get_performance(
             "since": (prof.get("starts") or {}).get(label, today.isoformat()),
             "coverage_pct": prof.get("coverage_pct"),
             "not_covered": prof.get("excluded") or [],
-            "note": "the figure on the dashboard's period card: the price move of the holdings "
-                    "you own now, at today's quantities. It differs from `gain` when you bought "
-                    "or sold during the period.",
+            "note": "the figure on the dashboard's period tile: the profit made in the period "
+                    "(price gains, profit from selling, dividends and interest, after fees), "
+                    "the same measure as `gain`.",
         }
     return envelope(out, ccy)
 

@@ -1,5 +1,10 @@
 """Period profit views: today, this week, this month, this year.
 
+The tiles show the profit actually made in the period (from_history, at the
+end of this file). The rest of this module works out the older "price move of
+what you hold now", which the tiles used before and which is still reported
+next to them as `price_move`.
+
 These measure how the market value of your *current* holdings has moved since
 the start of the calendar period (midnight today, Monday, the 1st of the month,
 1 January; see backend/clock.py), computed from daily close prices (yfinance).
@@ -143,6 +148,44 @@ def compute(holdings: list[dict], today: date | None = None) -> dict:
         "coverage_pct": round(100 * covered_value / total_value, 1) if total_value else 0,
         "excluded": missing,
     }
+
+
+def from_history(hist: list[dict], starts: dict[str, date], today: date,
+                 today_change: float | None) -> dict[str, float | None]:
+    """What you made this week, this month and this year: total profit now
+    minus total profit at the last close before the period began (the chart's
+    profit line, main._history). Total profit is price gains on what you
+    hold, profit from selling, dividends and interest, after fees, so it
+    counts sales and income in the period and is not moved by money you put
+    in or took out.
+
+    This is what the period tiles show. Valuing today's holdings at the
+    period's opening prices (compute() below, kept as `price_move`) is not a
+    profit: shares bought during the year would be measured from a price they
+    were never bought at.
+
+    A period that began before the first trade counts everything made so far.
+    A period that begins today equals today's change. None when there is no
+    history to measure from."""
+    out: dict[str, float | None] = {}
+    usable = len(hist) >= 2 and all(p.get("total_profit") is not None for p in (hist[0], hist[-1]))
+    for name, start in starts.items():
+        if name == "today":
+            continue
+        if start >= today:
+            out[name] = today_change
+            continue
+        if not usable:
+            out[name] = None
+            continue
+        iso, base = start.isoformat(), None
+        for p in hist:                       # oldest first
+            if p["day"] >= iso:
+                break
+            base = p
+        before = base["total_profit"] if base is not None else 0.0
+        out[name] = round(hist[-1]["total_profit"] - before, 2)
+    return out
 
 
 def _closes(tickers: list[str]) -> dict[str, list[tuple[date, float]]]:

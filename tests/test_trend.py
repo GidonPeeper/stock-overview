@@ -137,6 +137,65 @@ class PeriodsTest(unittest.TestCase):
         self.assertAlmostEqual(periods.move_eur(row, 100.0), 100.0)
 
 
+class PeriodProfitTest(unittest.TestCase):
+    """The week, month and year tiles: profit made in the period, from the
+    chart's profit line (periods.from_history)."""
+
+    def test_money_added_during_the_year_is_not_a_loss(self):
+        # Start of 2026: 10,000 invested, worth 12,000 -> total profit 2,000.
+        # In June 40,000 more goes in, at prices 10% above 1 January's. Today
+        # everything is worth 53,000 for 50,000 paid, and 500 of dividends came
+        # in during the year: total profit 3,000 + 500 = 3,500.
+        # Made this year: 3,500 - 2,000 = +1,500.
+        # (The old tile valued today's holdings at 1 January prices and showed
+        # a loss on the June purchase, as if it had been bought in January.)
+        hist = [{"day": "2025-12-31", "total_profit": 2000.0},
+                {"day": "2026-06-15", "total_profit": 2600.0},
+                {"day": "2026-10-30", "total_profit": 4100.0},      # last close before November
+                {"day": "2026-11-20", "total_profit": 3000.0},      # Friday: last close before this week
+                {"day": "2026-11-25", "total_profit": 3500.0}]      # today, live
+        today = date(2026, 11, 25)                                  # a Wednesday
+        out = periods.from_history(hist, clock.period_starts(today), today, today_change=120.0)
+        self.assertEqual(out, {"year": 1500.0,      # 3,500 - 2,000
+                               "month": -600.0,     # 3,500 - 4,100
+                               "week": 500.0})      # 3,500 - 3,000
+
+    def test_a_period_that_starts_today_is_todays_change(self):
+        hist = [{"day": "2026-11-20", "total_profit": 3000.0}, {"day": "2026-11-23", "total_profit": 3100.0}]
+        monday = date(2026, 11, 23)
+        out = periods.from_history(hist, clock.period_starts(monday), monday, today_change=80.0)
+        self.assertEqual(out["week"], 80.0)          # Monday: this week is today
+
+    def test_first_trade_inside_the_period_counts_everything_so_far(self):
+        # first bought in March 2026: all 700 of profit was made this year
+        hist = [{"day": "2026-03-02", "total_profit": 0.0}, {"day": "2026-11-25", "total_profit": 700.0}]
+        today = date(2026, 11, 25)
+        self.assertEqual(periods.from_history(hist, clock.period_starts(today), today, 10.0)["year"], 700.0)
+
+    def test_no_history_gives_no_figure(self):
+        today = date(2026, 11, 25)
+        out = periods.from_history([{"day": "2026-11-25", "total_profit": 5.0}],
+                                   clock.period_starts(today), today, 5.0)
+        self.assertEqual(out, {"week": None, "month": None, "year": None})
+
+    def test_the_endpoint_shows_profit_and_keeps_the_price_move(self):
+        from backend import main
+        hist = [{"day": "2025-12-31", "total_profit": 2000.0}, {"day": "2026-11-24", "total_profit": 3300.0},
+                {"day": "2026-11-25", "total_profit": 3500.0}]
+        old = {"periods": {"today": 120.0, "week": -900.0, "month": -4000.0, "year": -9000.0},
+               "starts": {"week": "2026-11-23", "month": "2026-11-01", "year": "2026-01-01"},
+               "coverage_pct": 100, "excluded": []}
+        with mock.patch.object(main, "_open_holdings_rows", return_value=([], 53000.0, 50000.0, {})), \
+                mock.patch.object(main.realized, "summary", return_value={"total_realized_eur": 0.0}), \
+                mock.patch.object(main.periods, "compute", return_value=old), \
+                mock.patch.object(main, "_history", return_value=hist), \
+                mock.patch.object(main.clock, "today", return_value=date(2026, 11, 25)):
+            out = main.profit()
+        self.assertEqual(out["periods"]["year"], 1500.0)             # not -9,000
+        self.assertEqual(out["periods"]["today"], 120.0)
+        self.assertEqual(out["price_move"]["year"], -9000.0)         # still there, under its own name
+
+
 class TodayMoveTest(unittest.TestCase):
     def test_same_currency_uses_price_difference(self):
         from backend import main

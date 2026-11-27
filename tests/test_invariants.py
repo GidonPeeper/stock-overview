@@ -336,8 +336,10 @@ class RandomTotalsTest(_Identities, unittest.TestCase):
                 out = self.check_identities(self.main, msg=f"seed {seed}")
                 closes = {tk: [(date(2025, 12, 30), q["prev_close"] * 0.9),
                                (date(2026, 11, 20), q["prev_close"])] for tk, q in quotes.items()}
+                # no chart history here: this test is about today's figure
                 with mock.patch.object(periods, "_closes", return_value=closes), \
-                        mock.patch.object(periods, "quote_scale", return_value=1.0):
+                        mock.patch.object(periods, "quote_scale", return_value=1.0), \
+                        mock.patch.object(self.main, "_history", return_value=[]):
                     prof = self.main.profit()
             if quotes:
                 self.assertEqual(prof["periods"]["today"], out["totals"]["daily"], f"seed {seed}")

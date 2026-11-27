@@ -48,7 +48,7 @@ _VAULT_STATE = github_sync.restore()
 from .connectors import trading212
 from .fx import BASE_CURRENCY, display_rates, from_eur, to_eur
 from .prices import fetch_quotes, quotes_status
-from . import (analytics, cache, cash, countries, datafiles, finances, income, insights, keynumbers, lookup, market,
+from . import (analytics, cache, cash, clock, countries, datafiles, finances, income, insights, keynumbers, lookup, market,
                periods, prefs, realized, reports, sectors, sources, store, trend, uktax, watch)
 
 
@@ -620,12 +620,24 @@ def closed() -> dict:
 
 @app.get("/api/profit")
 def profit() -> dict:
-    """Period P/L (today/week/month/year) for current holdings, plus the
-    all-time figures. Slower than /api/portfolio because it pulls price history."""
+    """Profit today, this week, this month and this year, plus the all-time
+    figures. Slower than /api/portfolio because it pulls price history."""
     rows, total_value, total_cost, _ = _open_holdings_rows()
     unrealized = total_value - total_cost
     realized_total = realized.summary()["total_realized_eur"]
     period = periods.compute(rows)
+    # Week, month and year: the profit actually made in the period, from the
+    # same history as the chart. The price move of today's holdings since the
+    # period began (what compute() gives) is kept beside it as `price_move`.
+    today = clock.today()
+    try:
+        hist = _history()
+    except Exception:
+        hist = []
+    shown = period["periods"]
+    period["price_move"] = {k: shown.get(k) for k in ("week", "month", "year")}
+    shown.update(periods.from_history(hist, clock.period_starts(today), today, shown.get("today")))
+    period.setdefault("starts", {k: v.isoformat() for k, v in clock.period_starts(today).items()})
     return {
         "unrealized": round(unrealized, 2),
         "realized": realized_total,
