@@ -128,6 +128,37 @@ class OfflineCardsTest(unittest.TestCase):
         self.assertIn("c.requested", (ROOT / "frontend" / "index.html").read_text())
 
 
+class ProjectionContributionTest(unittest.TestCase):
+    """Analysis → Wealth projector: "adds what you usually invest each month".
+
+    Made-up history (the walkthrough's files): money went in during three
+    months of 2025 only (Jan 1,202; Feb 2,002; Mar 740), two sales in June
+    and July, nothing since. The card said "what you usually invest each
+    month (€1,371)" and added €1,371 every month for ten years: the median of
+    only the months in which money went in ((740 + 2,002) / 2). Its own method
+    line says "your median monthly contribution (from the last 24 months)":
+    by hand, the month-to-month changes are +2,002, +740, -601, -600.40 and
+    eighteen zeros, so the median is 0 (the average is about 70). Not fixed
+    here (no calculation changes in this pass): reported to the maintainer."""
+
+    @unittest.expectedFailure
+    def test_someone_who_stopped_investing_is_not_assumed_to_invest_every_month(self):
+        from backend import reports, trend
+        cost = {"2025-01": 1202.0, "2025-02": 3204.0, "2025-03": 3944.0, "2025-04": 3944.0,
+                "2025-05": 3944.0, "2025-06": 3343.0, "2025-07": 2742.6}
+        hist, last = [], 1202.0
+        for y in (2025, 2026):
+            for m in range(1, 13):
+                ym = f"{y}-{m:02d}"
+                if ym > "2026-11":
+                    break
+                last = cost.get(ym, last)
+                hist.append({"day": f"{ym}-28", "total_cost": last, "total_value": 4000.0})
+        with mock.patch.object(trend, "series", return_value=hist):
+            p = reports.projection(4000.0)
+        self.assertEqual(p["monthly_contribution"], 0.0)   # today: 1371.0
+
+
 class DataFolderIsIgnoredTest(unittest.TestCase):
     """README: "Everything you add is saved in the data folder, which git
     ignores." Before, data/settings.json (country, currency, time zone,
