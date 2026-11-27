@@ -35,13 +35,27 @@ account in **Settings** and the samples disappear. Full guide:
 | **Holdings** | Every position, merged across brokers by ISIN. Sold positions, watchlist, upcoming company results |
 | **Income** | Dividends and interest received per year, and what to expect in the next 12 months |
 | **Analysis** | A plain-language summary, a health score, risk figures with an explanation, diversification, a stress test and a 10-year projector |
-| **Money** | Net worth (investments, cash, things you own, loans), monthly budget, ways to save, and tax-year figures for the UK, US or NL |
+| **Money** | Net worth (investments, cash, things you own, loans), monthly budget, ways to save, how tax on investments works in your country, and tax-year figures for the UK, US or NL |
 
 On every tab, the search at the top looks up the price of any share, fund,
 index, currency or crypto by name, ticker or ISIN: today's change, a chart,
 key facts and what you hold of it. A link like `/#lookup=NVDA` opens it.
 
-Amounts show in euros, pounds or dollars. It also installs on a phone as an app.
+## Make it yours
+
+Choose these in **Settings**; they are saved with your data.
+
+- **Your country.** 23 countries have a page on how tax on investments works
+  there (gains, dividends, interest, funds, tax-free accounts, losses, what to
+  report), each figure taken from the tax authority's own site with the date
+  it was checked, plus news feeds in the local language. General
+  information, not advice. The app's own tax calculations cover the UK, the
+  US and the Netherlands.
+- **Currency.** Amounts in euros, pounds or dollars.
+- **Colours.** A base and a secondary colour, in light or dark. Whatever you
+  pick is adjusted so text stays readable.
+
+It also installs on a phone as an app.
 
 ## Brokers and banks
 
@@ -71,8 +85,8 @@ export file is the official route and stays the default.
 
 Stock Overview is an MCP server, so Claude can answer questions from your own
 numbers: performance, holdings, dividends, net worth, risk and tax figures.
-Claude gets eleven read-only tools and nothing else, one of them to look up
-the price of any share.
+Claude gets twelve read-only tools and nothing else, among them the price of
+any share and the tax overview for your country.
 
 ```bash
 ./run.sh claude     # prints the command to connect Claude Code or Claude Desktop
@@ -113,6 +127,9 @@ prices from yfinance.
 | `backend/importers/` | Statement files (PDF, CSV) to the app's own format |
 | `backend/positions.py`, `realized.py`, `trend.py` | Cost basis, realized profit, and the daily history rebuilt from trades |
 | `backend/mcp_server.py`, `mcp_tools.py` | The Claude connector |
+| `backend/countries/` | One file per country: the tax overview and news feeds (data, see `SCHEMA.md` there) |
+| `backend/lookup.py` | The price lookup |
+| `backend/prefs.py` | Choices made in Settings: country, currency, time zone, colours |
 | `frontend/` | The dashboard and Settings pages |
 
 Statement files can also be converted from the command line, for example
