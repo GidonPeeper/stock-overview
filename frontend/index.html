@@ -38,8 +38,8 @@
     :root[data-theme="light"]{
       --bg:#f4f6f9; --panel:#ffffff; --panel2:#eff2f6; --panel3:#e1e7ef;
       --text:#151d28; --muted:#526070; --faint:#5e6a7a;
-      --green:#0f7f4c; --red:#c8323f; --amber:#8f5d00; --border:#e2e7ee;
-      --green-bg:rgba(15,127,76,.10); --red-bg:rgba(200,50,63,.09); --amber-bg:rgba(143,93,0,.10);
+      --green:#0c7445; --red:#c8323f; --amber:#8f5d00; --border:#e2e7ee;
+      --green-bg:rgba(12,116,69,.10); --red-bg:rgba(200,50,63,.09); --amber-bg:rgba(143,93,0,.10);
       --accent:#1557e8; --accent-bg:rgba(21,87,232,0.1); --accent-fill:#2563eb; --on-accent:#ffffff;
       --accent2:#7935ed; --accent2-bg:rgba(121,53,237,0.1); --accent2-fill:#7c3aed; --on-accent2:#ffffff;
       --shadow:0 1px 2px rgba(21,29,40,.06), 0 8px 24px -16px rgba(21,29,40,.18);
@@ -363,6 +363,7 @@
     details.card > summary .s{ display:block; font-size:var(--fs-sm); color:var(--muted); font-weight:400; }
 
     input[type=range]{ width:100%; accent-color:var(--accent); height:32px; }
+    @media(pointer:coarse){ input[type=range]{ height:44px; } }
 
     /* phones: every control at least 44px tall */
     @media(max-width:640px){
@@ -698,7 +699,7 @@
             <div class="ch"><h2>Watchlist</h2></div>
             <div class="lead">Shares you are interested in but do not own yet.</div>
             <div class="search">
-              <input id="search-input" class="field" placeholder="Search any share or ETF, e.g. Ferrari or NVDA" autocomplete="off"
+              <input id="search-input" class="field" placeholder="Find a share: a name or ticker" autocomplete="off"
                 aria-label="Search shares and ETFs" oninput="searchTickers(this.value)" />
               <div id="search-results" class="search-results" hidden></div>
             </div>
@@ -1254,7 +1255,7 @@
         `<div class="small muted" style="margin-bottom:6px">Currencies your holdings are priced in</div>
          <div class="bar">${ccy.map((c,i)=>`<div title="${c.currency} ${c.pct}%" style="width:${c.pct}%;background:${col(i)}"></div>`).join("")}</div>
          <div style="display:flex;gap:14px;flex-wrap:wrap;margin-top:6px;font-size:var(--fs-sm);color:var(--muted)">${
-           ccy.map((c,i)=>`<span><span style="color:${col(i)}">●</span> ${c.currency} ${c.pct}%</span>`).join("")}</div>` : "";
+           ccy.map((c,i)=>`<span><span style="color:${col(i)}" aria-hidden="true">●</span> ${c.currency} ${c.pct}%</span>`).join("")}</div>` : "";
     }
 
     /* ---- holdings tab extras ---- */
@@ -1319,7 +1320,7 @@
         </div>`+
         groups.map(g=>{
           const m=TYPE_META[g.type];
-          return `<div class="grp-h"><span style="color:${m.color}">● ${m.label}</span>
+          return `<div class="grp-h"><span><span style="color:${m.color}" aria-hidden="true">●</span> ${m.label}</span>
               <span class="muted num">${money0(g.total)} · ${assets?(g.total/assets*100).toFixed(1):0}%</span></div>`+
             g.rows.map(r=>`<div class="row"><span>${esc(r.label)}<span class="r-sub">${esc(r.sub||"")}</span></span>
               <span class="num r-end" style="font-weight:600">${money0(r.value)}</span></div>`).join("");
