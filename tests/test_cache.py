@@ -355,7 +355,11 @@ class Trading212ThroughSourcesTest(unittest.TestCase):
                   mock.patch.object(sources.degiro, "get_holdings", return_value=[]),
                   mock.patch.object(sources.traderepublic, "get_holdings", return_value=[]),
                   mock.patch.object(sources.degiro, "get_trades", return_value=[]),
-                  mock.patch.object(sources.traderepublic, "get_trades", return_value=[])):
+                  mock.patch.object(sources.traderepublic, "get_trades", return_value=[]),
+                  # accounts added in Settings live in the real data/ folder:
+                  # a contributor who uses the app has some (a positions file)
+                  mock.patch.object(sources.connections, "holdings", return_value=[]),
+                  mock.patch.object(sources.connections, "trade_sources", return_value={})):
             p.start()
             self.addCleanup(p.stop)
         self.addCleanup(cache.clear)
