@@ -100,6 +100,34 @@ class PlainMessagesTest(unittest.TestCase):
         self.assertIn("Its positions are removed from this app", js)
 
 
+class OfflineCardsTest(unittest.TestCase):
+    """Run with Yahoo Finance unreachable (no internet). Before, the Analysis
+    tab said "You have not sold anything yet" to someone who had sold two
+    holdings, and "Needs at least two holdings with a ticker symbol" to
+    someone holding three: the cards could not tell "none" from "no prices"."""
+
+    def test_hindsight_says_prices_are_missing_not_that_nothing_was_sold(self):
+        from backend import fx, reports, sources
+        from backend.positions import Trade
+        trades = [Trade("2025-01-03", "NL0010273215", "ASML", "BUY", 2, 1202.0, ticker="ASML.AS"),
+                  Trade("2025-06-02", "NL0010273215", "ASML", "SELL", 1, 698.0, ticker="ASML.AS")]
+        with mock.patch.object(sources, "all_trades", return_value=trades), \
+                mock.patch("backend.prices.fetch_quotes", return_value={}), \
+                mock.patch.object(fx, "_live_rates", return_value={"EUR": 1.0}):
+            h = reports.hindsight()
+        self.assertEqual((h["regrets"], h["good_exits"]), ([], []))
+        self.assertEqual((h["sold"], h["unpriced"]), (1, 1))
+        page = (ROOT / "frontend" / "index.html").read_text()
+        self.assertIn("h.unpriced", page)
+
+    def test_correlation_says_how_many_holdings_it_was_asked_about(self):
+        from backend import reports
+        with mock.patch.object(reports, "_cached", return_value=None):   # Yahoo did not answer
+            c = reports.correlation(["AAPL", "ASML.AS", "MSFT"])
+        self.assertEqual((c["tickers"], c["requested"]), ([], 3))
+        self.assertIn("c.requested", (ROOT / "frontend" / "index.html").read_text())
+
+
 class DataFolderIsIgnoredTest(unittest.TestCase):
     """README: "Everything you add is saved in the data folder, which git
     ignores." Before, data/settings.json (country, currency, time zone,

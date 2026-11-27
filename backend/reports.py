@@ -129,8 +129,11 @@ def correlation(tickers: list[str]) -> dict:
             "method": "Pearson correlation of daily returns over the last year "
                       "(price data via Yahoo Finance).",
         }
-    return _cached("corr:" + ",".join(tickers), 6 * 3600, build, data=False) or \
+    out = _cached("corr:" + ",".join(tickers), 6 * 3600, build, data=False) or \
         {"tickers": [], "matrix": [], "method": ""}
+    # how many holdings it was asked about, so the page can tell "you hold too
+    # few" apart from "no price history right now" (Yahoo not answering)
+    return {**out, "requested": len(tickers)}
 
 
 # ------------------------------------------------------ income projection
@@ -296,7 +299,7 @@ def hindsight() -> dict:
     with ThreadPoolExecutor(max_workers=8) as pool:  # one Yahoo call per share, in parallel
         splits = dict(zip(priced, pool.map(_splits, priced)))
 
-    rows = []
+    rows, unpriced = [], 0
     for isin, s in sold.items():
         tk = tickers.get(isin, "")
         if tk and tk in quotes:
@@ -305,6 +308,7 @@ def hindsight() -> dict:
         elif tk == "":
             value_now = 0.0  # delisted / worthless now
         else:
+            unpriced += 1
             continue  # unpriceable ticker -> skip rather than guess
         delta = value_now - s["proceeds"]
         if s["proceeds"] < 1:  # ignore zero-proceeds corporate-action noise
@@ -316,6 +320,7 @@ def hindsight() -> dict:
     rows.sort(key=lambda r: -r["delta_eur"])
     total = round(sum(r["delta_eur"] for r in rows), 2)
     return {"method": HINDSIGHT_METHOD, "total_delta_eur": total,
+            "sold": len(sold), "unpriced": unpriced,   # so "nothing sold" is not said when prices are missing
             "regrets": [r for r in rows if r["delta_eur"] > 0][:6],
             "good_exits": [r for r in rows if r["delta_eur"] < 0][-6:][::-1]}
 

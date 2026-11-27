@@ -278,9 +278,10 @@ def _problem_text(exc: BaseException) -> str:
         return (f"A file on the server could not be read or saved ({exc.strerror or type(exc).__name__}). "
                 "Check that the data folder exists, can be written to, and that the disk is not full. "
                 "Nothing was changed.")
-    return (f"A data source did not answer or sent something unexpected ({type(exc).__name__}). "
-            "The rest of the dashboard is not affected. Try again in a minute; if it keeps "
-            "happening, the server log says more.")
+    return ("A data source did not answer or sent something unexpected (most often Yahoo Finance, "
+            "for prices: check the internet connection). The rest of the dashboard is not affected. "
+            "Try again in a minute; if it keeps happening, the app's log says more: the Terminal "
+            f"window where it runs, or your host's Logs page ({type(exc).__name__}).")
 
 
 @app.exception_handler(Exception)
