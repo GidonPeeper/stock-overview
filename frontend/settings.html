@@ -568,6 +568,23 @@
           <a href="https://github.com/GidonPeeper/stock-overview/blob/main/SETUP.md" target="_blank" rel="noopener">SETUP.md</a>.</div>
       </div>
 
+      <div class="card" id="backup">
+        <h2>Back up and restore</h2>
+        <div class="sub">One file with all your data: statements, balances, budget, connected accounts and your choices here.
+          Keep it as a copy, or use it to move to a new computer: download it here, then restore it there.</div>
+        <div class="note private"><b>Keep this file private.</b> It holds your account keys and statements, not encrypted.
+          Store it like a bank statement: on your own computer or a USB stick, not in an email or a shared folder.</div>
+        <div class="btn-row"><button class="btn" id="bk-down" type="button">Download a backup</button>
+          <span class="fine" id="bk-last" style="margin:0"></span></div>
+        <div class="msg" id="m-bk-down" role="status"></div>
+        <div class="label">Restore from a backup</div>
+        <div class="fine" style="margin-top:2px">Replaces your data with the backup's. Your current files are kept in a dated folder first.</div>
+        <div class="up"><input type="file" id="bk-file" accept=".zip,application/zip" aria-label="Backup file to restore" />
+          <button type="button" id="bk-check">Check the file</button></div>
+        <div id="bk-preview" aria-live="polite"></div>
+        <div class="msg" id="m-bk" role="status"></div>
+      </div>
+
       <div class="card" id="datafiles">
         <h2>Data files in use</h2>
         <div class="sub" style="margin-bottom:4px">Which broker files the dashboard reads right now.</div>
@@ -1236,6 +1253,72 @@
         $("cu-list").innerHTML = '<div class="ph" style="--h:48px"><span class="sr">Checking…</span></div>'; loadCheckup();
       });
       loadCheckup();
+    })();
+  </script>
+  <script>
+    /* ---- back up and restore (/api/backup*, backend/backup.py) ---- */
+    (() => {
+      const $ = id => document.getElementById(id);
+      const day = iso => new Date(iso).toLocaleDateString("en-GB", {day: "numeric", month: "short", year: "numeric"});
+      const size = n => n < 1024 ? `${n} bytes` : n < 1048576 ? `${Math.round(n / 1024)} KB` : `${(n / 1048576).toFixed(1)} MB`;
+      const say = (el, text, cls) => { el.textContent = text; el.className = "msg" + (cls ? " " + cls : ""); };
+      const why = async r => { const b = await r.json().catch(() => ({})); return typeof b.detail === "string" ? b.detail : "The server did not answer. Try again in a minute."; };
+      function loadInfo() {
+        getJSON("/api/backup/info").then(i => {
+          $("bk-last").textContent = i.last_downloaded ? `Last downloaded on ${day(i.last_downloaded)}.` : "No backup downloaded yet.";
+        }).catch(() => {});
+      }
+      $("bk-down").addEventListener("click", async () => {
+        const m = $("m-bk-down"); say(m, "Making the backup…");
+        const r = await fetch("/api/backup").catch(() => null);
+        if (!r) return say(m, "✗ Could not reach the server. Check that the app is running and try again.", "err");
+        if (!r.ok) return say(m, "✗ " + await why(r), "err");
+        const blob = await r.blob(), a = document.createElement("a");
+        const name = (/filename="([^"]+)"/.exec(r.headers.get("content-disposition") || "") || [])[1] || "stock-overview-backup.zip";
+        a.href = URL.createObjectURL(blob); a.download = name; document.body.appendChild(a); a.click(); a.remove();
+        setTimeout(() => URL.revokeObjectURL(a.href), 60000);
+        say(m, `✓ Downloaded ${name}. Keep it somewhere safe and private.`, "ok");
+        loadInfo(); if (window.loadCheckup) loadCheckup();
+      });
+      function form(confirm) {
+        const fd = new FormData(); fd.append("file", $("bk-file").files[0]);
+        if (confirm) fd.append("confirm", "yes");
+        return fd;
+      }
+      $("bk-check").addEventListener("click", async () => {
+        const m = $("m-bk"); $("bk-preview").innerHTML = "";
+        if (!$("bk-file").files.length) return say(m, "Choose the backup file first (a .zip made with “Download a backup”).", "err");
+        say(m, "Checking the file…");
+        const r = await fetch("/api/backup/check", {method: "POST", body: form(false)}).catch(() => null);
+        if (!r) return say(m, "✗ Could not reach the server. Check that the app is running and try again.", "err");
+        if (!r.ok) return say(m, "✗ " + await why(r), "err");
+        const p = await r.json(); say(m, "");
+        $("bk-preview").innerHTML = `<div class="note" style="color:var(--text)">
+            <b>This backup was made on ${esc(day(p.created))}</b>${p.version ? ` with version ${esc(p.version)}` : ""}. It holds:
+            <ul class="bk-list">${p.files.map(f => `<li>${esc(f.label)} <span class="fine" style="margin:0">(${size(f.size)})</span></li>`).join("")}</ul>
+            ${p.set_aside.length ? `Not in the backup, so set aside with your current files: ${p.set_aside.map(f => esc(f.label)).join(", ")}.<br>` : ""}
+            Restoring replaces your current data with this. Your current files are kept in a dated folder (data/before-restore-…).</div>
+          <div class="btn-row"><button class="btn danger" id="bk-go" type="button">Restore this backup</button>
+            <button class="btn ghost" id="bk-cancel" type="button">Cancel</button></div>`;
+        $("bk-cancel").onclick = () => { $("bk-preview").innerHTML = ""; $("bk-file").value = ""; };
+        $("bk-go").onclick = async () => {
+          $("bk-go").disabled = true; say(m, "Restoring…");
+          const r2 = await fetch("/api/backup/restore", {method: "POST", body: form(true)}).catch(() => null);
+          if (!r2) { $("bk-go").disabled = false; return say(m, "✗ Could not reach the server. Nothing was changed. Try again.", "err"); }
+          if (!r2.ok) { $("bk-go").disabled = false; return say(m, "✗ " + await why(r2), "err"); }
+          const done = await r2.json();
+          const text = `✓ Restored ${done.restored.length} files from the backup of ${day(done.created)}.` +
+            (done.safety_copy ? ` Your previous files are kept in ${done.safety_copy}.` : "");
+          try { sessionStorage.setItem("so.restored", text); } catch (e) {}
+          say(m, text + " Reloading…", "ok");
+          setTimeout(() => { location.hash = "backup"; location.reload(); }, 1200);
+        };
+      });
+      try {
+        const t = sessionStorage.getItem("so.restored");
+        if (t) { sessionStorage.removeItem("so.restored"); say($("m-bk"), t, "ok"); }
+      } catch (e) {}
+      loadInfo();
     })();
   </script>
   <script>

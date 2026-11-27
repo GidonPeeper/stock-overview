@@ -719,6 +719,50 @@ def checkup_endpoint() -> dict:
     return checkup.run(checkup.Context(_open_holdings_rows, _VAULT_STATE))
 
 
+# Back up and restore (Settings; backend/backup.py): one zip file with your data files.
+@app.get("/api/backup")
+def backup_download():
+    from . import backup
+    try:
+        blob, _ = backup.make()
+    except backup.BackupError as e:
+        raise HTTPException(404, str(e))
+    backup.mark_downloaded()
+    name = f"stock-overview-backup-{time.strftime('%Y-%m-%d')}.zip"
+    return Response(blob, media_type="application/zip",
+                    headers={"Content-Disposition": f'attachment; filename="{name}"', "Cache-Control": "no-store"})
+
+
+@app.get("/api/backup/info")
+def backup_info() -> dict:
+    from . import backup
+    return backup.info()
+
+
+@app.post("/api/backup/check")
+def backup_check(file: UploadFile = File(...)) -> dict:
+    """What a restore of this file would do; nothing is changed."""
+    from . import backup
+    try:
+        return backup.preview(file.file.read(backup.MAX_ZIP + 1))
+    except backup.BackupError as e:
+        raise HTTPException(400, str(e))
+
+
+@app.post("/api/backup/restore")
+@_one_save_at_a_time
+def backup_restore(file: UploadFile = File(...), confirm: str = Form("")) -> dict:
+    """Replace your data files with a backup's (checked first; the old files
+    are kept in data/before-restore-<date>/)."""
+    from . import backup
+    if confirm != "yes":
+        raise HTTPException(400, "A restore replaces your current data: confirm it first.")
+    try:
+        return backup.restore(file.file.read(backup.MAX_ZIP + 1))
+    except backup.BackupError as e:
+        raise HTTPException(400, str(e))
+
+
 @app.get("/settings", include_in_schema=False)
 def settings_page():
     return FileResponse(FRONTEND_DIR / "settings.html")
