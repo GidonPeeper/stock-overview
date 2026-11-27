@@ -2299,7 +2299,7 @@
       const noLive=PORT.holdings.length&&!PORT.holdings.some(h=>h.daily_eur!=null)&&(PORT.quotes||{}).unpriced;
       const items=[["Today",noLive?null:PORT.totals.daily]]; [["This week","week"],["This month","month"],["This year","year"]].forEach(([lab,k])=>items.push([lab,p[k]===undefined?null:p[k]]));
       el.innerHTML=items.map(([k,v])=>`<div class="stat"><div class="k">${k}</div><div class="v num ${v==null?'flat':cls(v)}">${v==null?'—':signed(v)}</div></div>`).join("");
-      $("period-note").textContent="What you made in each period: price gains, profit from selling, dividends and interest, after fees. Money you added or took out is not counted."+(PROFIT&&PROFIT.coverage_pct<100?` ${100-PROFIT.coverage_pct}% of your holdings has no price history and is counted at what you paid.`:"");
+      $("period-note").textContent="What you made in each period: price gains, profit from selling, dividends and interest, after fees. Money you added or took out is not counted. Today counts from each market's opening, so shares show no change before their market opens."+(PROFIT&&PROFIT.coverage_pct<100?` ${100-PROFIT.coverage_pct}% of your holdings has no price history and is counted at what you paid.`:"");
     }
     const hhmm=t=>new Date(t).toLocaleTimeString("en-GB",{hour:"2-digit",minute:"2-digit"});
     function setLive(html){ const el=$("live"); if(el) el.innerHTML=html; }
