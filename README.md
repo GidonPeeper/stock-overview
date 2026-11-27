@@ -35,7 +35,7 @@ account in **Settings** and the samples disappear. Full guide:
 | **Holdings** | Every position, merged across brokers by ISIN. Sold positions, watchlist, upcoming company results |
 | **Income** | Dividends and interest received per year, and what to expect in the next 12 months |
 | **Analysis** | A plain-language summary, a health score, risk figures with an explanation, diversification, a stress test and a 10-year projector |
-| **Money** | Net worth (investments, cash, things you own, loans), monthly budget, ways to save, how tax on investments works in your country, and tax-year figures for the UK, US or NL |
+| **Money** | Net worth (investments, cash, things you own, loans), monthly budget, ways to save, how tax on investments works in your country, UK tax-year figures, and tax-loss checks for the UK, US and NL |
 
 On every tab, the search at the top looks up the price of any share, fund,
 index, currency or crypto by name, ticker or ISIN: today's change, a chart,
@@ -97,12 +97,16 @@ Details and privacy notes: [MCP.md](MCP.md).
 ## Your data and safety
 
 - Everything you add is saved in the `data` folder, which git ignores. Back
-  it up by copying it. Never share it.
+  it up by copying it. Never share it. How to back up, update, move or start
+  over: [SETUP.md](SETUP.md#5-back-up-update-move-or-start-over).
 - Broker keys must be read-only: the steps say which boxes to tick. Keys are
   never sent back to the browser.
 - Without a password the app answers only your own computer. To use it from
   your phone or the internet, set a password first ([SETUP.md](SETUP.md)).
-- Prices come from Yahoo Finance. Tax figures are estimates, not advice.
+- Prices come from Yahoo Finance and news from public news sites. The app
+  asks them only for prices and headlines: your amounts and files stay on
+  your computer. No AI service is needed; Claude is optional. Tax figures are
+  estimates, not advice.
 
 ## Use it away from home (optional)
 
