@@ -16,12 +16,14 @@
   <!-- signed out: forget the dashboard numbers saved on this device -->
   <script>try{ localStorage.removeItem("so.snap.v1"); }catch(e){}</script>
   <style>
-    :root { --bg:#0a0d10; --panel:#12171e; --panel2:#1a212b; --text:#eef2f6; --muted:#9aa6b5; --accent:#5b97ff; --border:#2a3442; --red:#f2707b; }
-    :root[data-theme="light"]{ --bg:#f4f6f9; --panel:#ffffff; --panel2:#eff2f6; --text:#151d28; --muted:#526070; --accent:#2563eb; --border:#d5dce5; --red:#c8323f; }
+    :root{ --bg:#0a0d10; --panel:#12171e; --panel2:#1a212b; --text:#eef2f6; --muted:#9aa6b5; --border:#2a3442; --red:#f2707b;
+      --accent:#709af1; --accent-bg:rgba(112,154,241,0.15); --accent-fill:#2563eb; --on-accent:#ffffff; }
+    :root[data-theme="light"]{ --bg:#f4f6f9; --panel:#ffffff; --panel2:#eff2f6; --text:#151d28; --muted:#526070; --border:#d5dce5; --red:#c8323f;
+      --accent:#1557e8; --accent-bg:rgba(21,87,232,0.1); --accent-fill:#2563eb; --on-accent:#ffffff; }
     * { box-sizing:border-box; }
     body { margin:0; min-height:100vh; background:var(--bg); color:var(--text);
       font:16px/1.5 "Inter",-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
-      background-image:radial-gradient(900px 400px at 50% -140px, rgba(76,141,255,.08), transparent 65%);
+      background-image:radial-gradient(900px 400px at 50% -140px, var(--accent-bg), transparent 65%);
       display:flex; align-items:center; justify-content:center; padding:24px; }
     .card { width:100%; max-width:360px; background:var(--panel); border:1px solid var(--border); border-radius:18px; padding:28px 24px; text-align:center; }
     img.logo { width:72px; height:72px; border-radius:18px; margin-bottom:14px; }
@@ -30,10 +32,12 @@
     input { width:100%; background:var(--panel2); border:1px solid var(--border); color:var(--text);
       border-radius:10px; padding:13px 14px; font-size:16px; margin-bottom:12px; }
     input:focus { outline:none; border-color:var(--accent); }
-    button { width:100%; background:var(--accent); color:#fff; border:none; border-radius:10px;
+    button { width:100%; background:var(--accent-fill); color:var(--on-accent); border:none; border-radius:10px;
       padding:14px; font-size:16px; font-weight:600; cursor:pointer; }
     .err { color:var(--red); font-size:13px; min-height:18px; margin-bottom:6px; }
   </style>
+  <!-- the colours chosen in Settings, as this device last saved them (no API before signing in) -->
+  <script>try{ var so=JSON.parse(localStorage.getItem("so.colors")||"null"); if(so&&so.css){ var st=document.createElement("style"); st.id="so-colors"; st.textContent=so.css; document.head.appendChild(st); } }catch(e){}</script>
 </head>
 <body>
   <form class="card" method="POST" action="/login">

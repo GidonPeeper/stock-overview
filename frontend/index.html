@@ -22,16 +22,21 @@
     :root{
       --bg:#0a0d10; --panel:#12171e; --panel2:#1a212b; --panel3:#243040;
       --text:#eef2f6; --muted:#9aa6b5; --faint:#7d8998;
-      --green:#34c77b; --red:#f2707b; --accent:#5b97ff; --amber:#e3b341; --border:#1f2833;
-      --green-bg:rgba(52,199,123,.13); --red-bg:rgba(242,112,123,.13); --accent-bg:rgba(91,151,255,.15); --amber-bg:rgba(227,179,65,.14);
+      --green:#34c77b; --red:#f2707b; --amber:#e3b341; --border:#1f2833;
+      --green-bg:rgba(52,199,123,.13); --red-bg:rgba(242,112,123,.13); --amber-bg:rgba(227,179,65,.14);
+      /* base (accent) and secondary (accent2) colour: frontend/colors.js derives these from the colours chosen in Settings */
+      --accent:#709af1; --accent-bg:rgba(112,154,241,0.15); --accent-fill:#2563eb; --on-accent:#ffffff;
+      --accent2:#ad86f4; --accent2-bg:rgba(173,134,244,0.15); --accent2-fill:#8242ee; --on-accent2:#ffffff;
       --shadow:0 1px 2px rgba(0,0,0,.4), 0 8px 24px -12px rgba(0,0,0,.5);
       --tabbar-h:64px;
     }
     :root[data-theme="light"]{
       --bg:#f4f6f9; --panel:#ffffff; --panel2:#eff2f6; --panel3:#e1e7ef;
       --text:#151d28; --muted:#526070; --faint:#667384;
-      --green:#0f7f4c; --red:#c8323f; --accent:#2563eb; --amber:#8f5d00; --border:#e2e7ee;
-      --green-bg:rgba(15,127,76,.10); --red-bg:rgba(200,50,63,.09); --accent-bg:rgba(37,99,235,.10); --amber-bg:rgba(143,93,0,.10);
+      --green:#0f7f4c; --red:#c8323f; --amber:#8f5d00; --border:#e2e7ee;
+      --green-bg:rgba(15,127,76,.10); --red-bg:rgba(200,50,63,.09); --amber-bg:rgba(143,93,0,.10);
+      --accent:#1557e8; --accent-bg:rgba(21,87,232,0.1); --accent-fill:#2563eb; --on-accent:#ffffff;
+      --accent2:#7935ed; --accent2-bg:rgba(121,53,237,0.1); --accent2-fill:#7c3aed; --on-accent2:#ffffff;
       --shadow:0 1px 2px rgba(21,29,40,.06), 0 8px 24px -16px rgba(21,29,40,.18);
     }
     *{ box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
@@ -143,15 +148,16 @@
     .chip.active{ background:var(--accent-bg); color:var(--accent); border-color:color-mix(in srgb, var(--accent) 55%, transparent); }
     .btn{ display:inline-flex; align-items:center; justify-content:center; gap:6px; min-height:44px; padding:0 18px; border-radius:12px; font-size:14.5px; font-weight:650;
       text-decoration:none; cursor:pointer; border:1px solid transparent; }
-    .btn.primary{ background:var(--accent); color:#fff; }
+    .btn.primary{ background:var(--accent-fill); color:var(--on-accent); }
     .btn.primary:hover{ filter:brightness(1.08); }
     .btn.ghost{ background:var(--panel2); color:var(--text); border-color:var(--border); }
+    .btn.ghost:hover{ border-color:var(--accent2); }
     input.field{ width:100%; background:var(--panel2); border:1px solid var(--border); color:var(--text); border-radius:12px; padding:0 13px; min-height:44px; font-size:15px; font-family:inherit; }
     input.field:focus{ outline:none; border-color:var(--accent); }
 
     /* ---------- welcome (sample data only) ---------- */
     .welcome{ position:relative; overflow:hidden; border-color:color-mix(in srgb, var(--accent) 35%, var(--border)); padding:22px; }
-    .welcome::before{ content:""; position:absolute; inset:0 0 auto 0; height:3px; background:linear-gradient(90deg,var(--accent),var(--green)); }
+    .welcome::before{ content:""; position:absolute; inset:0 0 auto 0; height:3px; background:linear-gradient(90deg,var(--accent),var(--accent2)); }
     .welcome h2{ font-size:21px; margin:8px 0 6px; letter-spacing:-.02em; }
     .welcome p{ margin:0 0 8px; color:var(--muted); max-width:640px; }
     .welcome p.big{ color:var(--text); font-size:15.5px; }
@@ -159,7 +165,7 @@
     @media(min-width:760px){ .w-steps{ grid-template-columns:repeat(3,1fr); } }
     .w-steps li{ background:var(--panel2); border-radius:14px; padding:12px 14px; font-size:13.5px; color:var(--muted); display:flex; gap:10px; align-items:flex-start; }
     .w-steps li b{ color:var(--text); display:block; font-weight:650; }
-    .w-steps .n{ flex:0 0 26px; height:26px; border-radius:50%; background:var(--accent-bg); color:var(--accent); display:grid; place-items:center; font-weight:750; font-size:13px; }
+    .w-steps .n{ flex:0 0 26px; height:26px; border-radius:50%; background:var(--accent2-bg); color:var(--accent2); display:grid; place-items:center; font-weight:750; font-size:13px; }
     .w-acts{ display:flex; gap:10px; flex-wrap:wrap; }
     @media(max-width:640px){
       .welcome{ padding:18px 16px; }
@@ -410,6 +416,13 @@
     .lk-eq{ padding-bottom:11px; color:var(--muted); font-weight:600; }
     #lk-calc-out{ margin:8px 0 4px; min-height:19px; }
   </style>
+  <!-- before the first paint: light or dark, and the colours chosen in Settings (this device's copy, see colors.js) -->
+  <script>(function(){ var d=document.documentElement, t=null, c=null;
+    try{ t=localStorage.getItem("theme"); c=JSON.parse(localStorage.getItem("so.colors")||"null"); }catch(e){}
+    d.dataset.theme=t||(matchMedia("(prefers-color-scheme: light)").matches?"light":"dark");
+    if(c&&c.css){ var s=document.createElement("style"); s.id="so-colors"; s.textContent=c.css; document.head.appendChild(s); } })();</script>
+  <!-- async, not defer: while the server wakes up it must not hold up the charts drawn from the saved numbers -->
+  <script async src="/colors.js" id="colors-js"></script>
 </head>
 <body>
   <div class="wrap">
@@ -910,7 +923,23 @@
     function isLight(){ return document.documentElement.dataset.theme==="light"; }
     const css=n=>getComputedStyle(document.documentElement).getPropertyValue(n).trim();
     function chartColors(){ return {tick:css("--faint"), grid:css("--border"), ring:css("--panel"), legend:css("--text"),
-      green:css("--green"), red:css("--red"), accent:css("--accent"), amber:css("--amber"), muted:css("--muted")}; }
+      green:css("--green"), red:css("--red"), accent:css("--accent"), accent2:css("--accent2"), amber:css("--amber"), muted:css("--muted")}; }
+    // Allocation and currency colours: the secondary colour first, then the base colour, then fixed
+    // ones (any too close to the two chosen colours left out, so no two slices look alike).
+    const PALETTE_REST=["#26a862","#e3b341","#f0616d","#2bb3c0","#db61a2","#f0883e","#a371f7","#4c8dff","#7d8998"];
+    function palette(){
+      const own=[css("--accent2"),css("--accent")].filter(c=>/^#[0-9a-f]{6}$/i.test(c));
+      const rgb=h=>[1,3,5].map(i=>parseInt(h.slice(i,i+2),16)), far=(a,b)=>{ const x=rgb(a),y=rgb(b); return Math.hypot(x[0]-y[0],x[1]-y[1],x[2]-y[2])>90; };
+      return own.concat(PALETTE_REST.filter(c=>own.every(o=>far(c,o)))).slice(0,9);
+    }
+    // Theme or colours changed: the charts read the CSS colours when drawn, so draw them again.
+    function redrawCharts(){
+      if(HISTORY.length) renderChart();
+      if(PORT) renderAllocation();
+      if(PROJ) renderProjection();
+      if(INC_YEARS) renderIncomeYears();
+      if(ANA) renderCcyExposure();
+    }
     function applyThemeUI(){
       $("themebtn").textContent = isLight() ? "☾" : "☀";
       document.querySelector('meta[name="theme-color"]').content = isLight() ? "#f4f6f9" : "#0a0d10";
@@ -919,10 +948,7 @@
       document.documentElement.dataset.theme = isLight() ? "dark" : "light";
       try{ localStorage.setItem("theme", document.documentElement.dataset.theme); }catch(e){}
       applyThemeUI();
-      if(HISTORY.length) renderChart();
-      if(PORT) renderAllocation();
-      if(PROJ) renderProjection();
-      if(INC_YEARS) renderIncomeYears();
+      redrawCharts();
     }
     applyThemeUI();
     function renderCcyBtn(){ const b=$("ccybtn"); if(b) b.textContent=SYM[CUR]||"€"; }
@@ -971,7 +997,6 @@
       if(!PORT) return;
       try{ localStorage.setItem(SNAP_KEY,JSON.stringify({at:Date.now(),port:PORT,closed:CLOSED,history:HISTORY,profit:PROFIT,cash:CASH,fin:FIN})); }catch(e){}
     }
-    const PALETTE=["#4c8dff","#26a862","#e3b341","#f0616d","#a371f7","#2bb3c0","#db61a2","#f0883e","#7d8998"];
 
     function sparkSVG(vals){
       if(!vals||vals.length<2) return '<svg class="spark" width="72" height="26" aria-hidden="true"></svg>';
@@ -1048,13 +1073,17 @@
         if(!items.length){ empty("ana-stats","Needs about a month of price history for your holdings. It fills in on its own."); return; }
         $("ana-stats").innerHTML=items.map(([k,v,f,d])=>
           `<div class="stat"><div class="k">${k}</div><div class="v num">${f(v)}</div><div class="d">${d}</div></div>`).join("");
-        const ccy=a.currency_exposure||[];
-        $("ana-ccy").innerHTML = ccy.length ?
-          `<div class="small muted" style="margin-bottom:6px">Currencies your holdings are priced in</div>
-           <div class="bar">${ccy.map((c,i)=>`<div title="${c.currency} ${c.pct}%" style="width:${c.pct}%;background:${PALETTE[i%PALETTE.length]}"></div>`).join("")}</div>
-           <div style="display:flex;gap:14px;flex-wrap:wrap;margin-top:6px;font-size:12.5px;color:var(--muted)">${
-             ccy.map((c,i)=>`<span><span style="color:${PALETTE[i%PALETTE.length]}">●</span> ${c.currency} ${c.pct}%</span>`).join("")}</div>` : "";
+        ANA=a; renderCcyExposure();
       }).catch(e=>failed("ana-stats","The risk numbers",e));
+    }
+    let ANA=null;
+    function renderCcyExposure(){
+      const ccy=(ANA&&ANA.currency_exposure)||[], pal=palette(), col=i=>pal[i%pal.length];
+      $("ana-ccy").innerHTML = ccy.length ?
+        `<div class="small muted" style="margin-bottom:6px">Currencies your holdings are priced in</div>
+         <div class="bar">${ccy.map((c,i)=>`<div title="${c.currency} ${c.pct}%" style="width:${c.pct}%;background:${col(i)}"></div>`).join("")}</div>
+         <div style="display:flex;gap:14px;flex-wrap:wrap;margin-top:6px;font-size:12.5px;color:var(--muted)">${
+           ccy.map((c,i)=>`<span><span style="color:${col(i)}">●</span> ${c.currency} ${c.pct}%</span>`).join("")}</div>` : "";
     }
 
     /* ---- holdings tab extras ---- */
@@ -1787,7 +1816,7 @@
       const box=$("alloc-box"), list=$("alloc-list");
       if(!items.length){ box.querySelector(".donut").hidden=true; return empty(list,'No investments yet. <a href="/settings#add-account">Add a broker account</a> to see how your money is spread.'); }
       box.querySelector(".donut").hidden=false; list.className="legend";
-      const col=i=>PALETTE[i%PALETTE.length];
+      const pal=palette(), col=i=>pal[i%pal.length];
       list.innerHTML=items.map((i,n)=>`<div class="lg"><span class="dot" style="background:${col(n)}"></span><span class="n">${esc(i.label)}</span>
         <span class="p num">${(i.value/tot*100).toFixed(1)}%</span><span class="a num">${money0(i.value)}</span></div>`).join("");
       if(!window.Chart||current!=="overview") return;
@@ -1956,7 +1985,7 @@
       const showBench = !profit && benchmarkOn && BENCH && Object.keys(BENCH).length;
       if(showBench){
         datasets.push({label:"S&P 500 (same money)",data:h.map((d,i)=>({x:xs[i],y:BENCH[d.day]==null?null:cv(BENCH[d.day])})),
-          borderColor:tc.amber,borderDash:[5,4],borderWidth:1.8,pointRadius:0,fill:false,tension:.2,spanGaps:true});
+          borderColor:tc.accent2,borderDash:[5,4],borderWidth:1.8,pointRadius:0,fill:false,tension:.2,spanGaps:true});
       }
       const longRange=xs.length>1&&xs[xs.length-1]-xs[0]>400, dayOf=x=>new Date(x*DAY).toISOString().slice(0,10);
       chart=new Chart(ctx,{type:"line",data:{datasets},
@@ -2025,6 +2054,20 @@
       if(refreshing&&quickPolls<5){ quickPolls++; setTimeout(refreshLive,4000); } else if(!refreshing) quickPolls=0;
     }
 
+    /* ---- choices saved with your data (Settings): colours. The page painted with this
+       device's copy; the server's choice wins, and becomes the copy for next time. ---- */
+    let PREFS=null;
+    function loadPrefs(){
+      fetchJSON("/api/prefs").then(p=>{ PREFS=p; useColors(p); }).catch(()=>{});
+    }
+    function withColors(fn){   // colors.js loads async (never holds up the first paint)
+      if(window.SOColors) return fn();
+      const s=$("colors-js"); if(s) s.addEventListener("load",()=>fn(),{once:true});
+    }
+    function useColors(p){ withColors(()=>{ if(SOColors.apply(p.color_base,p.color_secondary)) redrawCharts(); }); }
+    // saved in Settings in another tab: follow at once
+    addEventListener("storage",e=>{ if(e.key==="so.colors") withColors(()=>{ const c=SOColors.saved(); if(SOColors.apply(c.base,c.secondary,false)) redrawCharts(); }); });
+
     let firstLoadDone=false;
     async function loadAll(attempt){
       attempt=attempt||0;
@@ -2038,6 +2081,7 @@
         return;
       }
       applyPortfolio(p,true);
+      loadPrefs();
       // Not needed for the first screen, so they never hold it up.
       fetchJSON("/api/closed").then(c=>{ CLOSED=c; renderClosed(); saveSnap(); }).catch(e=>{ if(!CLOSED) failed("closed-rows","What you sold",e); });
       fetchJSON("/api/history").then(h=>{ HISTORY=h; histLoaded=true; renderChart(); saveSnap(); })

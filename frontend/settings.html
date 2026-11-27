@@ -12,14 +12,19 @@
   <script>(function(){ let t=null; try{ t=localStorage.getItem("theme"); }catch(e){}
     document.documentElement.dataset.theme=t||(matchMedia("(prefers-color-scheme: light)").matches?"light":"dark");
     if(document.documentElement.dataset.theme==="light") document.querySelector('meta[name="theme-color"]').content="#f4f6f9"; })();</script>
+  <script defer src="/colors.js"></script>
   <style>
     /* same tokens as the dashboard */
     :root{ --bg:#0a0d10; --panel:#12171e; --panel2:#1a212b; --panel3:#243040; --text:#eef2f6; --muted:#9aa6b5;
-      --faint:#7d8998; --green:#34c77b; --red:#f2707b; --accent:#5b97ff; --amber:#e3b341; --border:#1f2833;
-      --green-bg:rgba(52,199,123,.13); --red-bg:rgba(242,112,123,.13); --accent-bg:rgba(91,151,255,.15); --amber-bg:rgba(227,179,65,.14); }
+      --faint:#7d8998; --green:#34c77b; --red:#f2707b; --amber:#e3b341; --border:#1f2833;
+      --green-bg:rgba(52,199,123,.13); --red-bg:rgba(242,112,123,.13); --amber-bg:rgba(227,179,65,.14);
+      --accent:#709af1; --accent-bg:rgba(112,154,241,0.15); --accent-fill:#2563eb; --on-accent:#ffffff;
+      --accent2:#ad86f4; --accent2-bg:rgba(173,134,244,0.15); --accent2-fill:#8242ee; --on-accent2:#ffffff; }
     :root[data-theme="light"]{ --bg:#f4f6f9; --panel:#ffffff; --panel2:#eff2f6; --panel3:#e1e7ef; --text:#151d28;
-      --muted:#526070; --faint:#667384; --green:#0f7f4c; --red:#c8323f; --accent:#2563eb; --amber:#8f5d00; --border:#e2e7ee;
-      --green-bg:rgba(15,127,76,.10); --red-bg:rgba(200,50,63,.09); --accent-bg:rgba(37,99,235,.10); --amber-bg:rgba(143,93,0,.10); }
+      --muted:#526070; --faint:#667384; --green:#0f7f4c; --red:#c8323f; --amber:#8f5d00; --border:#e2e7ee;
+      --green-bg:rgba(15,127,76,.10); --red-bg:rgba(200,50,63,.09); --amber-bg:rgba(143,93,0,.10);
+      --accent:#1557e8; --accent-bg:rgba(21,87,232,0.1); --accent-fill:#2563eb; --on-accent:#ffffff;
+      --accent2:#7935ed; --accent2-bg:rgba(121,53,237,0.1); --accent2-fill:#7c3aed; --on-accent2:#ffffff; }
     html{ color-scheme:dark; } :root[data-theme="light"]{ color-scheme:light; }
     *{ box-sizing:border-box; }
     [hidden]{ display:none !important; }
@@ -40,7 +45,7 @@
     .toc a:hover{ color:var(--text); }
     .sec{ scroll-margin-top:64px; }
     .sec > h2.st{ font-size:12px; text-transform:uppercase; letter-spacing:.08em; color:var(--muted); margin:28px 2px 10px; font-weight:650; display:flex; gap:8px; align-items:center; }
-    .sec > h2.st .n{ width:20px; height:20px; border-radius:50%; background:var(--accent-bg); color:var(--accent); display:grid; place-items:center; font-size:11px; letter-spacing:0; }
+    .sec > h2.st .n{ width:20px; height:20px; border-radius:50%; background:var(--accent2-bg); color:var(--accent2); display:grid; place-items:center; font-size:11px; letter-spacing:0; }
     .card{ background:var(--panel); border:1px solid var(--border); border-radius:18px; padding:18px; margin-bottom:14px; scroll-margin-top:64px; }
     .card h2{ font-size:16px; margin:0 0 6px; font-weight:650; letter-spacing:-.01em; }
     .card > .sub{ margin-bottom:12px; }
@@ -56,7 +61,7 @@
     .up input[type=file]{ font-size:13px; color:var(--muted); max-width:100%; }
     input[type=file]::file-selector-button{ font:inherit; font-size:13px; font-weight:600; min-height:40px; padding:0 14px; margin-right:10px;
       border-radius:10px; border:1px solid var(--border); background:var(--panel2); color:var(--text); cursor:pointer; }
-    .up button{ background:var(--accent); border:none; color:#fff; min-height:40px; padding:0 16px; border-radius:10px;
+    .up button{ background:var(--accent-fill); border:none; color:var(--on-accent); min-height:40px; padding:0 16px; border-radius:10px;
       font-size:14px; font-weight:650; cursor:pointer; font-family:inherit; }
     .msg{ font-size:13px; margin-top:6px; min-height:18px; }
     .ok{ color:var(--green); } .err{ color:var(--red); }
@@ -66,7 +71,7 @@
       border-radius:10px; padding:0 11px; font-size:14px; font-family:inherit; }
     textarea.ipt{ padding:8px 11px; }
     .ipt:focus{ outline:none; border-color:var(--accent); }
-    .btn{ background:var(--accent); border:none; color:#fff; min-height:40px; padding:0 16px; border-radius:10px;
+    .btn{ background:var(--accent-fill); border:none; color:var(--on-accent); min-height:40px; padding:0 16px; border-radius:10px;
       font-size:14px; font-weight:650; cursor:pointer; font-family:inherit; display:inline-flex; align-items:center; justify-content:center; }
     .bal{ width:110px; text-align:right; }
     .del{ background:none; border:none; color:var(--faint); cursor:pointer; font-size:15px; min-width:40px; min-height:40px; border-radius:10px; }
@@ -91,8 +96,8 @@
     .chip{ border:1px solid var(--border); background:var(--panel2); color:var(--muted); border-radius:20px; padding:0 13px; min-height:38px;
       font-size:13px; cursor:pointer; font-family:inherit; display:inline-flex; align-items:center; gap:6px; }
     .chip:hover{ color:var(--text); }
-    .chip.on{ background:var(--accent); border-color:var(--accent); color:#fff; }
-    .chip.on .pill{ background:rgba(255,255,255,.22); color:#fff; }
+    .chip.on{ background:var(--accent-fill); border-color:var(--accent-fill); color:var(--on-accent); }
+    .chip.on .pill{ background:color-mix(in srgb, var(--on-accent) 20%, transparent); color:var(--on-accent); }
     .chip.dim{ opacity:.65; }
     .acct-head{ margin-top:16px; padding-top:14px; border-top:1px solid var(--border); }
     .acct-head b{ font-size:16px; }
@@ -107,6 +112,7 @@
     .fld .ipt{ width:100%; font-size:15px; }
     .chk{ display:flex; gap:8px; align-items:center; font-size:13.5px; margin:9px 0; min-height:40px; }
     .btn.ghost{ background:var(--panel2); color:var(--text); border:1px solid var(--border); }
+    .btn.ghost:hover{ border-color:var(--accent2); }
     .btn.sm{ min-height:36px; padding:0 12px; font-size:13px; }
     .btn:disabled{ opacity:.6; cursor:default; }
     .map{ display:grid; grid-template-columns:repeat(auto-fill,minmax(150px,1fr)); gap:0 10px; }
@@ -147,6 +153,43 @@
       .row > span:first-child{ flex:1 1 150px; min-width:0; }
       .row > :last-child{ margin-left:auto; }
     }
+    /* ---- colours and theme ---- */
+    .seg{ display:inline-flex; background:var(--panel2); border:1px solid var(--border); border-radius:12px; padding:3px; gap:2px; }
+    .seg button{ background:none; border:none; color:var(--muted); padding:0 14px; min-height:36px; border-radius:9px; cursor:pointer;
+      font:inherit; font-size:13.5px; font-weight:600; }
+    .fld .seg{ align-self:flex-start; }
+    .seg button:hover{ color:var(--text); }
+    .seg button[aria-pressed="true"]{ background:var(--panel); color:var(--text); box-shadow:0 1px 3px rgba(0,0,0,.25); }
+    [data-theme="dark"] .seg button[aria-pressed="true"]{ background:var(--panel3); }
+    .ap-presets{ display:grid; grid-template-columns:repeat(auto-fill,minmax(150px,1fr)); gap:8px; margin:12px 0 4px; }
+    .ap-preset{ display:flex; align-items:center; gap:10px; min-height:48px; padding:8px 12px; border-radius:12px; cursor:pointer; text-align:left;
+      background:var(--panel2); border:1px solid var(--border); color:var(--text); font:inherit; font-size:13.5px; font-weight:600; }
+    .ap-preset:hover{ border-color:var(--muted); }
+    .ap-preset[aria-pressed="true"]{ border-color:var(--accent); box-shadow:inset 0 0 0 1px var(--accent); }
+    .ap-sw{ display:inline-flex; flex-shrink:0; }
+    .ap-sw i{ width:18px; height:18px; border-radius:50%; border:2px solid var(--panel2); box-shadow:0 0 0 1px var(--border); }
+    .ap-sw i + i{ margin-left:-6px; }
+    .ap-custom{ display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:0 14px; align-items:start; margin-top:6px; }
+    .ap-pick{ display:flex; gap:8px; align-items:center; }
+    .ap-pick input[type=color]{ flex:0 0 44px; width:44px; height:40px; padding:2px; border-radius:10px; border:1px solid var(--border);
+      background:var(--panel2); cursor:pointer; }
+    .ap-pick .ipt{ flex:1; min-width:0; font-family:ui-monospace,Menlo,monospace; text-transform:lowercase; }
+    .fld-err{ color:var(--red); font-size:12.5px; min-height:0; }
+    .ipt[aria-invalid="true"]{ border-color:var(--red); }
+    .ap-prev{ display:grid; grid-template-columns:1fr 1fr; gap:10px; margin:12px 0 4px; }
+    .ap-box{ border-radius:14px; padding:12px; border:1px solid; font-size:12.5px; min-width:0; }
+    .ap-box .ap-t{ font-weight:650; margin-bottom:8px; opacity:.8; }
+    .ap-tabs{ display:flex; gap:4px; margin-bottom:10px; }
+    .ap-tabs span{ padding:5px 9px; border-radius:8px; font-weight:600; }
+    .ap-row{ display:flex; gap:8px; align-items:center; flex-wrap:wrap; }
+    .ap-btn{ padding:6px 11px; border-radius:9px; font-weight:650; }
+    .ap-box svg{ display:block; width:100%; height:44px; margin-top:8px; }
+    @media(max-width:640px){
+      .ap-custom{ grid-template-columns:1fr; }
+      .ap-prev{ grid-template-columns:1fr; }
+      .ap-pick input[type=color]{ height:44px; }
+      .seg button{ min-height:44px; }
+    }
     /* ---- country ---- */
     .ctry-effects{ display:grid; gap:8px; margin:14px 0 6px; }
     .ctry-effects .state{ font-size:13.5px; }
@@ -160,6 +203,8 @@
     #ctry-list .tag + .tag{ margin-left:4px; }
     @media(max-width:640px){ .ctry-grid{ grid-template-columns:1fr; } .ctry-save .btn{ flex:1 1 100%; } }
   </style>
+  <!-- the colours chosen here, as this device last saved them (colors.js): applied before the first paint -->
+  <script>try{ var so=JSON.parse(localStorage.getItem("so.colors")||"null"); if(so&&so.css){ var st=document.createElement("style"); st.id="so-colors"; st.textContent=so.css; document.head.appendChild(st); } }catch(e){}</script>
 </head>
 <body>
   <div class="wrap">
@@ -372,6 +417,31 @@
     <!-- 4. App and data -->
     <section class="sec" id="app">
       <h2 class="st"><span class="n">4</span>App and data</h2>
+      <div class="card" id="appearance">
+        <h2>Colours and theme</h2>
+        <div class="sub">The base colour is for buttons, links and the selected tab; the secondary colour for charts and highlights.
+          Gains stay green and losses red. Colours are adjusted where needed so text stays easy to read in light and dark.</div>
+        <div class="ap-presets" id="ap-presets" role="group" aria-label="Colour sets"></div>
+        <div class="ap-custom">
+          <div class="fld"><label for="ap-base-hex">Base colour</label>
+            <span class="ap-pick"><input type="color" id="ap-base" aria-label="Choose the base colour" />
+              <input class="ipt" id="ap-base-hex" maxlength="7" autocomplete="off" spellcheck="false" aria-describedby="ap-base-err" /></span>
+            <span class="fld-err" id="ap-base-err"></span></div>
+          <div class="fld"><label for="ap-sec-hex">Secondary colour</label>
+            <span class="ap-pick"><input type="color" id="ap-sec" aria-label="Choose the secondary colour" />
+              <input class="ipt" id="ap-sec-hex" maxlength="7" autocomplete="off" spellcheck="false" aria-describedby="ap-sec-err" /></span>
+            <span class="fld-err" id="ap-sec-err"></span></div>
+          <div class="fld"><span id="ap-theme-l">Theme</span>
+            <div class="seg" id="ap-theme" role="group" aria-labelledby="ap-theme-l">
+              <button type="button" data-t="light">Light</button><button type="button" data-t="dark">Dark</button></div></div>
+        </div>
+        <div class="ap-prev" id="ap-prev" aria-hidden="true"></div>
+        <div class="ctry-save"><button class="btn" id="ap-save" type="button">Save colours</button>
+          <button class="btn ghost" id="ap-reset" type="button">Back to the standard colours</button>
+          <span id="ap-dirty" class="fine" style="margin:0" hidden>Not saved yet: you are seeing a preview</span></div>
+        <div class="msg" id="m-ap" role="status"></div>
+      </div>
+
       <div class="card" id="country">
         <h2>Your country</h2>
         <div class="sub">Where you live sets the tax overview on the Money tab, the news, and which tax cards the dashboard shows.</div>
@@ -913,6 +983,114 @@
       });
       init();
     })();
+  </script>
+  <script>
+    /* ---- colours and theme ---- */
+    /* Base and secondary colour, saved with POST /api/prefs (color_base, color_secondary;
+       null = the standard colours). The page itself previews a choice at once; Save keeps
+       it, for every device. Light or dark is kept on this device, like the dashboard's switch. */
+    document.addEventListener("DOMContentLoaded", () => {
+      const $ = id => document.getElementById(id), C = window.SOColors;
+      if (!C) { $("appearance").hidden = true; return; }
+      const HEXRE = /^#?[0-9a-f]{6}$/i;
+      const norm = v => { v = String(v || "").trim().toLowerCase(); return HEXRE.test(v) ? (v[0] === "#" ? v : "#" + v) : null; };
+      let saved = C.saved(), pick = {...saved};                       // "" = the standard colour
+      const shown = k => pick[k] || C.DEFAULTS[k];
+      const same = (a, b) => (a.base || "") === (b.base || "") && (a.secondary || "") === (b.secondary || "");
+
+      function presets() {
+        $("ap-presets").innerHTML = C.PRESETS.map((p, i) => {
+          const on = i === 0 ? !pick.base && !pick.secondary : pick.base === p.base && pick.secondary === p.secondary;
+          return `<button type="button" class="ap-preset" data-i="${i}" aria-pressed="${on}">
+            <span class="ap-sw" aria-hidden="true"><i style="background:${p.base}"></i><i style="background:${p.secondary}"></i></span>${esc(p.name)}</button>`;
+        }).join("");
+      }
+      function preview() {
+        const b = C.derive(shown("base")), s = C.derive(shown("secondary"));
+        const ink = {light: ["#151d28", "#526070", "#e2e7ee", "#0f7f4c"], dark: ["#eef2f6", "#9aa6b5", "#1f2833", "#34c77b"]};
+        $("ap-prev").innerHTML = ["light", "dark"].map(t => {
+          const g = C.SURFACES[t], [text, muted, border, green] = ink[t], a = b[t], z = s[t];
+          return `<div class="ap-box" style="background:${g.panel};color:${text};border-color:${border}">
+            <div class="ap-t">${t === "light" ? "Light" : "Dark"}</div>
+            <div class="ap-tabs"><span style="background:${a.tint};color:${a.text}">Overview</span><span style="color:${muted}">Holdings</span></div>
+            <div class="ap-row"><span class="ap-btn" style="background:${a.fill};color:${a.on}">Save</span>
+              <span class="ap-btn" style="border:1px solid ${z.text};background:${g.panel2}">Cancel</span>
+              <span style="color:${a.text};text-decoration:underline">A link</span>
+              <b style="color:${green}">+€1,250</b></div>
+            <svg viewBox="0 0 200 44" preserveAspectRatio="none"><polyline points="0,38 40,30 80,32 120,18 160,14 200,6" fill="none" stroke="${a.text}" stroke-width="2.2"/>
+              <polyline points="0,38 40,34 80,30 120,28 160,22 200,18" fill="none" stroke="${z.text}" stroke-width="1.8" stroke-dasharray="5 4"/></svg></div>`;
+        }).join("");
+      }
+      function fields() {
+        for (const [k, id] of [["base", "ap-base"], ["secondary", "ap-sec"]]) {
+          $(id).value = shown(k);
+          if (document.activeElement !== $(id + "-hex")) { $(id + "-hex").value = shown(k); $(id + "-hex").removeAttribute("aria-invalid"); $(id + "-err").textContent = ""; }
+        }
+      }
+      function themeSeg() {
+        const t = document.documentElement.dataset.theme;
+        document.querySelectorAll("#ap-theme button").forEach(b => b.setAttribute("aria-pressed", String(b.dataset.t === t)));
+      }
+      function render() {
+        C.apply(pick.base, pick.secondary, false);                    // preview on this page, not kept yet
+        presets(); preview(); fields(); themeSeg();
+        $("ap-dirty").hidden = same(pick, saved);
+      }
+      function set(k, v) {
+        // the standard colour picked by hand counts as "standard"
+        pick[k] = v && v !== C.DEFAULTS[k] ? v : "";
+        render();
+      }
+      $("ap-presets").addEventListener("click", e => {
+        const b = e.target.closest(".ap-preset"); if (!b) return;
+        const p = C.PRESETS[+b.dataset.i];
+        pick = +b.dataset.i === 0 ? {base: "", secondary: ""} : {base: p.base, secondary: p.secondary};
+        render();
+      });
+      for (const [k, id] of [["base", "ap-base"], ["secondary", "ap-sec"]]) {
+        $(id).addEventListener("input", () => set(k, $(id).value.toLowerCase()));
+        $(id + "-hex").addEventListener("input", () => {
+          const v = norm($(id + "-hex").value), bad = !v && $(id + "-hex").value.trim().length >= 6;
+          $(id + "-hex").setAttribute("aria-invalid", String(bad));
+          $(id + "-err").textContent = bad ? "Write it as # and six digits or letters a–f, for example #2563eb." : "";
+          if (v) set(k, v);
+        });
+        $(id + "-hex").addEventListener("blur", () => fields());
+      }
+      $("ap-theme").addEventListener("click", e => {
+        const b = e.target.closest("button[data-t]"); if (!b) return;
+        document.documentElement.dataset.theme = b.dataset.t;
+        try { localStorage.setItem("theme", b.dataset.t); } catch (x) {}
+        const m = document.querySelector('meta[name="theme-color"]'); if (m) m.content = b.dataset.t === "light" ? "#f4f6f9" : "#0a0d10";
+        themeSeg();
+      });
+      async function save(choice, okText) {
+        const msg = $("m-ap");
+        const r = await fetch("/api/prefs", {method: "POST", headers: {"Content-Type": "application/json"},
+          body: JSON.stringify({color_base: choice.base || null, color_secondary: choice.secondary || null})}).catch(() => null);
+        if (!r) { msg.textContent = "✗ Could not reach the server. Your colours are not saved."; msg.className = "msg err"; return; }
+        const b = await r.json().catch(() => ({}));
+        if (!r.ok) { msg.textContent = "✗ " + (typeof b.detail === "string" ? b.detail : "Could not save."); msg.className = "msg err"; return; }
+        saved = {base: b.color_base || "", secondary: b.color_secondary || ""}; pick = {...saved};
+        C.apply(saved.base, saved.secondary);                         // kept on this device for the next first paint
+        msg.textContent = okText || savedMsg(); msg.className = "msg ok";
+        render();
+      }
+      $("ap-save").addEventListener("click", () => {
+        if (same(pick, saved)) { $("m-ap").textContent = "Nothing changed."; $("m-ap").className = "msg"; return; }
+        save(pick);
+      });
+      $("ap-reset").addEventListener("click", () => save({base: "", secondary: ""}, "✓ Back to the standard colours"));
+      // the copy on this device can be older than the one saved with your data
+      getJSON("/api/prefs").then(p => {
+        const server = {base: p.color_base || "", secondary: p.color_secondary || ""};
+        const untouched = same(pick, saved);
+        saved = server; C.apply(server.base, server.secondary);
+        if (untouched) pick = {...server};
+        render();
+      }).catch(() => render());
+      render();
+    });
   </script>
   <script src="/accounts.js"></script>
 </body>
