@@ -275,6 +275,10 @@
     .cu-do{ font-size:var(--fs-md); margin-top:6px; overflow-wrap:anywhere; }
     .cu-do a{ font-weight:600; white-space:nowrap; }
     .cu-h{ font-size:var(--fs-xs); text-transform:uppercase; letter-spacing:.05em; color:var(--muted); margin:14px 0 0; font-weight:650; }
+    .cu-x{ margin-top:6px; font-size:var(--fs-sm); color:var(--muted); }
+    .cu-gone{ margin-top:12px; font-size:var(--fs-md); }
+    .cu-gone summary{ cursor:pointer; color:var(--muted); font-weight:600; }
+    .cu-gone .cu-item{ opacity:.75; }
     .private{ border-color:color-mix(in srgb, var(--amber) 45%, var(--border)); background:var(--amber-bg); color:var(--text); }
     .bk-list{ margin:8px 0; padding-left:20px; font-size:var(--fs-md); }
     .switch{ display:flex; gap:10px; align-items:flex-start; font-size:var(--fs-md); min-height:44px; padding:6px 0; cursor:pointer; }
@@ -1283,15 +1287,29 @@
           <span class="cu-mark" aria-hidden="true">${LV[f.level][0]}</span>
           <div class="cu-body"><div class="cu-t">${esc(f.title)}${f.level === "info" ? `<span class="sr"> (${LV.info[1]})</span>` : `<span class="cu-lv">${LV[f.level][1]}</span>`}</div>
             <div class="cu-why">${esc(f.why)}</div>
-            <div class="cu-do"><b>What to do:</b> ${esc(f.action)}${link(f)}</div></div></div>`;
+            <div class="cu-do"><b>What to do:</b> ${esc(f.action)}${link(f)}</div>
+            <button type="button" class="linkbtn cu-x" data-dismiss="${esc(f.id)}" data-on="${f.dismissed ? "0" : "1"}">${f.dismissed ? "Show again" : "Dismiss"}<span class="sr">: ${esc(f.title)}</span></button></div></div>`;
       window.renderCheckup = c => {
         if (c.help) $("cu-help").href = c.help;
-        const act = c.findings.filter(f => f.level !== "info"), info = c.findings.filter(f => f.level === "info");
+        const shown = c.findings.filter(f => !f.dismissed), gone = c.findings.filter(f => f.dismissed);
+        const act = shown.filter(f => f.level !== "info"), info = shown.filter(f => f.level === "info");
         let html = act.length ? `<p class="sr">${act.length} ${act.length === 1 ? "thing needs" : "things need"} attention.</p>` + act.map(item).join("")
           : `<div class="cu-ok"><span><b>All is well.</b> Nothing needs your attention right now.</span></div>`;
         if (info.length) html += (act.length ? `<div class="cu-h">Good to know</div>` : "") + info.map(item).join("");
+        if (gone.length) html += `<details class="cu-gone"><summary>Dismissed (${gone.length})</summary>
+          <p class="note">Hidden until you show them again. A problem comes back after a week if it is still there.</p>${gone.map(item).join("")}</details>`;
         $("cu-list").innerHTML = html;
       };
+      // Dismiss / Show again: saved with your data, so it holds on every device
+      $("cu-list").addEventListener("click", async e => {
+        const b = e.target.closest("[data-dismiss]");
+        if (!b) return;
+        b.disabled = true;
+        const r = await fetch("/api/dismissed", {method: "POST", headers: {"Content-Type": "application/json"},
+          body: JSON.stringify({key: b.dataset.dismiss, dismissed: b.dataset.on === "1"})}).catch(() => null);
+        if (!r || !r.ok) { b.disabled = false; b.textContent = "Could not save. Try again"; return; }
+        loadCheckup();
+      });
       window.loadCheckup = () => getJSON("/api/checkup").then(renderCheckup)
         .catch(e => loadFailed(["cu-list"], "The check-up", e, "loadCheckup()"));
       $("cu-again").addEventListener("click", () => {

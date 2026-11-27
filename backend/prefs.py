@@ -145,6 +145,43 @@ def get() -> dict:
     return {**{k: value(k) for k in _KEYS}, "chosen": sorted(k for k in _KEYS if k in saved)}
 
 
+DISMISSED = "dismissed"          # in the same file: {key: "YYYY-MM-DD" it was dismissed}
+_KEY = re.compile(r"^[\w:./@ -]{1,200}$")
+_MAX_DISMISSED = 200
+
+
+def dismissed() -> dict[str, str]:
+    """Warnings the user chose to hide: {key: day dismissed}. A check-up
+    finding's key is its id; a notice's key starts with "notice:"."""
+    d = _saved().get(DISMISSED)
+    return {str(k): str(v) for k, v in d.items()} if isinstance(d, dict) else {}
+
+
+def set_dismissed(key: str, on: bool, day: str) -> dict[str, str]:
+    """Hide (on) or show again (off) one warning. The oldest are forgotten
+    past _MAX_DISMISSED, so the file stays small."""
+    key = str(key or "").strip()
+    if not _KEY.match(key):
+        raise ValueError("Not a warning that can be dismissed")
+    with _lock:
+        data = dict(_saved())
+        d = dismissed()
+        if on:
+            d[key] = day
+            if len(d) > _MAX_DISMISSED:
+                d = dict(sorted(d.items(), key=lambda kv: kv[1])[-_MAX_DISMISSED:])
+        else:
+            d.pop(key, None)
+        if d:
+            data[DISMISSED] = d
+        else:
+            data.pop(DISMISSED, None)
+        DATA_DIR.mkdir(exist_ok=True)
+        write_atomic(DATA_DIR / FILE, json.dumps(data, indent=2))
+        _cache[0] = None
+    return dismissed()
+
+
 def update(changes: dict) -> dict:
     """Save the given choices (unknown keys are refused). A value of None
     forgets a choice, so it falls back again."""

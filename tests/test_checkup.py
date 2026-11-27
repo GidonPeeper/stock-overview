@@ -27,6 +27,17 @@ LAST_DAY, NEW_YEAR = date(_Y + 1, 4, 5), date(_Y + 1, 4, 6)
 RULES, NEXT = rules.UK_TAX_YEAR, f"{_Y + 1}/{str(_Y + 2)[2:]}"
 
 
+_no_dismissals = mock.patch("backend.prefs.dismissed", return_value={})
+
+
+def setUpModule():        # warnings dismissed in a copy that holds your own data change nothing here
+    _no_dismissals.start()
+
+
+def tearDownModule():
+    _no_dismissals.stop()
+
+
 def ctx(**inputs):
     return checkup.Context(today=inputs.pop("today", TODAY), vault_state=inputs.pop("vault_state", None),
                            inputs=inputs)
@@ -59,6 +70,21 @@ class FindingShapeTest(unittest.TestCase):
         self.assertFalse(out["ok"])
         with mock.patch.object(checkup, "CHECKS", [lambda c: [found[0]]]):
             self.assertTrue(checkup.run(ctx())["ok"])       # good to know only: all is well
+
+    def test_dismissed_findings_leave_the_counts_and_problems_come_back(self):
+        found = [checkup._finding("p", "problem", "t", "w", "a"), checkup._finding("a", "attention", "t", "w", "a"),
+                 checkup._finding("i", "info", "t", "w", "a")]
+        hidden = {"a": "2026-01-01", "i": "2026-11-27", "p": (TODAY - timedelta(days=6)).isoformat()}
+        with mock.patch.object(checkup, "CHECKS", [lambda c: [dict(f) for f in found]]), \
+                mock.patch("backend.prefs.dismissed", return_value=hidden):
+            out = checkup.run(ctx())
+            self.assertEqual(out["counts"], {"problem": 0, "attention": 0, "info": 0})
+            self.assertEqual((out["dismissed"], out["ok"]), (3, True))
+            self.assertTrue(all(f["dismissed"] for f in out["findings"]))   # still listed, as dismissed
+            # a week on, the problem is back if it is still there; the rest stay hidden
+            later = checkup.run(ctx(today=TODAY + timedelta(days=1)))
+        self.assertEqual(later["counts"], {"problem": 1, "attention": 0, "info": 0})
+        self.assertEqual([f["id"] for f in later["findings"] if not f["dismissed"]], ["p"])
 
     def test_slow_input_is_skipped_not_waited_for(self):
         def slow():

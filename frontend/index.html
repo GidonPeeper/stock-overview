@@ -166,6 +166,10 @@
       display:grid; place-items:center; font-size:var(--fs-xs); font-weight:800; }
     .notice{ border:1px solid var(--amber); border-radius:var(--r-md); padding:10px 14px; margin:0 0 14px; font-size:var(--fs-sm); line-height:1.5; color:var(--text); background:var(--panel); overflow-wrap:anywhere; }
     .notice ul{ margin:4px 0 0; padding-left:18px; }
+    .notice{ position:relative; padding-right:44px; }
+    .notice .x-dismiss{ position:absolute; top:4px; right:4px; width:36px; height:36px; border:0; background:none; color:var(--muted); font-size:16px; cursor:pointer; border-radius:var(--r-sm); }
+    .notice .x-dismiss:hover{ color:var(--text); background:var(--panel2); }
+    @media (pointer:coarse){ .notice .x-dismiss{ width:44px; height:44px; top:0; right:0; } }
     /* the check-up (Settings): a count on the settings button; a card whose rules are out of date */
     #setbtn, #hdr-more{ position:relative; }
     .cu-badge{ position:absolute; top:-6px; right:-6px; min-width:20px; height:20px; padding:0 5px; border-radius:var(--r-pill); border:2px solid var(--bg);
@@ -2379,8 +2383,19 @@
       const q=PORT.quotes||{}, items=(PORT.problems||[]).map(p=>`<b>${esc(p.source)}:</b> ${esc(p.message)}`);
       if(q.unpriced) items.push(`${q.unpriced} holding${q.unpriced===1?" has":"s have"} no live price and ${q.unpriced===1?"is":"are"} counted at what you paid.`);
       if(q.fx_live===false&&PORT.holdings.some(h=>h.currency&&h.currency!=="EUR")) items.push("Live exchange rates could not be loaded: amounts in other currencies use built-in rates for now.");
-      el.hidden=!items.length;
-      el.innerHTML=items.length?`<b>Some numbers are incomplete right now.</b><ul>${items.map(i=>`<li>${i}</li>`).join("")}</ul><a href="/settings#checkup">What to do: the check-up in Settings</a>`:"";
+      // dismissed: hidden until what it says changes (saved with your data, so on every device)
+      const key="notice:"+hashText(items.join("|"));
+      const show=items.length&&!(DISMISSED&&DISMISSED[key]);
+      el.hidden=!show;
+      el.innerHTML=show?`<button type="button" class="x-dismiss" aria-label="Dismiss this message" title="Dismiss" onclick="dismissNotice('${key}')">✕</button><b>Some numbers are incomplete right now.</b><ul>${items.map(i=>`<li>${i}</li>`).join("")}</ul><a href="/settings#checkup">What to do: the check-up in Settings</a>`:"";
+    }
+    var DISMISSED=null;   // {key: day} from /api/dismissed (var: renderNotice may run before this line)
+    function hashText(s){ let h=5381; for(let i=0;i<s.length;i++) h=((h<<5)+h+s.charCodeAt(i))>>>0; return h.toString(36); }
+    fetchJSON("/api/dismissed").then(d=>{ DISMISSED=d.keys||{}; renderNotice(); }).catch(()=>{ DISMISSED={}; });
+    async function dismissNotice(key){
+      DISMISSED=Object.assign({},DISMISSED,{[key]:"now"}); renderNotice();
+      const r=await fetch("/api/dismissed",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({key,dismissed:true})}).catch(()=>null);
+      if(r&&r.ok){ DISMISSED=(await r.json()).keys||DISMISSED; }
     }
 
     // One /api/portfolio request at a time, shared by the first load and the live refresh.

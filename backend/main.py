@@ -1056,6 +1056,26 @@ def prefs_save(changes: dict = Body(...)) -> dict:
     return out
 
 
+@app.get("/api/dismissed")
+def dismissed_get() -> dict:
+    """Warnings the user chose to hide: {"keys": {key: day}} (prefs.dismissed)."""
+    return {"keys": prefs.dismissed()}
+
+
+@app.post("/api/dismissed")
+@_one_save_at_a_time
+def dismissed_save(body: dict = Body(...)) -> dict:
+    """Hide a warning ({"key": ..., "dismissed": true}) or show it again
+    ("dismissed": false). A check-up finding's key is its id."""
+    try:
+        keys = prefs.set_dismissed(body.get("key"), bool(body.get("dismissed", True)),
+                                   clock.today().isoformat())
+    except ValueError as e:
+        raise HTTPException(400, str(e))
+    github_sync.push_vault_async()
+    return {"keys": keys}
+
+
 @app.get("/api/fx")
 def fx_rates() -> dict:
     """EUR -> GBP/USD rates for the browser's currency switch (amounts are

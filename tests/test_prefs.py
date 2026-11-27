@@ -30,6 +30,21 @@ class PrefsTest(unittest.TestCase):
         self.assertEqual(fx.display_currency(), "GBP")
         self.assertEqual(str(clock.tz()), "Europe/Amsterdam")
 
+    def test_dismissed_warnings_are_saved_with_the_settings(self):
+        prefs.update({"currency": "usd"})
+        self.assertEqual(prefs.set_dismissed("backup_old", True, "2026-11-27"), {"backup_old": "2026-11-27"})
+        prefs.set_dismissed("notice:1a2b3c", True, "2026-11-28")
+        self.assertEqual(prefs.value("currency"), "USD")                   # the choices are kept
+        self.assertEqual(prefs.get()["chosen"], ["currency"])
+        self.assertEqual(prefs.set_dismissed("backup_old", False, "2026-11-29"), {"notice:1a2b3c": "2026-11-28"})
+        for bad in ("", "x" * 201, "<script>", None):
+            with self.assertRaises(ValueError):
+                prefs.set_dismissed(bad, True, "2026-11-27")
+        with mock.patch.object(prefs, "_MAX_DISMISSED", 2):                # the oldest are forgotten
+            prefs.set_dismissed("a", True, "2026-11-01")
+            prefs.set_dismissed("b", True, "2026-11-30")
+        self.assertEqual(set(prefs.dismissed()), {"notice:1a2b3c", "b"})
+
     def test_a_choice_wins_and_is_kept(self):
         prefs.update({"country": "uk", "currency": "usd", "timezone": "America/New_York",
                       "color_base": "#0A7A5C"})

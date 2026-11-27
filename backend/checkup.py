@@ -617,6 +617,24 @@ CHECKS: list[Callable[[Context], list[dict]]] = [
 ]
 
 
+PROBLEM_COMES_BACK = 7   # days: a dismissed problem shows again after this if it is still there
+
+
+def _is_dismissed(f: dict, today: date) -> bool:
+    """Hidden by the user (Dismiss). Things to do and good-to-know stay hidden
+    until shown again; a problem comes back after PROBLEM_COMES_BACK days."""
+    from . import prefs
+    day = prefs.dismissed().get(f["id"])
+    if not day:
+        return False
+    if f["level"] != "problem":
+        return True
+    try:
+        return (today - date.fromisoformat(day)).days < PROBLEM_COMES_BACK
+    except ValueError:
+        return False
+
+
 def run(ctx: Context) -> dict:
     """Every finding, most important first: problems, then things to do, then
     good-to-know. `ok` is True when nothing needs doing (info aside)."""
@@ -633,8 +651,13 @@ def run(ctx: Context) -> dict:
                 seen.add(f["id"])
                 found.append(f)
     found.sort(key=lambda f: LEVELS.index(f["level"]))
-    counts = {lv: sum(1 for f in found if f["level"] == lv) for lv in LEVELS}
-    return {"ok": not (counts["problem"] or counts["attention"]), "counts": counts, "findings": found,
+    hidden = 0
+    for f in found:
+        f["dismissed"] = _is_dismissed(f, ctx.today)
+        hidden += f["dismissed"]
+    counts = {lv: sum(1 for f in found if f["level"] == lv and not f["dismissed"]) for lv in LEVELS}
+    return {"ok": not (counts["problem"] or counts["attention"]), "counts": counts, "dismissed": hidden,
+            "findings": found,
             "checked_at": time.strftime("%Y-%m-%dT%H:%M:%S"),
             "help": version.docs_url("TROUBLESHOOTING.md"),
             "version": {k: version.info().get(k) for k in ("short", "date", "source")}}
