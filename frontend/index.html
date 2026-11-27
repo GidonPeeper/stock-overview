@@ -67,6 +67,20 @@
     .iconbtn{ background:var(--panel2); border:1px solid var(--border); color:var(--muted); width:40px; height:40px; border-radius:12px;
       cursor:pointer; font-size:15px; display:grid; place-items:center; text-decoration:none; transition:background .15s,color .15s; }
     .iconbtn:hover{ color:var(--text); } .iconbtn:active{ background:var(--panel3); }
+    /* top-bar menus (currency; on phones "More") */
+    .menu-wrap{ position:relative; }
+    .menu{ position:absolute; right:0; top:calc(100% + 8px); z-index:30; min-width:236px; padding:6px; background:var(--panel);
+      border:1px solid var(--border); border-radius:14px; box-shadow:0 2px 4px rgba(0,0,0,.12), 0 16px 40px -12px rgba(0,0,0,.45); }
+    .menu-h{ font-size:12px; font-weight:650; color:var(--muted); padding:8px 10px 4px; }
+    .menu [role^="menuitem"]{ display:flex; align-items:center; gap:10px; width:100%; min-height:44px; padding:0 10px; border:0; border-radius:10px;
+      background:none; color:var(--text); font:inherit; font-size:14.5px; font-weight:550; text-align:left; text-decoration:none; cursor:pointer; }
+    .menu [role^="menuitem"]:hover, .menu [role^="menuitem"]:focus-visible{ background:var(--panel2); outline:none; }
+    .menu [role^="menuitem"]:focus-visible{ box-shadow:inset 0 0 0 2px var(--accent); }
+    .menu .m-ico{ width:24px; text-align:center; color:var(--muted); font-weight:650; flex-shrink:0; }
+    .menu [aria-checked="true"]{ color:var(--accent); font-weight:650; }
+    .menu [aria-checked="true"] .m-ico{ color:var(--accent); }
+    .menu [aria-checked="true"]::after{ content:"✓"; margin-left:auto; font-weight:700; }
+    .menu-note{ font-size:12px; color:var(--muted); padding:6px 10px 6px; border-top:1px solid var(--border); margin-top:4px; line-height:1.45; }
     .pill{ display:inline-flex; align-items:center; font-size:11px; font-weight:650; padding:2px 9px; border-radius:20px; white-space:nowrap; letter-spacing:.01em; }
     .pill.amber{ background:var(--amber-bg); color:var(--amber); }
     .pill.green{ background:var(--green-bg); color:var(--green); }
@@ -451,7 +465,16 @@
       </div>
       <div class="hdr-acts">
         <button class="iconbtn lk-open" id="lk-open" type="button" onclick="lkOpenSearch()" aria-label="Look up a price" aria-controls="lk-search" aria-expanded="false" title="Look up a price"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="M20 20l-4.2-4.2"/></svg></button>
-        <button class="iconbtn" id="ccybtn" onclick="toggleCcy()" title="Show amounts in pounds or euros" aria-label="Switch currency">€</button>
+        <div class="menu-wrap">
+          <button class="iconbtn" id="ccybtn" type="button" onclick="toggleCcy()" aria-haspopup="menu" aria-expanded="false" aria-controls="ccy-menu" title="Currency for amounts" aria-label="Amounts in euros: change">€</button>
+          <div class="menu" id="ccy-menu" role="menu" aria-label="Show amounts in" hidden>
+            <div class="menu-h" aria-hidden="true">Show amounts in</div>
+            <button type="button" role="menuitemradio" aria-checked="false" data-ccy="EUR"><span class="m-ico" aria-hidden="true">€</span>Euros</button>
+            <button type="button" role="menuitemradio" aria-checked="false" data-ccy="GBP"><span class="m-ico" aria-hidden="true">£</span>Pounds</button>
+            <button type="button" role="menuitemradio" aria-checked="false" data-ccy="USD"><span class="m-ico" aria-hidden="true">$</span>US dollars</button>
+            <div class="menu-note">Saved with your data, so all your devices show the same.</div>
+          </div>
+        </div>
         <button class="iconbtn" id="themebtn" onclick="toggleTheme()" title="Light or dark" aria-label="Switch light or dark">☀</button>
         <a class="iconbtn" href="/settings" title="Settings: accounts and data" aria-label="Settings">⚙</a>
         <button class="iconbtn" onclick="refreshAll()" title="Refresh" aria-label="Refresh">↻</button>
@@ -579,7 +602,7 @@
             <button id="t-open" class="active" onclick="showTab('open')">Open <span id="n-open" class="muted"></span></button>
             <button id="t-closed" onclick="showTab('closed')">Sold <span id="n-closed" class="muted"></span></button>
           </div>
-          <a class="link-btn" href="/api/export/holdings.csv" download>⬇ Download CSV</a>
+          <a class="link-btn" href="/api/export/holdings.csv" download onclick="return exportHoldings(event)">⬇ Download CSV</a>
         </div>
         <div id="tab-open">
           <div class="sortbar">Sort by
@@ -725,7 +748,7 @@
             <input id="contrib-slider" type="range" min="0" max="8000" step="100" oninput="setContrib(toBase(+this.value))" />
           </div>
           <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
-            <label class="muted small" for="goal-input">Goal</label>
+            <label class="muted small" for="goal-input">Goal, in <span class="ccy-sym">€</span></label>
             <input id="goal-input" class="field" type="number" placeholder="e.g. 250000" style="width:140px" />
             <button class="chip" onclick="setGoal()">Set goal</button>
             <span id="goal-eta" class="small"></span>
@@ -739,7 +762,8 @@
           <details class="card" id="more-trade">
             <summary><span><h2>Cheapest broker for a trade</h2><span class="s">Compare fees at three brokers</span></span><span class="chev">▼</span></summary>
             <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:12px">
-              <input id="tc-amount" class="field" type="number" value="1000" min="1" step="50" aria-label="Amount to invest" style="width:110px" oninput="renderTradeCost()" />
+              <label class="muted small" for="tc-amount">Amount, in <span class="ccy-sym">€</span></label>
+              <input id="tc-amount" class="field" type="number" value="1000" min="1" step="50" style="width:110px" oninput="renderTradeCost()" />
               <div class="seg">
                 <button id="tc-us" class="active" onclick="setTcType('us')">US share</button>
                 <button id="tc-eu" onclick="setTcType('eu')">EU share</button>
@@ -886,7 +910,7 @@
   <script>
     const $=id=>document.getElementById(id);
     const esc=t=>String(t??"").replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
-    /* ---- money: the API sends EUR; shown in the currency picked with the £/€ button.
+    /* ---- money: the API sends EUR; shown in the currency picked in the top bar or in Settings (EUR, GBP or USD).
        Rule: exact portfolio figures get 2 decimals; estimates and plans are rounded. ---- */
     const SYM={EUR:"€",GBP:"£",USD:"$"};
     let FX={default:"EUR",per_eur:{EUR:1}};
@@ -951,13 +975,74 @@
       redrawCharts();
     }
     applyThemeUI();
-    function renderCcyBtn(){ const b=$("ccybtn"); if(b) b.textContent=SYM[CUR]||"€"; }
-    function toggleCcy(){
-      const order=[...new Set(["GBP","EUR",FX.default||"EUR"])]; CUR=order[(order.indexOf(CUR)+1)%order.length];   // + USD when chosen in Settings
-      try{ localStorage.setItem("ccy",CUR); }catch(e){}
-      renderCcyBtn(); rerenderMoney();
+    /* ---- the currency amounts are shown in: euros, pounds or US dollars ----
+       One choice, saved with your data (prefs "currency"), the same one as in Settings, so
+       every device shows the same. This device keeps a copy ("ccy") to paint at once; the
+       server's choice wins when it arrives. A choice made while the server cannot be reached
+       stays here ("ccy.unsaved") and is saved on the next visit. */
+    const CCY_NAME={EUR:"euros",GBP:"pounds",USD:"US dollars"};
+    function renderCcyBtn(){
+      const b=$("ccybtn"); if(b){ b.textContent=SYM[CUR]||"€"; b.setAttribute("aria-label","Amounts in "+(CCY_NAME[CUR]||"euros")+": change"); }
+      document.querySelectorAll("[data-ccy]").forEach(x=>x.setAttribute("aria-checked",String(x.dataset.ccy===CUR)));
+      document.querySelectorAll(".ccy-sym").forEach(x=>{ x.textContent=SYM[CUR]||"€"; });
     }
+    function toggleCcy(){   // the currency button: opens its menu
+      if(menuOpen&&menuOpen.menu===$("ccy-menu")) closeMenu(true); else openMenu($("ccybtn"),$("ccy-menu"));
+    }
+    function setCcy(c,save){
+      if(!(c in SYM)) return;
+      const changed=c!==CUR; CUR=c;
+      try{ localStorage.setItem("ccy",c); }catch(e){}
+      renderCcyBtn();
+      if(changed) rerenderMoney();
+      if(save) saveCcy(c);
+    }
+    async function saveCcy(c){
+      try{
+        const r=await fetch("/api/prefs",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({currency:c})});
+        if(!r.ok) throw new Error(String(r.status));
+        PREFS=await r.json(); try{ localStorage.removeItem("ccy.unsaved"); }catch(e){}
+      }catch(e){ try{ localStorage.setItem("ccy.unsaved","1"); }catch(_){} }
+    }
+    function syncCcy(p){
+      let local=null, unsaved=false;
+      try{ local=localStorage.getItem("ccy"); unsaved=localStorage.getItem("ccy.unsaved")==="1"; }catch(e){}
+      const chosen=(p.chosen||[]).includes("currency");
+      // this device's choice is newer: not saved yet, or made before the choice was saved with your data
+      if(local in SYM&&local!==p.currency&&(unsaved||!chosen)){ saveCcy(local); return; }
+      if(unsaved) try{ localStorage.removeItem("ccy.unsaved"); }catch(e){}
+      if(p.currency in SYM) setCcy(p.currency,false);
+    }
+    document.addEventListener("click",e=>{
+      const b=e.target.closest("[data-ccy]"); if(!b) return;
+      closeMenu(true); setCcy(b.dataset.ccy,true);
+    });
+    /* ---- menus in the top bar: arrows move, Escape closes, focus goes back to the button ---- */
+    let menuOpen=null;
+    const menuItems=m=>[...m.querySelectorAll('[role^="menuitem"]')].filter(x=>x.offsetParent!==null);
+    function openMenu(btn,menu){
+      closeMenu(false);
+      menu.hidden=false; btn.setAttribute("aria-expanded","true"); menuOpen={btn,menu};
+      const items=menuItems(menu); (items.find(i=>i.getAttribute("aria-checked")==="true")||items[0]).focus();
+    }
+    function closeMenu(focusBack){
+      if(!menuOpen) return;
+      const {btn,menu}=menuOpen; menuOpen=null;
+      menu.hidden=true; btn.setAttribute("aria-expanded","false");
+      if(focusBack&&btn.offsetParent!==null) btn.focus();
+    }
+    document.addEventListener("keydown",e=>{
+      if(!menuOpen) return;
+      const items=menuItems(menuOpen.menu), i=items.indexOf(document.activeElement), n=items.length;
+      if(e.key==="Escape"){ e.preventDefault(); e.stopPropagation(); closeMenu(true); }
+      else if(e.key==="ArrowDown"||e.key==="ArrowUp"){ e.preventDefault(); items[(i+(e.key==="ArrowDown"?1:-1)+n)%n].focus(); }
+      else if(e.key==="Home"||e.key==="End"){ e.preventDefault(); items[e.key==="Home"?0:n-1].focus(); }
+      else if(e.key==="Tab") closeMenu(false);
+    },true);
+    document.addEventListener("pointerdown",e=>{ if(menuOpen&&!menuOpen.menu.contains(e.target)&&!menuOpen.btn.contains(e.target)) closeMenu(false); });
     function rerenderMoney(){
+      renderCcyBtn();
+      if(lkIsOpen()&&LK.q){ lkRenderPrice(); lkRenderHeld(); if($("lk-n")) lkCalc("n"); }   // the price lookup's "≈" amounts
       if(!PORT) return;
       renderHero(); renderMovers(); renderOpen(); renderClosed(); renderAllocation(); renderChart(); renderPeriods();
       if(CASH){ renderMoney(); renderCashOpt(); }
@@ -1611,7 +1696,7 @@
                 :`buying it back outside an ISA before <b>${r.rebuy_from}</b> would undo this ${r.gain_gbp<0?"loss":"gain"} for tax; buying in the ISA is fine`}</span></span>
             <span class="num r-end ${cls(r.gain_gbp)}">${(r.gain_gbp>0?"+":"")+gbp0(r.gain_gbp)}</span></div>`).join("");
       }
-      html+=`<div class="note">${t.from} to ${t.to} · ${t.accounts.filter(a=>a.isa).map(a=>esc(a.name)).join(", ")||"no ISA account connected"}${t.accounts.some(a=>a.isa)?" left out (tax-free)":""}.</div>`;
+      html+=`<div class="note">In pounds, as HMRC counts. ${t.from} to ${t.to} · ${t.accounts.filter(a=>a.isa).map(a=>esc(a.name)).join(", ")||"no ISA account connected"}${t.accounts.some(a=>a.isa)?" left out (tax-free)":""}.</div>`;
       el.innerHTML=html;
     }
 
@@ -1628,7 +1713,7 @@
     function renderHarvest(){
       const h=HARVEST, el=$("harvest"); if(!h) return; el.className="";
       if(h.residence==="OTHER"){ el.closest(".card").hidden=true; return; }   // no tax rules for this country
-      const sym={GBP:"£",USD:"$"}[h.currency]||"";
+      const sym={GBP:"£",USD:"$",EUR:"€"}[h.currency]||(h.currency?h.currency+" ":"");   // always says which currency
       const t0=n=>sym+Math.abs(Number(n)).toLocaleString("en-GB",{maximumFractionDigits:0});
       $("harvest-how").innerHTML=(h.how_it_works||[]).map(p=>`<p>${p}</p>`).join("");
       const foot=`<div class="note">${h.disclaimer||""}</div>`;
@@ -1874,6 +1959,35 @@
       if(!html) empty(el,"You have not sold anything yet."); else { el.className=""; el.innerHTML=html; }
       const t=$("closed-total"); t.textContent=signed(CLOSED.total_realized_eur); t.className="num "+cls(CLOSED.total_realized_eur);
     }
+    // The CSV the server makes has amounts in euros (value_eur, profit_eur, daily_eur). Shown in
+    // pounds or dollars: the same file, plus those amounts in that currency at today's rate.
+    function exportHoldings(e){
+      if(CUR==="EUR"||!(CUR in (FX.per_eur||{}))) return true;      // the plain download
+      e.preventDefault();
+      fetch("/api/export/holdings.csv").then(r=>{ if(!r.ok) throw new Error(String(r.status)); return r.text(); }).then(text=>{
+        const rows=parseCSV(text); if(!rows.length) throw new Error("empty");
+        const head=rows[0], cols=["value_eur","profit_eur","daily_eur"].map(c=>head.indexOf(c)), low=CUR.toLowerCase();
+        const out=rows.map((r,i)=>i===0?r.concat(cols.filter(c=>c>=0).map(c=>head[c].replace("_eur","_"+low)))
+          :r.concat(cols.filter(c=>c>=0).map(c=>r[c]===""||isNaN(+r[c])?"":(Math.round(cv(+r[c])*100)/100).toFixed(2))));
+        const csv=out.map(r=>r.map(v=>/[",\n]/.test(v)?'"'+v.replace(/"/g,'""')+'"':v).join(",")).join("\r\n")+"\r\n";
+        const a=document.createElement("a"); a.href=URL.createObjectURL(new Blob([csv],{type:"text/csv"})); a.download="holdings.csv";
+        document.body.appendChild(a); a.click(); setTimeout(()=>{ URL.revokeObjectURL(a.href); a.remove(); },1000);
+      }).catch(()=>{ location.href="/api/export/holdings.csv"; });    // could not add them: the euro file
+      return false;
+    }
+    function parseCSV(text){
+      const rows=[]; let row=[], f="", q=false;
+      for(let i=0;i<text.length;i++){
+        const c=text[i];
+        if(q){ if(c==='"'){ if(text[i+1]==='"'){ f+='"'; i++; } else q=false; } else f+=c; }
+        else if(c==='"') q=true;
+        else if(c===","){ row.push(f); f=""; }
+        else if(c==="\n"||c==="\r"){ if(c==="\r"&&text[i+1]==="\n") i++; row.push(f); rows.push(row); row=[]; f=""; }
+        else f+=c;
+      }
+      if(f||row.length){ row.push(f); rows.push(row); }
+      return rows;
+    }
     function showTab(w){
       $("tab-open").hidden=w!=="open"; $("tab-closed").hidden=w!=="closed";
       $("t-open").classList.toggle("active",w==="open"); $("t-closed").classList.toggle("active",w==="closed");
@@ -2054,11 +2168,11 @@
       if(refreshing&&quickPolls<5){ quickPolls++; setTimeout(refreshLive,4000); } else if(!refreshing) quickPolls=0;
     }
 
-    /* ---- choices saved with your data (Settings): colours. The page painted with this
+    /* ---- choices saved with your data (Settings): colours and currency. The page painted with this
        device's copy; the server's choice wins, and becomes the copy for next time. ---- */
     let PREFS=null;
     function loadPrefs(){
-      fetchJSON("/api/prefs").then(p=>{ PREFS=p; useColors(p); }).catch(()=>{});
+      fetchJSON("/api/prefs").then(p=>{ PREFS=p; useColors(p); syncCcy(p); }).catch(()=>{});
     }
     function withColors(fn){   // colors.js loads async (never holds up the first paint)
       if(window.SOColors) return fn();

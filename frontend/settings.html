@@ -498,8 +498,11 @@
     const money0=n=>{ const v=Number(n||0)*(PER_EUR[CUR]??1); return (v<0&&Math.round(Math.abs(v))>0?"−":"")+(SYM[CUR]||"€")+Math.abs(v).toLocaleString("en-GB",{maximumFractionDigits:0}); };
     const own0=(n,c)=>(SYM[c]||(c+" "))+Number(n||0).toLocaleString("en-GB",{maximumFractionDigits:0});
     const esc=t=>String(t??"").replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+    // The display currency is saved with your data (fx.default = prefs "currency") and wins over this
+    // device's copy, unless the dashboard has a choice it could not save yet (see index.html).
     const fxReady=fetch("/api/fx").then(r=>r.json()).then(fx=>{ PER_EUR=fx.per_eur||PER_EUR;
-      if(!CUR||!(CUR in PER_EUR)) CUR=fx.default||"EUR";
+      let unsaved=false; try{ unsaved=localStorage.getItem("ccy.unsaved")==="1"; }catch(e){}
+      if(!(unsaved&&CUR in PER_EUR)) CUR=(fx.default in PER_EUR)?fx.default:"EUR";
       document.querySelectorAll(".ccy-default").forEach(sel=>sel.value=CUR); }).catch(()=>{ CUR="EUR"; });
 
     /* ---- broker statement picker ---- */
@@ -977,7 +980,10 @@
         const b = await r.json().catch(() => ({}));
         if (!r.ok) { msg.textContent = "✗ " + (typeof b.detail === "string" ? b.detail : "Could not save."); msg.className = "msg err"; return; }
         P = b; touched = false;
-        if (ch.currency) { try { localStorage.setItem("ccy", ch.currency); } catch (e) {} CUR = ch.currency; }   // the dashboard opens in it
+        if (ch.currency) {                // the dashboard opens in it; totals on this page follow
+          try { localStorage.setItem("ccy", ch.currency); localStorage.removeItem("ccy.unsaved"); } catch (e) {}
+          CUR = ch.currency; loadCash(); loadFin();
+        }
         msg.textContent = savedMsg(); msg.className = "msg ok";
         $("ctry-suggest").hidden = true; render();
       });
@@ -1016,7 +1022,7 @@
             <div class="ap-row"><span class="ap-btn" style="background:${a.fill};color:${a.on}">Save</span>
               <span class="ap-btn" style="border:1px solid ${z.text};background:${g.panel2}">Cancel</span>
               <span style="color:${a.text};text-decoration:underline">A link</span>
-              <b style="color:${green}">+€1,250</b></div>
+              <b style="color:${green}">+${SYM[CUR] || "€"}1,250</b></div>
             <svg viewBox="0 0 200 44" preserveAspectRatio="none"><polyline points="0,38 40,30 80,32 120,18 160,14 200,6" fill="none" stroke="${a.text}" stroke-width="2.2"/>
               <polyline points="0,38 40,34 80,30 120,28 160,22 200,18" fill="none" stroke="${z.text}" stroke-width="1.8" stroke-dasharray="5 4"/></svg></div>`;
         }).join("");
