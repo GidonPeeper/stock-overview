@@ -670,8 +670,64 @@ def get_watchlist() -> dict:
                      "note": "prices are in each share's own trading currency"})
 
 
+def get_quote(
+        query: Annotated[str, Field(
+            min_length=1, max_length=64,
+            description="What to look up: a ticker as Yahoo Finance writes it (AAPL, RMV.L, VWRL.L, "
+                        "^GSPC, EURUSD=X, BTC-EUR), a company or fund name (Nvidia), or an ISIN "
+                        "(US67066G1040).")],
+        currency: Currency = None) -> dict:
+    """The price of any share, fund, index, currency or crypto, held or not
+    (backend/lookup.py, the same lookup as the dashboard's search)."""
+    from . import lookup
+
+    ccy = _ccy(currency)
+    try:
+        q, others, isin = lookup.find(query)
+    except lookup.QuoteError as exc:
+        raise ToolInputError(str(exc)) from None
+    out: dict = {
+        "ticker": q["ticker"], "name": q["name"], "kind": q["kind"], "exchange": q["exchange"] or None,
+        "price": q["price"], "price_currency": q["currency"],
+        "price_time": q["price_time"], "price_time_text": q["price_time_text"],
+        "market_open": q["market_open"], "market_note": q["market_note"],
+        "today_change": q["change"], "today_change_pct": q["change_pct"],
+    }
+    if q.get("message"):
+        out["message"] = q["message"]
+    if q.get("last_session"):
+        out["last_session"] = q["last_session"]     # the move on the last day it traded
+    if q.get("price_eur") is not None and q["currency"] != ccy:
+        out["price_in_currency"] = round(fx.from_eur(q["price_eur"], ccy), 4)
+    f = q.get("facts") or {}
+    facts = {"day_range": f.get("day_range"), "52_week_range": f.get("year_range"),
+             "market_value": f.get("market_cap"), "pe_ratio": f.get("pe"),
+             "dividend_yield_pct": f.get("dividend_yield_pct"), "yearly_cost_pct": f.get("yearly_cost_pct")}
+    out["facts"] = {k: v for k, v in facts.items() if v is not None}
+    try:
+        held = [h for h in _app().portfolio()["holdings"]
+                if (h["ticker"] or "").upper() == q["ticker"] or (isin and h["isin"] == isin)]
+    except Exception:
+        held = []
+    if held:
+        value = sum(h["value_eur"] for h in held)
+        gain = sum(h["profit_eur"] for h in held)
+        out["you_hold"] = {"quantity": round(sum(h["quantity"] for h in held), 4),
+                           "value": _m(value, ccy), "unrealized_gain": _m(gain, ccy),
+                           "unrealized_gain_pct": _pct(gain, value - gain),
+                           "accounts": sorted({b for h in held for b in h["brokers"]})}
+    else:
+        out["you_hold"] = None
+    if others:
+        out["other_matches"] = [{k: r.get(k) for k in ("ticker", "name", "kind", "exchange")} for r in others]
+    out["note"] = ("price, today_change, last_session and the facts' amounts are in price_currency "
+                   "(an index is in points, a currency pair is a rate); you_hold's value and gain are in "
+                   "`currency`. Yahoo Finance prices can be delayed by about 15 minutes.")
+    return envelope(out, ccy)
+
+
 TOOLS = [get_portfolio_summary, list_holdings, get_performance, get_realized_gains, get_income,
-         get_net_worth, get_risk_analysis, get_tax_overview, get_data_status, get_watchlist]
+         get_net_worth, get_risk_analysis, get_tax_overview, get_data_status, get_watchlist, get_quote]
 
 # the country files (backend/countries.py)
 TOOLS.append(get_country_tax_overview)

@@ -37,6 +37,10 @@ account in **Settings** and the samples disappear. Full guide:
 | **Analysis** | A plain-language summary, a health score, risk figures with an explanation, diversification, a stress test and a 10-year projector |
 | **Money** | Net worth (investments, cash, things you own, loans), monthly budget, ways to save, and tax-year figures for the UK, US or NL |
 
+On every tab, the search at the top looks up the price of any share, fund,
+index, currency or crypto by name, ticker or ISIN: today's change, a chart,
+key facts and what you hold of it. A link like `/#lookup=NVDA` opens it.
+
 Amounts show in euros, pounds or dollars. It also installs on a phone as an app.
 
 ## Brokers and banks
@@ -67,7 +71,8 @@ export file is the official route and stays the default.
 
 Stock Overview is an MCP server, so Claude can answer questions from your own
 numbers: performance, holdings, dividends, net worth, risk and tax figures.
-Claude gets ten read-only tools and nothing else.
+Claude gets eleven read-only tools and nothing else, one of them to look up
+the price of any share.
 
 ```bash
 ./run.sh claude     # prints the command to connect Claude Code or Claude Desktop
