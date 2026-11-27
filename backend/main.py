@@ -147,13 +147,15 @@ _SETUP_PAGE = """<!doctype html><meta charset="utf-8">
 <title>Set a password</title>
 <body style="font:16px/1.5 system-ui,sans-serif;max-width:560px;margin:48px auto;padding:0 16px">
 <h1 style="font-size:22px">Set a password first</h1>
-<p>This dashboard can be reached from the internet but has no password yet, so it
-shows nothing. In your host's settings (on Render: the service's
-<b>Environment</b> page) add:</p>
+<p>This dashboard can be reached from other devices but has no password yet, so it
+shows nothing. Add these three settings:</p>
 <ul><li><code>DASHBOARD_USER</code>: a username</li>
 <li><code>DASHBOARD_PASSWORD</code>: a long password</li>
 <li><code>DASHBOARD_SECRET</code>: a long random text (it also encrypts your saved data)</li></ul>
-<p>Save, wait for the restart, and reload this page. See SETUP.md in the repo.</p>
+<p><b>On your own computer:</b> put them in the file <code>.env</code> in the app's folder
+(copy <code>.env.sample</code> to <code>.env</code> first), then stop the app and start it again.<br>
+<b>On a host such as Render:</b> add them on the service's <b>Environment</b> page and wait for the restart.</p>
+<p>Then reload this page. Step by step: SETUP.md in the app's folder.</p>
 </body>"""
 
 
@@ -282,9 +284,10 @@ def _problem_text(exc: BaseException) -> str:
         return (f"A file on the server could not be read or saved ({exc.strerror or type(exc).__name__}). "
                 "Check that the data folder exists, can be written to, and that the disk is not full. "
                 "Nothing was changed.")
-    return (f"A data source did not answer or sent something unexpected ({type(exc).__name__}). "
-            "The rest of the dashboard is not affected. Try again in a minute; if it keeps "
-            "happening, the server log says more.")
+    return ("A data source did not answer or sent something unexpected (most often Yahoo Finance, "
+            "for prices: check the internet connection). The rest of the dashboard is not affected. "
+            "Try again in a minute; if it keeps happening, the app's log says more: the Terminal "
+            f"window where it runs, or your host's Logs page ({type(exc).__name__}).")
 
 
 @app.exception_handler(Exception)
@@ -868,6 +871,8 @@ async def upload_statement(kind: str, file: UploadFile = File(...)) -> dict:
     if len(content) > 12_000_000:
         raise HTTPException(413, "That file is larger than 12 MB, which is more than a broker "
                                  "statement should be. Export a shorter period, or check it is the right file.")
+    if not content.strip():
+        raise HTTPException(400, "That file is empty. Download it again from your broker and upload the new file.")
     is_pdf = content[:5] == b"%PDF-"
     text = "" if is_pdf else _decode_text(content)
     if not is_pdf:
@@ -895,17 +900,15 @@ async def upload_statement(kind: str, file: UploadFile = File(...)) -> dict:
                 datafiles.save_file("trades_trade_republic.json", _json.dumps(trades, indent=1).encode())
                 datafiles.save_file("income_trade_republic.json", _json.dumps(income_, indent=1).encode())
             else:
-                payload = _loads_or_400(text)
-                if "trades" not in payload:
-                    raise HTTPException(400, "That is not a Trade Republic file the app reads. Upload the account "
-                                             "statement PDF or the transaction export CSV (Trade Republic app: "
-                                             "Profile → Account statements).")
+                if "trades" not in _loads_or_400(text, _NOT_TR):
+                    raise HTTPException(400, _NOT_TR)
                 datafiles.save_upload("trade_republic", content)
         elif kind == "tr_income":
-            if "income" not in _loads_or_400(text):
-                raise HTTPException(400, 'That file has no "income" list. Upload the Trade Republic statement above '
-                                     'instead (it fills dividends and interest), or follow '
-                                     'data/income_trade_republic.sample.json.')
+            wrong = ('That is not a Trade Republic dividends file: it must be JSON with an "income" '
+                     'list, as data/income_trade_republic.sample.json. Most people do not need this: '
+                     'the transaction export (CSV) already holds dividends and interest.')
+            if "income" not in _loads_or_400(text, wrong):
+                raise HTTPException(400, wrong)
             datafiles.save_upload("tr_income", content)
         elif kind == "t212_statement" and (is_pdf or trading212_csv.looks_like(text)):
             if is_pdf:
@@ -921,9 +924,8 @@ async def upload_statement(kind: str, file: UploadFile = File(...)) -> dict:
             datafiles.save_upload("t212_statement",
                                   _json.dumps(st, indent=1, ensure_ascii=False).encode())
         elif kind == "t212_statement":
-            if not {"positions", "trades"} & set(_loads_or_400(text)):
-                raise HTTPException(400, "That is not a Trading 212 file the app reads. Upload the activity "
-                                     "statement PDF or the History CSV export (Menu → History → Export).")
+            if not {"positions", "trades"} & set(_loads_or_400(text, _NOT_T212)):
+                raise HTTPException(400, _NOT_T212)
             datafiles.save_upload("t212_statement", content)
         else:
             raise HTTPException(404, "Unknown kind of statement. Reload the page and upload it again.")
@@ -947,13 +949,22 @@ def _decode_text(content: bytes) -> str:
         return content.decode("cp1252", errors="replace")
 
 
-def _loads_or_400(text: str) -> dict:
+# What to say when an upload is not the file the broker's slot expects. Most
+# people upload a CSV or PDF, never JSON, so the message names those.
+_NOT_TR = ("That doesn't look like a Trade Republic file. Upload the transaction export (CSV) or the "
+           "account statement (PDF): in the Trade Republic app, Profile → Account statements.")
+_NOT_T212 = ("That doesn't look like a Trading 212 statement. Upload the activity statement (PDF) or a "
+             "History export (CSV): in Trading 212, Menu → History → Export.")
+
+
+def _loads_or_400(text: str, wrong_file: str) -> dict:
+    """The upload as JSON (the app's own format, for hand-made files), or a
+    400 with `wrong_file`: it is then most likely another broker's file."""
     import json as _json
     try:
         payload = _json.loads(text)
     except ValueError:
-        raise HTTPException(400, "That file is not one the app reads (not valid JSON). Upload the broker's "
-                                 "own statement (PDF or CSV) instead.")
+        raise HTTPException(400, wrong_file)
     return payload if isinstance(payload, dict) else {}
 
 

@@ -1519,7 +1519,9 @@
       }).catch(e=>failed("stress","What-if scenarios",e));
       fetchJSON("/api/correlation").then(c=>{
         $("corr-method").textContent=(c.method||"")+" 1 = always move together, 0 = unrelated, −1 = move in opposite directions.";
-        if((c.tickers||[]).length<2) return empty("corr","Needs at least two holdings with a ticker symbol. Add another account or holding to see how they move together.");
+        if((c.tickers||[]).length<2) return empty("corr",(c.requested||0)>=2
+          ?"The price history of your holdings could not be loaded right now (Yahoo Finance did not answer). Try again later."
+          :"Needs at least two holdings with a ticker symbol. Add another account or holding to see how they move together.");
         const el=$("corr"); el.className=""; el.style.overflowX="auto";
         if(c.best_diversifier) $("corr-summary").innerHTML=
           `Least alike: <b>${c.best_diversifier.pair.join(" and ")}</b> (${c.best_diversifier.corr}). `+
@@ -1691,7 +1693,9 @@
       }).catch(()=>{ $("proj-empty").hidden=false; $("proj-empty").textContent="The projection could not load right now."; });
       fetchJSON("/api/hindsight").then(h=>{
         $("hind-method").textContent=h.method||"";
-        if(!h.regrets.length&&!h.good_exits.length){ $("hind-total").innerHTML=""; return empty("hindsight","You have not sold anything yet. When you do, this shows what those shares would be worth today."); }
+        if(!h.regrets.length&&!h.good_exits.length){ $("hind-total").innerHTML=""; return empty("hindsight",h.unpriced
+          ?"There is no price today for the shares you sold (Yahoo Finance did not answer, or does not know them), so this cannot be worked out right now."
+          :"You have not sold anything yet. When you do, this shows what those shares would be worth today."); }
         const el=$("hindsight"); el.className="";
         const d=h.total_delta_eur;
         $("hind-total").innerHTML=`<span class="num ${d>0?'neg':'pos'}" style="font-size:var(--fs-2xl);font-weight:750">${money0(Math.abs(d))}</span>
@@ -1914,7 +1918,7 @@
         return;
       }
       if(!c.available){
-        el.innerHTML=`<div class="empty">${esc(c.message)} <a href="/settings#country">Change your country in Settings</a>.</div>`+calc;
+        el.innerHTML=`<div class="empty">${esc(c.message)} Your tax authority's website has the rules. Wrong country? <a href="/settings#country">Change it in Settings</a>.</div>`+calc;
         return;
       }
       const o=c.overview, ty=o.tax_year;

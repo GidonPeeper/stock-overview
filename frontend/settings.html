@@ -376,14 +376,12 @@
         <div class="upanel" data-p="t212" role="tabpanel" hidden>
           <div id="t212-accounts"></div>
           <div class="sub" style="margin:8px 0">Best: connect each Trading 212 account (Invest, Stocks ISA) with a read-only key under
-            <a href="#add-account">Add an account</a>. Keys can also be set on the server:
-            <code>T212_INVEST_API_KEY</code> + <code>T212_INVEST_API_SECRET</code> and <code>T212_ISA_API_KEY</code> + <code>T212_ISA_API_SECRET</code>
-            (or one <code>T212_API_KEY</code> + <code>T212_API_SECRET</code>). Accounts with "ISA" in the name count as tax-free.</div>
+            <a href="#add-account">Add an account</a>.</div>
           <div class="sub" style="margin:8px 0 0">No key, for example for a closed account? Upload its statement (in EUR):</div>
           <ol class="steps">
             <li>In Trading 212, open <b>Menu → History → Export / Activity statement</b>.</li>
-            <li>Pick the full period the account was open and download the PDF.</li>
-            <li>A History CSV export (12 months at most) uploaded after it is added on.</li>
+            <li>Download the activity statement (PDF) for the whole time the account was open, or a History export (CSV, 12 months at most).</li>
+            <li>Upload it here. A newer CSV uploaded later is added to what is already here.</li>
           </ol>
           <div class="note warn">Don't upload a statement for an account that also has a key: it would count twice.</div>
           <div class="up"><input type="file" id="f-t212_statement" accept=".pdf,.csv,.json" aria-label="Trading 212 statement file" />
@@ -958,11 +956,12 @@
       if(r.ok){
         const st=await r.json(), rep=st._report||{};
         let extra="";
-        if(rep.fills!==undefined) extra=` · ${rep.fills} fills, ${rep.orders} orders${rep.fill_amount_errors&&rep.fill_amount_errors.length?` · ⚠ ${rep.fill_amount_errors.length} amount mismatches`:""}`;
-        if(rep.trades!==undefined&&rep.cash_balance_eur!==undefined) extra=` · ${rep.trades} trades, ${rep.dividends} dividends · cash €${rep.cash_balance_eur}`;
+        const n=(k,w)=>`${k} ${k===1?w:w+"s"}`;   // 1 trade, 2 trades
+        if(rep.fills!==undefined) extra=` · ${n(rep.orders,"trade")}${rep.fill_amount_errors&&rep.fill_amount_errors.length?` · ⚠ ${rep.fill_amount_errors.length} amount mismatches`:""}`;
+        if(rep.trades!==undefined&&rep.cash_balance_eur!==undefined) extra=` · ${n(rep.trades,"trade")}, ${n(rep.dividends,"dividend")} · cash €${rep.cash_balance_eur}`;
         if(rep.all_checks_ok!==undefined) extra=rep.all_checks_ok?` · all ${Object.keys(rep.checks).length} statement checks passed`:` · ⚠ some statement checks failed: ${Object.entries(rep.checks).filter(([k,v])=>!v.ok).map(([k])=>k).join(", ")}`;
-        if(rep.merged_after) extra=` · added ${rep.added.trades} trades, ${rep.added.dividends} dividends after ${rep.merged_after}`;
-        else if(rep.summary&&rep.summary.trades!==undefined&&rep.all_checks_ok===undefined) extra=` · ${rep.summary.trades} trades, ${rep.summary.dividends} dividends`;
+        if(rep.merged_after) extra=` · added ${n(rep.added.trades,"trade")}, ${n(rep.added.dividends,"dividend")} after ${rep.merged_after}`;
+        else if(rep.summary&&rep.summary.trades!==undefined&&rep.all_checks_ok===undefined) extra=` · ${n(rep.summary.trades,"trade")}, ${n(rep.summary.dividends,"dividend")}`;
         if(rep.warnings&&rep.warnings.length) extra+=` · ⚠ ${rep.warnings.join(" ")}`;
         msg.textContent=savedMsg().replace("Saved","Uploaded — live now.")+extra; msg.className="msg ok"; renderStatus(st);
       }

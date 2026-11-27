@@ -33,7 +33,10 @@ free — see [Speed](#speed-sleep-keep-alive-and-caching) below.
    - `DISPLAY_CURRENCY` — `EUR`, `GBP` or `USD`, the currency the app opens in.
    - `TAX_RESIDENCE` — `UK` (default), `US` or `NL`; anything else (`NONE`)
      hides the tax cards.
-   - Optional: `DASHBOARD_TZ` (default `Europe/London`), `UK_RESIDENT_FROM`.
+   - `UK_RESIDENT_FROM` — leave empty, unless you moved to the UK during this
+     tax year (then that date, `YYYY-MM-DD`).
+   - Optional, on the service's **Environment** page later: `DASHBOARD_TZ`
+     (default `Europe/London`). The time zone chosen in Settings wins.
 
 Broker and bank keys are added in the app (Settings → Add an account), or as
 env vars: `T212_<NAME>_API_KEY` + `T212_<NAME>_API_SECRET` per Trading 212
@@ -44,7 +47,8 @@ account (a name containing `ISA` counts as tax-free).
 2. Open the `…onrender.com` URL in **Safari** → sign in → **Save Password**.
 3. **Share → Add to Home Screen** → app icon. Next time, tap the password field
    and unlock with **Face ID**.
-4. Settings → Cloud persistence should say **Cloud sync ON**.
+4. Settings → App and data → **Where your data is saved** should say
+   **Cloud backup on**.
 
 ## How saving works
 Render wipes its disk on every restart and deploy. Every upload, balance or

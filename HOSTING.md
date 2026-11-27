@@ -1,7 +1,7 @@
 # Secure remote access (phone) via Cloudflare Tunnel + Access
 
-Goal: reach the dashboard from anywhere **without** copying your statements, T212
-key, or database to a server. The app keeps running on your Mac; Cloudflare
+Goal: reach the dashboard from anywhere **without** copying your statements or
+broker keys to a server. The app keeps running on your Mac; Cloudflare
 exposes it over HTTPS and only lets *you* in.
 
 ```
@@ -19,7 +19,7 @@ phone ──HTTPS──▶ Cloudflare (Access login: you@example.com)
    Cloudflare Access alone, set `ALLOW_NO_PASSWORD=1` and
    `ALLOWED_HOSTS=<your address, e.g. dash.example.com>` instead.
 
-The T212 key is read-only, so even a total breach cannot move money.
+Broker keys are read-only, so even a total breach cannot move money.
 
 ## Prerequisites
 - A free **Cloudflare account**
@@ -29,10 +29,11 @@ The T212 key is read-only, so even a total breach cannot move money.
   so don't rely on it.
 
 ## Steps
-1. Turn on the app password — in `.env`:
+1. Turn on the app password. Copy `.env.sample` to `.env` and fill in:
    ```
    DASHBOARD_USER=you
    DASHBOARD_PASSWORD=<a long random passphrase>
+   DASHBOARD_SECRET=<a long random text: it keeps you signed in across restarts>
    ```
 2. Install the connector and authenticate:
    ```bash
@@ -50,9 +51,9 @@ The T212 key is read-only, so even a total breach cannot move money.
        service: http://localhost:8000
      - service: http_status:404
    ```
-4. Run the app (localhost only — never `--host 0.0.0.0`) and the tunnel:
+4. Run the app (this computer only: no `HOST=0.0.0.0`) and the tunnel:
    ```bash
-   .venv/bin/uvicorn backend.main:app            # terminal 1
+   ./run.sh                                      # terminal 1
    cloudflared tunnel run stock-overview         # terminal 2
    ```
    (Later: `cloudflared service install` to run the tunnel on boot.)

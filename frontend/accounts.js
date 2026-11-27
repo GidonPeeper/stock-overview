@@ -229,7 +229,8 @@
         <div class="btn-row"><button class="btn" id="cf-go" type="button">Connect</button></div>
         <div class="msg" id="cf-msg" role="status"></div>
         <div class="fine">Read-only: the app can only look, never trade or move money. Your key is checked with
-          ${esc(inst.name)} first, then kept on your own server (encrypted in the backup vault) and never shown again.</div></div>`;
+          ${esc(inst.name)} first, then saved in the app's data folder (encrypted in the cloud backup, if you use one)
+          and never shown again.</div></div>`;
       $("cf-go").addEventListener("click", () => connect(inst, m));
     } else if (m.support === "import") {
       const accept = (m.accept || [m.file_format || "csv"]).map(f => "." + f).join(",");
@@ -349,8 +350,8 @@
         ${st.configured ? '<button class="btn ghost" id="eb-cancel" type="button">Cancel</button>' : ""}
         ${st.source === "app" ? '<button class="btn danger" id="eb-forget" type="button">Remove the saved key</button>' : ""}</div>
       <div class="msg" id="eb-msg" role="status"></div>
-      <div class="fine">The key is checked with Enable Banking, then kept on your own server (encrypted in the backup
-        vault) and never shown again. It can only read the accounts you link.</div>
+      <div class="fine">The key is checked with Enable Banking, then saved in the app's data folder (encrypted in the
+        cloud backup, if you use one) and never shown again. It can only read the accounts you link.</div>
       ${docLink(a, "Enable Banking docs")}`;
     $("eb-copy").addEventListener("click", () => {
       const i = $("eb-redirect"); i.select();
@@ -490,7 +491,7 @@
       <div id="tr-step"></div>
       <div class="msg" id="tr-msg" role="status"></div>
       <div class="fine">Your PIN goes to Trade Republic once, to start the sign-in, and is never stored. The app keeps
-        only the sign-in session, on your own computer (encrypted in the backup vault). It can only read: it has no way
+        only the sign-in session, in the app's data folder (encrypted in the cloud backup, if you use one). It can only read: it has no way
         to trade, move money or change settings.</div>` + docLink(m, "pytr, the open-source tool this follows");
     $("tr-go").addEventListener("click", () => trStart(inst, m, renew));
     $("tr-pin").addEventListener("keydown", e => { if (e.key === "Enter") trStart(inst, m, renew); });
@@ -795,7 +796,7 @@
         <div class="cact">${signin ? `<button class="btn sm" type="button" data-act="tr-signin" data-id="${esc(c.id)}" data-label="${esc(c.label)}">Sign in again</button>`
             : `<button class="btn sm ghost" type="button" data-act="${csv ? "file" : "refresh"}" data-id="${esc(c.id)}">${csv ? "New file" : "Refresh"}</button>`}
           ${link ? `<button class="btn sm ${c.consent && (c.consent.warn || c.consent.expired) ? "" : "ghost"}" type="button" data-act="renew" data-id="${esc(c.id)}">Renew</button>` : ""}
-          <button class="del" type="button" title="Remove" aria-label="Remove ${esc(c.label)}" data-act="remove" data-id="${esc(c.id)}" data-label="${esc(c.label)}" ${link ? 'data-link="1"' : ""} ${tr ? 'data-tr="1"' : ""}>✕</button></div></div>`);
+          <button class="del" type="button" title="Remove" aria-label="Remove ${esc(c.label)}" data-act="remove" data-id="${esc(c.id)}" data-label="${esc(c.label)}" ${link ? 'data-link="1"' : ""} ${tr ? 'data-tr="1"' : ""} ${csv ? 'data-csv="1"' : ""}>✕</button></div></div>`);
     }
     for (const s of d.server || []) {
       const [cls, word] = STATUS[s.status] || STATUS.pending;
@@ -823,6 +824,7 @@
     } else if (b.dataset.act === "remove") {
       const what = b.dataset.link ? "The bank link is ended and removed from this app."
         : b.dataset.tr ? "The saved Trade Republic sign-in and the history read so far are deleted from this app."
+        : b.dataset.csv ? "Its positions are removed from this app. Your file is not touched."
         : "Its key is deleted from this app. You can also delete the key at the bank or broker.";
       if (!confirm(`Remove “${b.dataset.label}”? ${what}`)) return;
       const r = await fetch("/api/connections/" + encodeURIComponent(id), {method: "DELETE"});

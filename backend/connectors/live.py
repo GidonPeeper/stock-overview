@@ -51,8 +51,9 @@ class Snapshot:
 
 def http_message(name: str, status: int, hints: dict[int, str] | None = None) -> str:
     hint = (hints or {}).get(status, "")
-    if status == 401:
-        msg = f"{name} did not accept the key (HTTP 401). Check you copied all of it, or make a new one."
+    if status == 401:   # the broker's own hint replaces the general advice, not repeats it
+        msg = f"{name} did not accept the key (HTTP 401). {hint or 'Check you copied all of it'}, or make a new one."
+        hint = ""
     elif status == 403:
         msg = f"{name} refused access (HTTP 403). The key may be missing a read permission."
     elif status == 404:
