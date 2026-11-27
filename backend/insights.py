@@ -264,7 +264,8 @@ SCREENER_METHOD = (
     "aggressive small caps, growth technology). Each is re-scored 0–100 here: "
     "40% price momentum (day's gain, capped), 30% valuation sanity (P/E between "
     "2 and 40 scores higher; missing P/E scores neutral), 30% liquidity/size "
-    "(market cap €300M–€10B preferred — small but not micro-cap). "
+    "(market value $300M–$10B preferred, as Yahoo reports it for these US "
+    "screeners — small but not micro-cap). "
     "This is a research starting point, not investment advice."
 )
 
