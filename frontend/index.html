@@ -474,6 +474,37 @@
     .lk-eq{ padding-bottom:11px; color:var(--muted); font-weight:600; }
     #lk-calc-out{ margin:8px 0 4px; min-height:19px; }
 
+    /* ---- key numbers ---- P/E, EBITDA, margins... in both detail dialogs; "?" opens a plain explanation under the tile */
+    .kn{ margin:18px 0 14px; padding-top:14px; border-top:1px solid var(--border); }
+    .kn-head{ display:flex; align-items:baseline; justify-content:space-between; gap:6px 12px; flex-wrap:wrap; }
+    .kn-head h3{ margin:0; font-size:var(--fs-base); color:var(--text); }
+    .kn-tags{ display:flex; gap:4px; flex-wrap:wrap; }
+    .kn-intro{ font-size:var(--fs-sm); color:var(--muted); margin:4px 0 10px; line-height:1.5; }
+    .kn-g{ margin:12px 0 0; }
+    .kn-g h4{ font-size:var(--fs-xs); font-weight:650; color:var(--muted); text-transform:uppercase; letter-spacing:.05em; margin:0 0 6px; }
+    .kn-grid, #lk-facts{ grid-auto-flow:row dense; }   /* an open explanation spans the row; the next tile fills the gap beside its own */
+    .kn-grid{ display:grid; grid-template-columns:repeat(auto-fill,minmax(148px,1fr)); gap:8px; }
+    .kn-t{ background:var(--panel2); border-radius:var(--r-sm); padding:8px 10px 9px 12px; min-width:0; }
+    .kn-k, .d-grid .b .k.kn-k{ display:flex; align-items:flex-start; justify-content:space-between; gap:6px; font-size:var(--fs-xs); color:var(--muted); line-height:1.35; }
+    .kn-k > span{ padding-top:2px; min-width:0; overflow-wrap:anywhere; }
+    .kn-v{ font-size:var(--fs-base); font-weight:650; margin-top:2px; overflow-wrap:anywhere; }
+    .kn-v.na{ font-size:var(--fs-sm); font-weight:550; color:var(--muted); }
+    .kn-q{ position:relative; flex:0 0 20px; width:20px; height:20px; margin:0 -3px 0 0; padding:0; border-radius:50%;
+      border:1px solid color-mix(in srgb, var(--muted) 55%, transparent); background:none; color:var(--muted);
+      font:700 11px/1 inherit; cursor:pointer; display:grid; place-items:center; transition:color var(--t-fast),border-color var(--t-fast),background var(--t-fast); }
+    .kn-q::after{ content:""; position:absolute; inset:-10px; }      /* a 40px target around the small circle */
+    .kn-q:hover, .kn-q[aria-expanded="true"]{ color:var(--accent); border-color:var(--accent); }
+    .kn-q[aria-expanded="true"]{ background:var(--accent-bg); }
+    @media(pointer:coarse){ .kn-q::after{ inset:-12px; } }
+    .kn-help{ grid-column:1/-1; position:relative; margin-top:2px; padding:10px 12px; border-radius:var(--r-sm); background:var(--accent-bg);
+      border:1px solid color-mix(in srgb, var(--accent) 35%, transparent); font-size:var(--fs-sm); line-height:1.55; color:var(--text); }
+    .kn-help::before{ content:""; position:absolute; top:-6px; left:var(--caret,24px); width:10px; height:10px; margin-left:-5px; transform:rotate(45deg);
+      background:linear-gradient(var(--accent-bg),var(--accent-bg)), var(--panel);    /* the box's own colour: its tint over the sheet */
+      border-left:1px solid color-mix(in srgb, var(--accent) 35%, transparent); border-top:1px solid color-mix(in srgb, var(--accent) 35%, transparent); }
+    .kn-help b{ display:block; font-weight:650; margin-bottom:2px; }
+    .kn-help p{ margin:0; } .kn-help p + p{ margin-top:6px; color:var(--muted); }
+    .kn-foot{ font-size:var(--fs-xs); color:var(--faint); margin:12px 0 0; line-height:1.5; }
+
     /* ---- touch screens: every control at least 44px; less motion when asked ---- */
     @media(pointer:coarse){
       .iconbtn{ width:44px; height:44px; }
@@ -943,6 +974,7 @@
       </div>
       <div id="d-chart-wrap"><canvas id="d-chart"></canvas></div>
       <div class="d-grid" id="d-grid"></div>
+      <section class="kn" id="d-kn" aria-label="Key numbers" hidden></section>
       <h3>Latest news</h3>
       <div class="news" id="d-news"></div>
     </div>
@@ -975,6 +1007,7 @@
       <div class="lk-acts" id="lk-acts" hidden></div>
       <div id="lk-note" class="small muted lk-note" role="status" aria-live="polite"></div>
       <div id="lk-calc" hidden></div>
+      <section class="kn" id="lk-kn" aria-label="Key numbers" hidden></section>
       <div id="lk-newsbox" hidden><h3>Latest news</h3><div class="news" id="lk-news"></div></div>
     </div>
   </div>
@@ -1551,6 +1584,7 @@
       detailTicker=ticker; detailRange="1mo";
       document.querySelectorAll("#d-range button").forEach(b=>b.classList.toggle("active",b.dataset.r==="1mo"));
       loadNews(ticker);
+      knShow("d-kn",ticker);
       openSheet();
       requestAnimationFrame(()=>{
         if(w&&w.spark&&w.spark.length>1) drawDetailChart(w.spark);
@@ -2100,6 +2134,7 @@
       ].map(([k,v])=>`<div class="b"><div class="k">${k}</div><div class="v num">${v}</div></div>`).join("");
       if(dchart){ dchart.destroy(); dchart=null; }
       loadNews(r.ticker);
+      knShow("d-kn",r.ticker);
       // reset range to 1M and draw from the sparkline (instant), then it's ready
       detailTicker=r.ticker; detailRange="1mo";
       document.querySelectorAll("#d-range button").forEach(b=>b.classList.toggle("active",b.dataset.r==="1mo"));
@@ -2343,6 +2378,161 @@
     // Opens the app from cache while the server wakes up (see /sw.js).
     if("serviceWorker" in navigator) addEventListener("load",()=>navigator.serviceWorker.register("/sw.js").catch(()=>{}));
 
+    /* ---- key numbers ---- P/E, EBITDA, margins, debt, growth... of one share or fund (/api/keynumbers,
+       backend/keynumbers.py), in the holding dialog and the price lookup. Each number has a "?" that opens
+       a short explanation under its tile: one at a time; the "?" again or Escape closes it. */
+    const KN_KINDS=new Set(["share","etf","fund"]);
+    // key: [title, what it is, how to read it]
+    const KN_HELP={
+      market_cap:["Market value","What the whole company is worth on the stock market: the share price times the number of shares.","It shows how big the company is, not whether it is cheap or expensive."],
+      enterprise_value:["Enterprise value (EV)","Market value plus debt, minus cash. Roughly what it would cost to buy the whole company and pay off its debts.","Used for EV/EBITDA, which compares companies with different amounts of debt more fairly."],
+      pe:["P/E ratio (price/earnings)","The share price divided by the profit per share over the last 12 months. A P/E of 20 means you pay 20 for every 1 of yearly profit.","Lower can mean cheaper, but compare with similar companies: fast-growing companies usually have a higher P/E. There is no P/E when the company made a loss."],
+      forward_pe:["Forward P/E","The share price divided by the profit per share that analysts expect for the next 12 months.","Lower than the normal P/E means analysts expect profit to grow. It is a forecast, so it can be wrong."],
+      peg:["PEG ratio","The P/E divided by the expected yearly profit growth in %. It corrects the P/E for growth.","Around 1 is often called fair; below 1 can mean cheap for how fast profit grows. It depends on analysts' forecasts."],
+      price_to_book:["Price/book (P/B)","Market value divided by book value: what the company owns minus what it owes, as its accounts show it.","Below 1 means you pay less than the accounts say the company is worth. Less useful for companies whose value is in brands, software or people."],
+      price_to_sales:["Price/sales (P/S)","Market value divided by revenue over the last 12 months.","Useful when a company has no profit yet. Lower is cheaper, but only compare within one industry: some industries keep far more of each sale than others."],
+      ev_to_ebitda:["EV/EBITDA","Enterprise value divided by EBITDA. Like the P/E, but it counts debt and leaves out interest, tax and write-downs.","Lower can mean cheaper. It compares companies with different debt and tax more fairly than the P/E."],
+      revenue:["Revenue","All money the company received from sales over the last 12 months, before any costs. Also called sales or turnover.","Look at the trend over several years, and at how much of it turns into profit (the margins)."],
+      ebitda:["EBITDA","Earnings before interest, taxes, depreciation and amortisation: the profit from running the business over the last 12 months, before the cost of debt, tax and the wearing out of buildings, machines and bought assets.","Often used to compare companies with different debt and tax. It leaves out real costs, so look at net profit too."],
+      net_income:["Net profit","What is left for shareholders after all costs, interest and tax, over the last 12 months. Also called net income or earnings.","A negative number is a loss. One-off gains or losses can make it jump in a single year."],
+      eps:["Earnings per share (EPS)","Net profit divided by the number of shares, over the last 12 months. It is the \"E\" in P/E.","EPS that grows year after year is a good sign. Buying back shares also raises it."],
+      gross_margin:["Gross margin","The part of each sale left after the direct cost of making the product or service. 60% means 60 of every 100 in sales is left for all other costs.","A high and steady gross margin often points to a strong brand or pricing power."],
+      operating_margin:["Operating margin","The part of each sale left after all running costs (staff, rent, research, marketing), before interest and tax.","It shows how well the business itself is run. Compare with similar companies and with earlier years."],
+      profit_margin:["Net margin","The part of each sale that ends up as net profit, after all costs, interest and tax. 10% means 10 of every 100 in sales is profit.","One-off gains or losses can make it jump, so check it against the operating margin."],
+      roe:["Return on equity (ROE)","Net profit divided by equity: the owners' money in the company (what it owns minus what it owes).","It shows how well the company turns its owners' money into profit; above 15% is often seen as good. Very high numbers can come from a lot of debt or share buybacks, which make equity small."],
+      roa:["Return on assets (ROA)","Net profit divided by everything the company owns (its total assets).","It shows how much profit the company makes with what it has. Banks and insurers always have a low ROA, because they hold large assets."],
+      revenue_growth:["Revenue growth","How much revenue grew compared with a year earlier.","Steady growth over several years says more than one good quarter."],
+      earnings_growth:["Earnings growth","How much profit per share grew compared with a year earlier.","It can swing a lot after one-off gains or losses. Look for growth that lasts."],
+      total_cash:["Cash","Cash and short-term investments the company holds, from its latest balance sheet.","A cushion for bad times, and money for growth, dividends or buybacks. Compare it with the debt."],
+      total_debt:["Debt","All money the company has borrowed (loans and bonds, often leases too), from its latest balance sheet.","Debt is harder to carry when profit falls or interest rates rise. Compare it with cash, with free cash flow and with equity (debt/equity)."],
+      debt_to_equity:["Debt/equity","Debt divided by equity, the owners' money in the company. 0.5 means 50 of debt for every 100 of equity.","Higher means more risk when business gets worse. What is normal differs by industry: utilities, property and banks borrow much more."],
+      current_ratio:["Current ratio","What the company owns that turns into cash within a year, divided by what it must pay within a year.","Above 1 means it can pay its bills for the coming year; well below 1 can be a warning sign."],
+      quick_ratio:["Quick ratio","Like the current ratio, but without stock waiting to be sold (inventory), which can be hard to turn into cash quickly.","Above 1 is comfortable."],
+      free_cash_flow:["Free cash flow","The cash the business brought in over the last 12 months after paying its running costs and its investments, such as buildings and machines.","This is the money that can pay dividends, buy back shares or pay off debt. It is harder to dress up than profit."],
+      dividend_yield:["Dividend yield","The dividends of the last year divided by today's share price. 3% means about 3 a year for every 100 you invest, if the dividend stays the same.","A very high yield can mean the market expects the dividend to be cut."],
+      payout_ratio:["Payout ratio","The part of net profit paid out as dividends. 40% means 40 of every 100 in profit goes to shareholders.","Above 100% the company pays out more than it earns, which cannot go on for long."],
+      beta:["Beta","How strongly the share moves compared with the whole stock market, measured over about the last 5 years.","1 means it moves like the market; 1.5 means 50% bigger moves up and down; below 1 means calmer."],
+      yearly_cost:["Yearly cost (TER)","What the fund charges each year, taken from its value: the total expense ratio. 0.20% costs 2 a year for every 1,000 invested.","For funds that follow the same index, lower is better: the cost comes off your return every year."],
+      fund_pe:["P/E ratio of the holdings","The average P/E of the companies in the fund: their share price divided by their profit per share over the last 12 months.","Higher means the fund's shares are more expensive compared with their profits."],
+      fund_pb:["Price/book of the holdings","The market value of the companies in the fund divided by their book value (what they own minus what they owe).","Higher means more is paid for each 1 of net assets; growth and tech funds are usually higher."],
+      fund_yield:["Dividend yield","The fund's payouts over the last year divided by its price.","A fund that reinvests its dividends (accumulating, \"Acc\") pays out little or nothing, so this is low or missing for it."],
+      return_3y:["Yearly return, 3 years","The fund's average return per year over the last 3 years, dividends included.","Past returns do not predict future ones. Compare with funds that follow a similar index."],
+      return_5y:["Yearly return, 5 years","The fund's average return per year over the last 5 years, dividends included.","Past returns do not predict future ones. Compare with funds that follow a similar index."],
+      fund_beta:["Beta (3 years)","How strongly the fund moved compared with the stock market over the last 3 years.","1 means like the market; above 1 means bigger moves up and down; below 1 means calmer."],
+      crypto_cap:["Market value","All coins in existence times today's price.","It shows how big the coin is, not whether it is cheap or expensive."],
+      day_range:["Day range","The lowest and highest price of the day (the last trading day when the market has not opened yet).","A wide range means a nervous day: often news or results."],
+      year_range:["52-week range","The lowest and highest price over the last 52 weeks (one year).","It shows where today's price sits in the year, not whether the share is cheap."],
+    };
+    // groups: [title, [[number key, label, format, help key (default: the number key)], ...]]
+    // formats: cap = money in the trading currency, amt = money from the accounts, eps = per share from the accounts,
+    // x = ratio, pct = percent, g = growth (signed), ter = a fund's cost in %
+    const KN_SHARE=[
+      ["Valuation",[["market_cap","Market value","cap"],["enterprise_value","Enterprise value","cap"],["pe","P/E ratio","x"],
+        ["forward_pe","Forward P/E","x"],["peg","PEG ratio","x"],["price_to_book","Price/book","x"],["price_to_sales","Price/sales","x"],
+        ["ev_to_ebitda","EV/EBITDA","x"]]],
+      ["Profit",[["revenue","Revenue","amt"],["ebitda","EBITDA","amt"],["net_income","Net profit","amt"],["eps","Earnings per share","eps"],
+        ["gross_margin","Gross margin","pct"],["operating_margin","Operating margin","pct"],["profit_margin","Net margin","pct"],
+        ["roe","Return on equity","pct"],["roa","Return on assets","pct"]]],
+      ["Growth",[["revenue_growth","Revenue growth","g"],["earnings_growth","Earnings growth","g"]]],
+      ["Debt and cash",[["total_cash","Cash","amt"],["total_debt","Debt","amt"],["debt_to_equity","Debt/equity","x"],
+        ["current_ratio","Current ratio","x"],["quick_ratio","Quick ratio","x"],["free_cash_flow","Free cash flow","amt"]]],
+      ["Dividend and risk",[["dividend_yield","Dividend yield","pct"],["payout_ratio","Payout ratio","pct"],["beta","Beta","x"]]],
+    ];
+    const KN_FUND=[
+      ["Costs and income",[["yearly_cost","Yearly cost","ter"],["dividend_yield","Dividend yield","pct","fund_yield"]]],
+      ["What it holds",[["pe","P/E ratio","x","fund_pe"],["price_to_book","Price/book","x","fund_pb"]]],
+      ["Returns and risk",[["return_3y","Yearly return, 3 years","g"],["return_5y","Yearly return, 5 years","g"],["beta","Beta (3 years)","x","fund_beta"]]],
+    ];
+    const KNS={};      // section id -> request number: a newer request drops older answers
+    let KN_N=0;        // ids for open explanations
+    const knNum=(v,d)=>Number(v).toLocaleString("en-GB",{minimumFractionDigits:d,maximumFractionDigits:d});
+    const knMinus=s=>String(s).replace(/^-/,"−");
+    function knValue(f,v,d){
+      const tq={currency:d.currency,kind:"share"}, rq={currency:d.report_currency||d.currency,kind:"share"};
+      if(f==="cap") return knMinus(d.currency?lkCompact(v,tq):compact.format(v));
+      if(f==="amt") return knMinus(rq.currency?lkCompact(v,rq):compact.format(v));
+      if(f==="eps") return knMinus(lkFmt(v,rq.currency?rq:null,2));
+      if(f==="x") return knNum(v,Math.abs(v)>=100?0:Math.abs(v)>=10?1:2);
+      if(f==="pct") return knMinus(knNum(v,Math.abs(v)>=100?0:1))+"%";
+      if(f==="g") return (v>0?"+":v<0?"−":"")+knNum(Math.abs(v),1)+"%";
+      if(f==="ter") return knNum(v,2)+"%";
+      return esc(v);
+    }
+    // a number that is missing for a reason worth saying, instead of leaving the tile out
+    function knWhyMissing(k,n){
+      if(k==="pe"&&n.eps<0) return "None: a loss";
+      if(k==="ev_to_ebitda"&&n.ebitda<0) return "None: EBITDA below 0";
+      return null;
+    }
+    const knQ=(h,label)=>`<button type="button" class="kn-q" data-k="${h}" aria-expanded="false" aria-label="What does ${esc(label)} mean?" onclick="knHelp(this)">?</button>`;
+    function knRender(el,d){
+      const n=d.numbers||{}, fund=d.kind!=="share", rc=d.report_currency||d.currency;
+      const groups=(fund?KN_FUND:KN_SHARE).map(([title,items])=>{
+        const tiles=items.map(([k,label,f,h])=>{
+          let v=n[k], txt, c="";
+          if(v==null){ const why=fund?null:knWhyMissing(k,n); if(!why) return ""; txt=esc(why); c="na"; }
+          else { txt=knValue(f,v,d); c=(f==="g"||k==="net_income"||k==="free_cash_flow"||/margin|^ro[ae]$/.test(k))&&v<0?"neg":f==="g"?cls(v):""; }
+          return `<div class="kn-t"><div class="kn-k"><span>${esc(label)}</span>${knQ(h||k,label)}</div><div class="kn-v num ${c}">${txt}</div></div>`;
+        }).join("");
+        return tiles?`<div class="kn-g"><h4>${esc(title)}</h4><div class="kn-grid">${tiles}</div></div>`:"";
+      }).join("");
+      const tags=(fund?[d.category,d.fund_family]:[d.sector,d.industry]).filter(Boolean).map(t=>`<span class="tag">${esc(t)}</span>`).join("");
+      let intro;
+      if(fund) intro="For a fund, these numbers describe the fund and the companies it holds."+
+        (Object.keys(n).length<3?" Yahoo Finance has few numbers for many European funds; the fund's factsheet has more.":"");
+      else intro="Profit and cash flow are for the last 12 months"+(d.as_of?` (latest report: ${dateGB(d.as_of)})`:"")+". "+
+        (rc&&d.currency&&rc!==d.currency?`Amounts from the accounts are in ${esc(rc)}; the share trades in ${esc(d.currency)}. `:"")+
+        "What is normal differs a lot by industry, so compare with similar companies. Tap ? for what a number means.";
+      el.innerHTML=`<div class="kn-head"><h3>Key numbers</h3>${tags?`<div class="kn-tags">${tags}</div>`:""}</div>
+        <p class="kn-intro">${intro}</p>
+        ${groups||`<div class="empty">${esc(d.message||"Yahoo Finance has no key numbers for this right now.")}</div>`}
+        ${groups?`<p class="kn-foot">From Yahoo Finance${d.source?" ("+esc(d.source)+")":""}. Numbers can be late or wrong: check ${fund?"the fund's factsheet":"the company's own reports"} before you decide.</p>`:""}`;
+    }
+    async function knShow(id,ticker,kind){
+      const el=$(id), seq=KNS[id]=(KNS[id]||0)+1;
+      if(!el) return;
+      if(!ticker||(kind&&!KN_KINDS.has(kind))){ el.hidden=true; el.innerHTML=""; return; }
+      el.hidden=false; el.setAttribute("aria-busy","true");
+      el.innerHTML='<div class="kn-head"><h3>Key numbers</h3></div><div class="ph" style="--h:110px" aria-hidden="true"></div><span class="lk-sr">Loading key numbers…</span>';
+      try{
+        const d=await fetchJSON("/api/keynumbers/"+encodeURIComponent(ticker),25000);
+        if(KNS[id]!==seq) return;
+        el.removeAttribute("aria-busy");
+        if(!KN_KINDS.has(d.kind)){ el.hidden=true; el.innerHTML=""; return; }
+        knRender(el,d);
+      }catch(e){
+        if(KNS[id]!==seq||e.auth) return;
+        el.removeAttribute("aria-busy");
+        el.innerHTML=`<div class="kn-head"><h3>Key numbers</h3></div><div class="empty">${esc(e.detail||"Key numbers could not load right now.")}
+          <button type="button" class="linkbtn" data-t="${esc(ticker)}" onclick="knShow('${id}',this.dataset.t)">Try again</button></div>`;
+      }
+    }
+    function knHelp(btn){
+      const sheet=btn.closest(".sheet")||document, was=btn.getAttribute("aria-expanded")==="true";
+      knCloseHelp(sheet);
+      const h=KN_HELP[btn.dataset.k]; if(was||!h) return;
+      const tile=btn.closest(".kn-t,.b"), box=document.createElement("div");
+      box.className="kn-help"; box.id="kn-help-"+(++KN_N); box.setAttribute("role","note");
+      box.innerHTML=`<b>${esc(h[0])}</b><p>${esc(h[1])}</p>${h[2]?`<p>${esc(h[2])}</p>`:""}`;
+      tile.after(box);
+      btn.setAttribute("aria-expanded","true"); btn.setAttribute("aria-controls",box.id);
+      const r=btn.getBoundingClientRect(), b=box.getBoundingClientRect();
+      box.style.setProperty("--caret",Math.max(14,Math.min(b.width-14,r.left+r.width/2-b.left))+"px");
+      box.scrollIntoView({block:"nearest",behavior:LESS_MOTION?"auto":"smooth"});
+    }
+    function knCloseHelp(scope){
+      (scope||document).querySelectorAll('.kn-q[aria-expanded="true"]').forEach(b=>{
+        const box=$(b.getAttribute("aria-controls")); if(box) box.remove();
+        b.setAttribute("aria-expanded","false"); b.removeAttribute("aria-controls");
+      });
+    }
+    // Escape closes an open explanation first, and only then the dialog
+    document.addEventListener("keydown",e=>{
+      if(e.key!=="Escape") return;
+      const b=document.querySelector('.modal.open .kn-q[aria-expanded="true"]'); if(!b) return;
+      e.preventDefault(); e.stopPropagation(); knCloseHelp(b.closest(".sheet")); b.focus();
+    },true);
+
     /* ---- lookup ---- the price of any share, fund, index, currency or crypto.
        The search in the top bar is a combobox (/ focuses it, arrows choose, Enter opens,
        Escape closes); a match opens a dialog with the price, a chart, facts, your holding,
@@ -2501,6 +2691,7 @@
     function lkHide(){
       if(!lkIsOpen()) return;
       $("lk-modal").classList.remove("open"); LK.seq++;              // answers still on their way are dropped
+      KNS["lk-kn"]=(KNS["lk-kn"]||0)+1;
       const w=document.querySelector(".wrap"); if(w) w.inert=false;
       if(LK.chart){ LK.chart.destroy(); LK.chart=null; }
       const o=LK.opener; LK.opener=null; LK.t=null;
@@ -2536,6 +2727,7 @@
       const main=$("lk-main"); main.setAttribute("aria-busy","true");
       main.innerHTML='<div class="ph" style="--h:96px" aria-hidden="true"></div><span class="lk-sr">Looking up the price…</span>';
       ["lk-held","lk-chartbox","lk-facts","lk-acts","lk-calc","lk-newsbox"].forEach(id=>{ $(id).hidden=true; });
+      knShow("lk-kn",null);
       lkNote("");
       lkFetchChart(t,LK.rng,seq);   // at the same time as the price
       try{
@@ -2570,10 +2762,11 @@
       const sub=[q.exchange, q.currency&&LK_MONEY.has(q.kind)?"trades in "+q.currency:""].filter(Boolean).map(esc).join(" · ");
       $("lk-tags").innerHTML=`<span class="tag">${esc(q.ticker)}</span><span class="tag">${LK_KIND[q.kind]||"Other"}</span>${sub?`<span>${sub}</span>`:""}`;
       lkRenderPrice(); lkRenderHeld(); lkRenderFacts(); lkRenderActs(); lkRenderCalc();
+      knShow("lk-kn",q.ticker,q.kind);
       $("lk-chartbox").hidden=q.price==null;
       if(q.price!=null) lkSetRange(LK.rng);
       $("lk-newsbox").hidden=false; lkLoadNews(seq);
-      if(q.facts_pending) lkFollowFacts(seq,1);
+      if(q.facts_pending&&!KN_KINDS.has(q.kind)) lkFollowFacts(seq,1);   // a share's or fund's facts are in Key numbers
       if(!WATCH) fetchJSON("/api/watchlist").then(w=>{ WATCH=w; renderWatchlist(); if(seq===LK.seq) lkRenderActs(); }).catch(()=>{});
       if(!PORT) getPortfolio().then(p=>{ if(seq===LK.seq) lkRenderHeld(PORT||p); }).catch(()=>{});
     }
@@ -2603,17 +2796,20 @@
           <span><span class="k">Gain</span><b class="num ${cls(g)}">${signed(g)}${cost>0?" · "+pct(g/cost*100):""}</b></span></div>`;
     }
     function lkRenderFacts(){
-      const q=LK.q, f=q.facts||{}, P=v=>lkFmt(v,q), items=[], el=$("lk-facts");
+      const q=LK.q, f=q.facts||{}, P=v=>lkFmt(v,q), items=[], el=$("lk-facts"), kn=KN_KINDS.has(q.kind);
       if(q.price==null){ el.hidden=true; return; }
-      if(f.day_range) items.push([q.traded_today===false?"Last day's range":"Day range",P(f.day_range[0])+" – "+P(f.day_range[1])]);
-      if(f.year_range) items.push(["52-week range",P(f.year_range[0])+" – "+P(f.year_range[1])]);
-      if(f.market_cap) items.push(["Market value",lkCompact(f.market_cap,q)]);
-      if(f.pe) items.push(["P/E ratio",f.pe.toLocaleString("en-GB",{maximumFractionDigits:1})]);
-      if(f.dividend_yield_pct) items.push(["Dividend yield",f.dividend_yield_pct.toLocaleString("en-GB",{maximumFractionDigits:2})+"%"]);
-      if(f.yearly_cost_pct) items.push(["Yearly cost",f.yearly_cost_pct.toLocaleString("en-GB",{maximumFractionDigits:3})+"% a year"]);
-      el.hidden=!items.length&&!q.facts_pending;
-      el.innerHTML=items.map(([k,v])=>`<div class="b"><div class="k">${k}</div><div class="v num">${v}</div></div>`).join("")+
-        (q.facts_pending?'<div class="b"><div class="k">More facts</div><div class="v small muted">Loading…</div></div>':"");
+      if(f.day_range) items.push([q.traded_today===false?"Last day's range":"Day range",P(f.day_range[0])+" – "+P(f.day_range[1]),"day_range"]);
+      if(f.year_range) items.push(["52-week range",P(f.year_range[0])+" – "+P(f.year_range[1]),"year_range"]);
+      if(!kn){   // shares and funds: market value, P/E, dividend yield and yearly cost are in Key numbers
+        if(f.market_cap) items.push(["Market value",lkCompact(f.market_cap,q),q.kind==="crypto"?"crypto_cap":"market_cap"]);
+        if(f.pe) items.push(["P/E ratio",f.pe.toLocaleString("en-GB",{maximumFractionDigits:1}),"pe"]);
+        if(f.dividend_yield_pct) items.push(["Dividend yield",f.dividend_yield_pct.toLocaleString("en-GB",{maximumFractionDigits:2})+"%","dividend_yield"]);
+        if(f.yearly_cost_pct) items.push(["Yearly cost",f.yearly_cost_pct.toLocaleString("en-GB",{maximumFractionDigits:3})+"% a year","yearly_cost"]);
+      }
+      const pending=q.facts_pending&&!kn;
+      el.hidden=!items.length&&!pending;
+      el.innerHTML=items.map(([k,v,h])=>`<div class="b"><div class="k kn-k"><span>${k}</span>${knQ(h,k)}</div><div class="v num">${v}</div></div>`).join("")+
+        (pending?'<div class="b"><div class="k">More facts</div><div class="v small muted">Loading…</div></div>':"");
     }
     function lkFollowFacts(seq,n){   // company facts were still on their way: ask again shortly
       setTimeout(async()=>{

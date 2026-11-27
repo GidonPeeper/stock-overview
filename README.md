@@ -41,6 +41,12 @@ On every tab, the search at the top looks up the price of any share, fund,
 index, currency or crypto by name, ticker or ISIN: today's change, a chart,
 key facts and what you hold of it. A link like `/#lookup=NVDA` opens it.
 
+Opening a holding or a looked-up share also shows its key numbers for your own
+analysis: P/E, forward P/E, EV/EBITDA, revenue, EBITDA, margins, return on
+equity, growth, debt, cash, free cash flow, dividend yield and beta (for a fund:
+yearly cost, returns and what it holds). Each has a ? that explains the number
+in plain words.
+
 ## Make it yours
 
 Choose these in **Settings**; they are saved with your data.
@@ -129,6 +135,7 @@ prices from yfinance.
 | `backend/mcp_server.py`, `mcp_tools.py` | The Claude connector |
 | `backend/countries/` | One file per country: the tax overview and news feeds (data, see `SCHEMA.md` there) |
 | `backend/lookup.py` | The price lookup |
+| `backend/keynumbers.py` | Key numbers of a share or fund (P/E, EBITDA, margins...) |
 | `backend/prefs.py` | Choices made in Settings: country, currency, time zone, colours |
 | `frontend/` | The dashboard and Settings pages |
 

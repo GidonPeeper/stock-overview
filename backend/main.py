@@ -48,7 +48,7 @@ _VAULT_STATE = github_sync.restore()
 from .connectors import trading212
 from .fx import BASE_CURRENCY, display_rates, from_eur, to_eur
 from .prices import fetch_quotes, quotes_status
-from . import (analytics, cache, cash, countries, datafiles, finances, income, insights, lookup, market,
+from . import (analytics, cache, cash, countries, datafiles, finances, income, insights, keynumbers, lookup, market,
                periods, prefs, realized, reports, sectors, sources, store, trend, uktax, watch)
 
 
@@ -690,6 +690,15 @@ def quote_chart(ticker: str, range: str = "1mo") -> dict:
     """The price lookup's chart for one range: 1d, 5d, 1mo, 6mo, 1y or 5y."""
     try:
         return lookup.chart(ticker, range)
+    except lookup.QuoteError as e:
+        raise HTTPException(e.status, str(e))
+
+
+@app.get("/api/keynumbers/{ticker}")
+def key_numbers(ticker: str) -> dict:
+    """P/E, EBITDA, margins, debt and more for one share or fund (keynumbers.py)."""
+    try:
+        return keynumbers.get(ticker)
     except lookup.QuoteError as e:
         raise HTTPException(e.status, str(e))
 
