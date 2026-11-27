@@ -127,6 +127,12 @@ class DataTest(unittest.TestCase):
         old = self._conn(last_sync=(TODAY - timedelta(days=9)).isoformat() + "T09:00:00")
         self.assertEqual(ids(self._connections([old])), {"connection_old:c_1"})
 
+    def test_trading212_account_is_not_called_out_of_date(self):
+        # Trading 212 accounts added in Settings are read by trading212.py, which
+        # never refreshes this date: an old date here says nothing about the data
+        old = self._conn(connector="trading212", last_sync=(TODAY - timedelta(days=9)).isoformat() + "T09:00:00")
+        self.assertEqual(self._connections([old]), [])
+
     def test_position_file_old(self):
         csv = self._conn(connector="generic_csv", method="upload",
                          last_sync=(TODAY - timedelta(days=120)).isoformat() + "T09:00:00")

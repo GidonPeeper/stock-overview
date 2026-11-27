@@ -208,7 +208,10 @@ def _check_connections(ctx: Context) -> list[dict]:
                                 "Open Settings → Connected accounts and press Renew next to it, then approve it in your bank's app.",
                                 "/settings#connected", "Connected accounts"))
         spec = registry.connector(c.get("connector"))
-        live = spec is not None and spec.fetch is not None and c.get("method") in ("api", "aggregator")
+        # an account another module reads (Trading 212: trading212.py) keeps no
+        # "last updated" of its own here; its key is checked above instead
+        live = (spec is not None and spec.fetch is not None and not spec.extra.get("managed_by")
+                and c.get("method") in ("api", "aggregator"))
         last_day = _day(last)
         busy = getattr(connections._inflight.get(cid), "done", lambda: True)() is False
         if (live and status == "ok" and last_day and not busy
