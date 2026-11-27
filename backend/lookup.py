@@ -229,7 +229,7 @@ def _blank(t: str) -> dict:
     return {"ticker": t, "name": t, "kind": "other", "exchange": "", "currency": None, "decimals": 2,
             "price": None, "price_time": None, "price_time_text": None, "traded_today": None,
             "previous_close": None, "change": None, "change_pct": None, "last_session": None,
-            "market_open": None, "market_note": None, "facts": {}, "eur_per_unit": None,
+            "market_open": None, "market_note": None, "extended": None, "facts": {}, "eur_per_unit": None,
             "price_eur": None, "message": None, "fetched_at": round(time.time())}
 
 
@@ -300,6 +300,8 @@ def _fetch_quote(t: str) -> dict:
             out.update(previous_close=_r(prev), **move)
         else:   # today's change is nothing yet; say how the last session went
             out["last_session"] = {"day": when.date().isoformat(), **move}
+    if is_open is False and meta.get("hasPrePostMarketData"):
+        out["extended"] = _extended(tk, meta, scale, price, now)
 
     facts = {}
     for key, lo, hi in (("day_range", "regularMarketDayLow", "regularMarketDayHigh"),
@@ -319,6 +321,59 @@ def _fetch_quote(t: str) -> dict:
             out["eur_per_unit"] = _r(per, 8)
             out["price_eur"] = _r(price * per, 4)
     return out
+
+
+def _session_of(ts: datetime, meta: dict) -> str | None:
+    """'pre', 'post' or None (regular hours, or Yahoo does not say) for a
+    bar's time, by the time of day of the regular session in the bar's own
+    (exchange) time zone, so a bar from an earlier day is still placed right."""
+    regular = (meta.get("currentTradingPeriod") or {}).get("regular") or {}
+    start, end = _moment(regular.get("start")), _moment(regular.get("end"))
+    if start is None or end is None or ts.tzinfo is None:
+        return None
+    start, end = start.astimezone(ts.tzinfo).time(), end.astimezone(ts.tzinfo).time()
+    if ts.time() < start:
+        return "pre"
+    if ts.time() >= end:
+        return "post"
+    return None
+
+
+def _extended(tk, meta: dict, scale: float, price: float, now: datetime) -> dict | None:
+    """The latest pre-market or after-hours trade, for a market (US shares
+    and funds) that trades outside its regular hours, while the regular
+    market is closed: {session, price, change, change_pct against the
+    regular price, time, time_text}. None when there is none or Yahoo does
+    not answer. One more request, made only while the market is closed."""
+    try:
+        frame = tk.history(period="1d", interval="1m", prepost=True, auto_adjust=False,
+                           timeout=_HTTP_TIMEOUT)
+        rows = [(ts, float(v)) for ts, v in frame["Close"].dropna().items() if _number(v)]
+    except Exception as exc:
+        log.info("extended-hours request failed: %r", exc)
+        return None
+    if not rows:
+        return None
+    ts, raw = rows[-1]
+    if hasattr(ts, "to_pydatetime"):
+        ts = ts.to_pydatetime()
+    session = _session_of(ts, meta)
+    regular_time = _moment(meta.get("regularMarketTime"))
+    if session is None or (regular_time is not None and ts + timedelta(minutes=1) <= regular_time):
+        return None
+    value = raw * scale
+    when = _moment(ts + timedelta(minutes=1))          # the bar holds trades up to its end
+    if when is not None and when > now:
+        when = now
+    day = when.date() if when else None
+    text = None
+    if when is not None:
+        text = (f"at {when:%H:%M}" if day == now.date()
+                else f"{when:%A} at {when:%H:%M}" if (now.date() - day).days < 7
+                else f"{day.day} {day:%b} at {when:%H:%M}")
+    return {"session": session, "price": _r(value),
+            "change": _r(value - price), "change_pct": round((value / price - 1) * 100, 2) if price else None,
+            "time": when.isoformat(timespec="minutes") if when else None, "time_text": text}
 
 
 def _without_price(t: str) -> dict:
@@ -463,7 +518,7 @@ def chart(ticker: str, rng: str = "1mo") -> dict:
     t = clean_ticker(ticker)
     if rng not in RANGES:
         raise BadInput("The range must be one of " + ", ".join(RANGES) + ".")
-    ttl = market._RANGES[rng][2]
+    ttl = min(market._RANGES[rng][2], 60) if rng == "1d" else market._RANGES[rng][2]   # 1D keeps up with the quote
     return cache.get(f"lookup.chart:{t}:{rng}:{clock.today().isoformat()}",
                      lambda: _within(_quotes_pool, _WAIT, _fetch_chart, t, rng),
                      ttl=ttl, stale=ttl, data=False)
@@ -477,8 +532,9 @@ def _fetch_chart(t: str, rng: str) -> dict:
     period, interval, _ = market._RANGES[rng]
     yf = _yf()
     tk = yf.Ticker(t)
+    extra = {"prepost": True} if rng == "1d" else {}     # 1D also shows pre-market and after hours
     try:
-        frame = tk.history(period=period, interval=interval, auto_adjust=False, timeout=_HTTP_TIMEOUT)
+        frame = tk.history(period=period, interval=interval, auto_adjust=False, timeout=_HTTP_TIMEOUT, **extra)
     except Exception as exc:
         log.info("chart request for %s (%s) failed: %r", t, rng, exc)
         raise YahooUnavailable(_DOWN) from None
@@ -490,12 +546,23 @@ def _fetch_chart(t: str, rng: str) -> dict:
     except (KeyError, TypeError, AttributeError, ValueError):
         rows = []
 
+    sessions = None
     if intraday:
         points = [[int(ts.timestamp() * 1000), v] for ts, v in rows]
-        # the 5-minute bars stop before a closing auction: end at the quoted price
+        if rng == "1d" and meta.get("hasPrePostMarketData"):
+            sessions = {int(ts.timestamp() * 1000): _session_of(ts.to_pydatetime() if hasattr(ts, "to_pydatetime") else ts, meta)
+                        for ts, _ in rows}
+        # the 5-minute bars stop before a closing auction: end the regular
+        # session at the quoted price (before any after-hours bars)
         last, when = _number(meta.get("regularMarketPrice")), _moment(meta.get("regularMarketTime"))
-        if points and last and when and when.timestamp() * 1000 > points[-1][0]:
-            points.append([int(when.timestamp() * 1000), last])
+        if points and last and when:
+            ms = int(when.timestamp() * 1000)
+            times = [p[0] for p in points]
+            if ms > times[-1] or (times[0] <= ms and ms not in times):
+                points.append([ms, last])
+                points.sort(key=lambda p: p[0])
+                if sessions is not None:
+                    sessions[ms] = None
     else:
         days = sorted(dict((ts.date(), v) for ts, v in rows).items())   # the bar's own (exchange) date
         if interval == "1d":
@@ -506,10 +573,17 @@ def _fetch_chart(t: str, rng: str) -> dict:
     base = _scaled(meta.get("chartPreviousClose"), scale) if rng == "1d" else None
     if base is None and points:
         base = points[0][1]
-    change = points[-1][1] - base if points and base else None
-    return {"ticker": t, "range": rng, "currency": ccy or None, "intraday": intraday,
-            "points": points, "base": _r(base),
-            "change": _r(change), "change_pct": round(change / base * 100, 2) if change is not None else None}
+    # the change is the regular session's: pre-market and after-hours moves are shown apart
+    regular = [p for p in points if not sessions or sessions.get(p[0]) is None]
+    change = regular[-1][1] - base if regular and base else None
+    out = {"ticker": t, "range": rng, "currency": ccy or None, "intraday": intraday,
+           "points": points, "base": _r(base),
+           "change": _r(change), "change_pct": round(change / base * 100, 2) if change is not None else None}
+    if sessions is not None:
+        out["sessions"] = [sessions.get(p[0]) for p in points]      # "pre", "post" or None per point
+        if regular:
+            out["day"] = datetime.fromtimestamp(regular[-1][0] / 1000, clock.tz()).date().isoformat()
+    return out
 
 
 # ------------------------------------------------------------------ search

@@ -33,13 +33,15 @@ def noon() -> datetime:
 
 def inst(price, prev, ccy="USD", kind="EQUITY", traded=0, period=(8, 0, 16, 30), period_day=None,
          name="Example Holdings plc", exchange="LSE", day=None, year=None, hint=2, closes_=None,
-         days=None, intraday=None):
+         days=None, intraday=None, at=None, prepost=None):
     """One instrument for the fake. `traded`: days since its last trade (0 =
     today at 11:55). `period`: the regular session (start h, m, end h, m) on
-    `period_day` (default today), or None when Yahoo does not say."""
+    `period_day` (default today), or None when Yahoo does not say. `at`:
+    (h, m) of the regular price instead. `prepost`: [(h, m, price)] trades
+    today outside regular hours (a US-style market); None = Yahoo has none."""
     return dict(price=price, prev=prev, ccy=ccy, kind=kind, traded=traded, period=period,
                 period_day=period_day, name=name, exchange=exchange, day=day, year=year, hint=hint,
-                closes=closes_, days=days, intraday=intraday)
+                closes=closes_, days=days, intraday=intraday, at=at, prepost=prepost)
 
 
 def fake_yahoo(spec, *, info=None, search=None, shares=None, delay=0.0, info_delay=0.0):
@@ -63,8 +65,8 @@ def fake_yahoo(spec, *, info=None, search=None, shares=None, delay=0.0, info_del
                 raise TypeError("no metadata")        # yfinance raises after a failed request
             return self._meta
 
-        def history(self, period="1mo", interval="1d", **kw):
-            calls.append(("history", self.sym, period, interval))
+        def history(self, period="1mo", interval="1d", prepost=False, **kw):
+            calls.append(("history", self.sym, period, interval) + (("prepost",) if prepost else ()))
             time.sleep(delay)
             s = spec.get(self.sym)
             if isinstance(s, Exception):
@@ -73,6 +75,8 @@ def fake_yahoo(spec, *, info=None, search=None, shares=None, delay=0.0, info_del
                 return pd.DataFrame({"Close": []})
             last_day = now.date() - timedelta(days=s["traded"])
             when = now - timedelta(minutes=5) if s["traded"] == 0 else datetime.combine(last_day, dtime(21, 0), tz)
+            if s["at"]:
+                when = datetime.combine(last_day, dtime(*s["at"]), tz)
             meta = {"currency": s["ccy"], "instrumentType": s["kind"], "regularMarketPrice": s["price"],
                     "chartPreviousClose": s["prev"], "regularMarketTime": pd.Timestamp(when),
                     "longName": s["name"], "fullExchangeName": s["exchange"], "priceHint": s["hint"]}
@@ -82,6 +86,8 @@ def fake_yahoo(spec, *, info=None, search=None, shares=None, delay=0.0, info_del
                 meta["currentTradingPeriod"] = {"regular": {
                     "start": pd.Timestamp(datetime.combine(pday, dtime(h1, m1), tz)),
                     "end": pd.Timestamp(datetime.combine(pday, dtime(h2, m2), tz))}}
+            if s["prepost"] is not None:
+                meta["hasPrePostMarketData"] = True
             if s["day"]:
                 meta["regularMarketDayLow"], meta["regularMarketDayHigh"] = s["day"]
             if s["year"]:
@@ -91,6 +97,10 @@ def fake_yahoo(spec, *, info=None, search=None, shares=None, delay=0.0, info_del
                 vals = s["intraday"] or [s["prev"], s["price"]]
                 start = datetime.combine(last_day, dtime(9, 0), tz)
                 index = [start + timedelta(minutes=30 * i) for i in range(len(vals))]
+                if prepost and s["prepost"]:
+                    extra = sorted((datetime.combine(now.date(), dtime(h, m), tz), v) for h, m, v in s["prepost"])
+                    both = sorted(list(zip(index, vals)) + extra)
+                    index, vals = [b[0] for b in both], [b[1] for b in both]
             elif period == "1d":
                 vals, index = [s["price"]], [datetime.combine(last_day, dtime(0, 0), tz)]
             else:
@@ -217,6 +227,40 @@ class QuoteTest(LookupCase):
         self.assertEqual((q["market_open"], q["market_note"], q["price_time_text"]), (True, None, "at 11:55"))
         c = lookup.quote("COIN-EUR")
         self.assertEqual((c["kind"], c["market_open"], c["eur_per_unit"]), ("crypto", True, 1.0))
+
+    def test_after_hours_price_once_the_market_has_closed(self):
+        # regular session 06:00-11:00 closed at 100.00; trades after hours at 11:30 and 11:58
+        calls = self.use({"EXAH": inst(100.0, 98.0, period=(6, 0, 11, 0), at=(11, 0), exchange="NasdaqGS",
+                                       intraday=[99.0, 100.0], prepost=[(11, 30, 101.0), (11, 58, 101.5)])})
+        q = lookup.quote("EXAH")
+        self.assertEqual((q["market_open"], q["change"]), (False, 2.0))     # today's change stays the regular one
+        today = clock.today()
+        self.assertEqual(q["extended"], {"session": "post", "price": 101.5, "change": 1.5, "change_pct": 1.5,
+                                         "time": datetime.combine(today, dtime(11, 59), clock.tz()).isoformat(timespec="minutes"),
+                                         "time_text": "at 11:59"})
+        self.assertIn(("history", "EXAH", "1d", "1m", "prepost"), calls)
+
+        day = lookup.chart("EXAH", "1d")
+        self.assertEqual([p[1] for p in day["points"]], [99.0, 100.0, 100.0, 101.0, 101.5])
+        self.assertEqual(day["sessions"], [None, None, None, "post", "post"])
+        self.assertEqual((day["change"], day["day"]), (2.0, today.isoformat()))   # the regular session's change
+
+    def test_pre_market_price_before_the_market_opens(self):
+        self.use({"EXPM": inst(149.3, 155.38, traded=1, period=(14, 30, 21, 0), exchange="NasdaqGS",
+                               prepost=[(9, 0, 148.0), (11, 30, 150.793)])})
+        q = lookup.quote("EXPM")
+        self.assertEqual(q["market_note"], "Market closed. It opens at 14:30.")
+        ext = q["extended"]
+        self.assertEqual((ext["session"], ext["price"], ext["change"], ext["change_pct"], ext["time_text"]),
+                         ("pre", 150.793, 1.493, 1.0, "at 11:31"))          # against the last close
+
+    def test_no_extended_hours_while_open_or_where_the_market_has_none(self):
+        calls = self.use({"EXOP": inst(100.0, 99.0, period=(8, 0, 16, 30), prepost=[(7, 0, 98.0)]),
+                          "EXLN.L": inst(500.0, 490.0, ccy="GBP", period=(8, 0, 11, 0), at=(11, 0))})
+        self.assertEqual((lookup.quote("EXOP")["market_open"], lookup.quote("EXOP")["extended"]), (True, None))
+        self.assertEqual((lookup.quote("EXLN.L")["market_open"], lookup.quote("EXLN.L")["extended"]), (False, None))
+        self.assertFalse([c for c in calls if c[0] == "history" and c[3] == "1m"])             # no extra request for either
+        self.assertNotIn("sessions", lookup.chart("EXLN.L", "1d"))
 
     def test_ticker_yahoo_does_not_know(self):
         calls = self.use({"NOPE1": None}, search=[hit("NOPE10"), hit("XNOPE1")])

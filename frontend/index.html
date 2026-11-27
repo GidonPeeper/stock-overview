@@ -466,6 +466,9 @@
     .lk-conv{ font-size:var(--fs-md); color:var(--muted); }
     .lk-move{ font-size:var(--fs-base); font-weight:650; margin-top:4px; }
     .lk-when{ color:var(--muted); margin-top:4px; }
+    .lk-ext{ margin-top:4px; display:flex; flex-wrap:wrap; gap:0 6px; align-items:baseline; }
+    .lk-ext .k{ font-weight:600; }
+    #lk-chart, #d-chart{ touch-action:pan-y; }   /* slide a finger sideways to read prices; up and down still scrolls */
     .lk-state{ display:flex; align-items:center; gap:7px; margin-top:2px; font-size:var(--fs-sm); color:var(--text); }
     .lk-dot{ width:8px; height:8px; border-radius:50%; background:var(--muted); flex:0 0 8px; }
     .lk-dot.on{ background:var(--green); }
@@ -980,6 +983,7 @@
       </div>
       <div id="d-val" class="d-val num"></div>
       <div id="d-today"></div>
+      <div id="d-ext" class="lk-ext small" hidden></div>
       <div class="seg" id="d-range" style="margin:12px 0 2px">
         <button data-r="1d" onclick="setDetailRange('1d')">1D</button>
         <button data-r="5d" onclick="setDetailRange('5d')">1W</button>
@@ -2174,28 +2178,76 @@
       if(dchart){ dchart.destroy(); dchart=null; }
       loadNews(r.ticker);
       knShow("d-kn",r.ticker);
-      // reset range to 1M and draw from the sparkline (instant), then it's ready
+      // pre-market or after-hours price, when the market is closed and has them (US shares)
+      const de=$("d-ext"); de.hidden=true; de.innerHTML="";
+      if(r.ticker&&r.priced_live) fetchJSON("/api/quote/"+encodeURIComponent(r.ticker)).then(q=>{
+        if(detailTicker!==r.ticker) return;
+        const h=extLine(q); de.innerHTML=h; de.hidden=!h;
+      }).catch(()=>{});
+      // reset range to 1M: draw from the sparkline (instant), then the dated prices for hovering
       detailTicker=r.ticker; detailRange="1mo";
       document.querySelectorAll("#d-range button").forEach(b=>b.classList.toggle("active",b.dataset.r==="1mo"));
       openSheet();
       requestAnimationFrame(()=>drawDetailChart(SPARKS[r.ticker]||[]));
+      if(r.ticker) setDetailRange("1mo");
     }
-    function drawDetailChart(vals){
+    // a dashed line at the point being read (hover, or a finger on a phone)
+    const CROSSHAIR={id:"crosshair",afterDatasetsDraw(ch){
+      const a=ch.tooltip&&ch.tooltip.getActiveElements?ch.tooltip.getActiveElements():[];
+      if(!a.length) return;
+      const x=a[0].element.x, {top,bottom}=ch.chartArea, c=ch.ctx;
+      c.save(); c.beginPath(); c.moveTo(x,top); c.lineTo(x,bottom); c.lineWidth=1; c.setLineDash([3,3]);
+      c.strokeStyle=chartColors().tick; c.stroke(); c.restore();
+    }};
+    const SESSION_NAME={pre:"Pre-market",post:"After hours"};
+    // when a price on a chart is from: "Fri 27 Nov, 14:35" within a day or a week, else "27 Nov 2026"
+    function chartWhen(ms,intraday){
+      const d=new Date(ms);
+      return intraday?d.toLocaleDateString("en-GB",{weekday:"short",day:"numeric",month:"short"})+", "+d.toLocaleTimeString("en-GB",{hour:"2-digit",minute:"2-digit"})
+        :d.toLocaleDateString("en-GB",{day:"numeric",month:"short",year:"numeric"});
+    }
+    // "After hours $101.50 +1.50 (+1.50%) at 21:59" for a quote with an extended-hours price, else ""
+    function extLine(q){
+      const x=q&&q.extended;
+      if(!x||x.price==null) return "";
+      return `<span class="k">${SESSION_NAME[x.session]||"Outside market hours"}</span> <span class="num">${lkFmt(x.price,q)}</span>`
+        +(x.change!=null?` <span class="num ${cls(x.change_pct)}">${lkSigned(x.change,q)} (${pct(x.change_pct)})</span>`:"")
+        +(x.time_text?` <span class="muted">${esc(x.time_text)}</span>`:"");
+    }
+    // data: the sparkline's prices (drawn at once, no dates) or a chart from /api/quote/<t>/chart
+    function drawDetailChart(data){
       const ctx=$("d-chart");
       if(dchart){ dchart.destroy(); dchart=null; }
-      if(!vals||vals.length<2||!window.Chart){ return; }
-      const tc=chartColors(), up=vals[vals.length-1]>=vals[0], col=up?tc.green:tc.red;
+      const dated=!!(data&&!Array.isArray(data)&&Array.isArray(data.points));
+      const pts=dated?data.points:(data||[]).map((v,i)=>[i,v]);
+      if(pts.length<2||!window.Chart){ return; }
+      const vals=pts.map(p=>p[1]), labels=pts.map(p=>p[0]), ses=dated&&data.sessions||null;
+      const up=dated&&data.change!=null?data.change>=0:vals[vals.length-1]>=vals[0];
+      const tc=chartColors(), col=up?tc.green:tc.red, q={currency:dated?data.currency:null,kind:"share",decimals:2};
       const g=ctx.getContext("2d").createLinearGradient(0,0,0,180); g.addColorStop(0,col+"44"); g.addColorStop(1,col+"05");
-      dchart=new Chart(ctx,{type:"line",data:{labels:vals.map((_,i)=>i),datasets:[{data:vals,borderColor:col,backgroundColor:g,fill:true,tension:.2,pointRadius:0,borderWidth:2}]},
-        options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{enabled:false}},scales:{x:{display:false},y:{display:false}}}});
+      const out=x=>ses&&ses[x.p1DataIndex];
+      dchart=new Chart(ctx,{type:"line",data:{labels,datasets:[{data:vals,borderColor:col,backgroundColor:g,fill:true,tension:.2,pointRadius:0,pointHoverRadius:dated?3:0,borderWidth:2,
+          segment:{borderColor:x=>out(x)?tc.tick:undefined,borderDash:x=>out(x)?[3,3]:undefined}}]},
+        options:{responsive:true,maintainAspectRatio:false,animation:dated?false:undefined,interaction:{intersect:false,mode:"index"},
+          plugins:{legend:{display:false},tooltip:dated?{displayColors:false,callbacks:{
+            title:i=>chartWhen(labels[i[0].dataIndex],data.intraday)+(ses&&ses[i[0].dataIndex]?" · "+SESSION_NAME[ses[i[0].dataIndex]]:""),
+            label:i=>lkFmt(i.parsed.y,q)}}:{enabled:false}},
+          scales:{x:{display:false},y:{display:false}}},
+        plugins:dated?[CROSSHAIR]:[]});
     }
     function setDetailRange(rng){
       detailRange=rng;
       document.querySelectorAll("#d-range button").forEach(b=>b.classList.toggle("active",b.dataset.r===rng));
-      if(!detailTicker) return;
-      if(rng==="1mo"&&SPARKS[detailTicker]){ drawDetailChart(SPARKS[detailTicker]); return; }
-      fetchJSON("/api/ticker_history/"+encodeURIComponent(detailTicker)+"?range="+rng)
-        .then(drawDetailChart).catch(()=>drawDetailChart([]));
+      const t=detailTicker;
+      if(!t) return;
+      const still=()=>detailTicker===t&&detailRange===rng;
+      fetchJSON("/api/quote/"+encodeURIComponent(t)+"/chart?range="+rng)
+        .then(c=>{ if(still()) drawDetailChart(c); })
+        .catch(()=>{   // no dated prices: the plain line, as before
+          if(rng==="1mo"&&SPARKS[t]){ if(still()) drawDetailChart(SPARKS[t]); return; }
+          fetchJSON("/api/ticker_history/"+encodeURIComponent(t)+"?range="+rng)
+            .then(v=>{ if(still()) drawDetailChart(v); }).catch(()=>{ if(still()) drawDetailChart([]); });
+        });
     }
     // The detail sheet is a dialog: the page behind cannot be reached while it is open, and
     // closing it puts focus back where it was.
@@ -2842,6 +2894,8 @@
       if(q.price_time_text) h+=`<div class="lk-when small">Price ${esc(q.price_time_text)}</div>`;
       if(q.market_open===true) h+='<div class="lk-state"><span class="lk-dot on" aria-hidden="true"></span>Market open</div>';
       else if(q.market_open===false) h+=`<div class="lk-state"><span class="lk-dot" aria-hidden="true"></span>${esc(q.market_note||"Market closed.")}</div>`;
+      const ext=extLine(q);
+      if(ext) h+=`<div class="lk-ext small">${ext}</div>`;
       el.innerHTML=h;
     }
     function lkRenderHeld(port){
@@ -2978,25 +3032,29 @@
       w.classList.remove("skeleton"); $("lk-cmsg").innerHTML="";
       if(pts.length<2){ w.hidden=true; $("lk-rchg").innerHTML=""; $("lk-cmsg").innerHTML='<div class="empty">No chart for this range.</div>'; return; }
       w.hidden=false;
-      const lastDay=new Date(pts[pts.length-1][0]).toISOString().slice(0,10);
+      const lastDay=c.day||new Date(pts[pts.length-1][0]).toISOString().slice(0,10);
       const span=c.range==="1d"?(q.traded_today===false?"on "+lkDay(lastDay):"today"):LK_SPAN[c.range];
-      const chg=c.change!=null?`${arrow(c.change_pct)}${lkSigned(c.change,q)} (${pct(c.change_pct)})`:"";
+      // 1D today: the same change as above the chart (the quote is fresher than the 5-minute bars)
+      const m=c.range==="1d"&&q.traded_today!==false&&q.change!=null?{change:q.change,change_pct:q.change_pct}:c;
+      const chg=m.change!=null?`${arrow(m.change_pct)}${lkSigned(m.change,q)} (${pct(m.change_pct)})`:"";
       $("lk-rchg").innerHTML=chg?`<span class="num ${cls(c.change_pct)}">${chg}</span> <span class="muted">${esc(span)}</span>`:"";
       cv_.setAttribute("aria-label",`Price chart ${span}${chg?": "+chg:""}`);
       if(!window.Chart) return;
-      const tc=chartColors(), col=(c.change??0)>=0?tc.green:tc.red, labels=pts.map(p=>p[0]);
+      const tc=chartColors(), col=(m.change??0)>=0?tc.green:tc.red, labels=pts.map(p=>p[0]), ses=c.sessions||null;
       const g=cv_.getContext("2d").createLinearGradient(0,0,0,200); g.addColorStop(0,col+"44"); g.addColorStop(1,col+"05");
-      const ds=[{data:pts.map(p=>p[1]),borderColor:col,backgroundColor:g,fill:true,tension:.15,pointRadius:0,pointHoverRadius:3,borderWidth:2}];
+      const out=x=>ses&&ses[x.p1DataIndex];   // pre-market and after hours: a grey dashed line
+      const ds=[{data:pts.map(p=>p[1]),borderColor:col,backgroundColor:g,fill:true,tension:.15,pointRadius:0,pointHoverRadius:3,borderWidth:2,
+        segment:{borderColor:x=>out(x)?tc.tick:undefined,borderDash:x=>out(x)?[3,3]:undefined}}];
       if(c.range==="1d"&&c.base) ds.push({data:labels.map(()=>c.base),borderColor:tc.muted,borderDash:[4,4],borderWidth:1,pointRadius:0,pointHoverRadius:0,fill:false});
       const time=ms=>new Date(ms).toLocaleTimeString("en-GB",{hour:"2-digit",minute:"2-digit"});
       const day=(ms,o)=>new Date(ms).toLocaleDateString("en-GB",o);
       const tick=ms=>c.range==="1d"?time(ms):c.range==="5d"?day(ms,{weekday:"short"}):c.range==="1mo"?day(ms,{day:"numeric",month:"short"})
         :c.range==="5y"?day(ms,{year:"numeric"}):day(ms,{month:"short",year:"2-digit"});
-      const title=ms=>c.intraday?day(ms,{weekday:"short",day:"numeric",month:"short"})+", "+time(ms):day(ms,{day:"numeric",month:"short",year:"numeric"});
-      LK.chart=new Chart(cv_,{type:"line",data:{labels,datasets:ds},
+      const title=i=>chartWhen(labels[i],c.intraday)+(ses&&ses[i]?" · "+SESSION_NAME[ses[i]]:"");
+      LK.chart=new Chart(cv_,{type:"line",data:{labels,datasets:ds},plugins:[CROSSHAIR],
         options:{responsive:true,maintainAspectRatio:false,animation:{duration:250},interaction:{intersect:false,mode:"index"},
           plugins:{legend:{display:false},tooltip:{filter:i=>i.datasetIndex===0,displayColors:false,
-            callbacks:{title:i=>title(labels[i[0].dataIndex]),label:i=>lkFmt(i.parsed.y,q)}}},
+            callbacks:{title:i=>title(i[0].dataIndex),label:i=>lkFmt(i.parsed.y,q)}}},
           scales:{x:{ticks:{color:tc.tick,font:{size:11},maxTicksLimit:5,maxRotation:0,autoSkip:true,callback:v=>tick(labels[v])},grid:{display:false}},
             y:{position:"right",ticks:{color:tc.tick,font:{size:11},maxTicksLimit:5,callback:v=>lkFmt(v,q,v>=1000?0:Math.min(q.decimals??2,4))},grid:{color:tc.grid}}}}});
     }
